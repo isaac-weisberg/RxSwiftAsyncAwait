@@ -21,10 +21,10 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run buffering timers on.
      - returns: An observable sequence of buffers.
      */
-    func buffer(timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType)
+    func buffer(timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType) async
         -> Observable<[Element]>
     {
-        BufferTimeCount(source: self.asObservable(), timeSpan: timeSpan, count: count, scheduler: scheduler)
+        await BufferTimeCount(source: self.asObservable(), timeSpan: timeSpan, count: count, scheduler: scheduler)
     }
 }
 
@@ -34,11 +34,12 @@ private final class BufferTimeCount<Element>: Producer<[Element]> {
     fileprivate let scheduler: SchedulerType
     fileprivate let source: Observable<Element>
     
-    init(source: Observable<Element>, timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType) {
+    init(source: Observable<Element>, timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType) async {
         self.source = source
         self.timeSpan = timeSpan
         self.count = count
         self.scheduler = scheduler
+        await super.init()
     }
     
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == [Element] {

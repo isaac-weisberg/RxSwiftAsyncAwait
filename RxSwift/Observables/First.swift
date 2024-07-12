@@ -6,22 +6,22 @@
 //  Copyright © 2017 Krunoslav Zaher. All rights reserved.
 //
 
-private final class FirstSink<Element, Observer: ObserverType> : Sink<Observer>, ObserverType where Observer.Element == Element? {
+private final class FirstSink<Element, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == Element? {
     typealias Parent = First<Element>
 
-    func on(_ event: Event<Element>) {
+    func on(_ event: Event<Element>) async {
         switch event {
         case .next(let value):
-            self.forwardOn(.next(value))
-            self.forwardOn(.completed)
-            self.dispose()
+            await self.forwardOn(.next(value))
+            await self.forwardOn(.completed)
+            await self.dispose()
         case .error(let error):
-            self.forwardOn(.error(error))
-            self.dispose()
+            await self.forwardOn(.error(error))
+            await self.dispose()
         case .completed:
-            self.forwardOn(.next(nil))
-            self.forwardOn(.completed)
-            self.dispose()
+            await self.forwardOn(.next(nil))
+            await self.forwardOn(.completed)
+            await self.dispose()
         }
     }
 }
@@ -33,9 +33,9 @@ final class First<Element>: Producer<Element?> {
         self.source = source
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element? {
-        let sink = FirstSink(observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
+    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element? {
+        let sink = await FirstSink(observer: observer, cancel: cancel)
+        let subscription = await self.source.subscribe(sink)
         return (sink: sink, subscription: subscription)
     }
 }

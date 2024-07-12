@@ -141,14 +141,14 @@ public extension ObservableType {
         switch scope {
         case .forever:
             switch replay {
-            case 0: return self.multicast(PublishSubject()).refCount()
-            default: return self.multicast(ReplaySubject.create(bufferSize: replay)).refCount()
+            case 0: return await self.multicast(PublishSubject()).refCount()
+            default: return await self.multicast(ReplaySubject.create(bufferSize: replay)).refCount()
             }
         case .whileConnected:
             switch replay {
             case 0: return await ShareWhileConnected(source: self.asObservable())
             case 1: return await ShareReplay1WhileConnected(source: self.asObservable())
-            default: return await self.multicast(makeSubject: { ReplaySubject.create(bufferSize: replay) }).refCount()
+            default: return await self.multicast(makeSubject: { await ReplaySubject.create(bufferSize: replay) }).refCount()
             }
         }
     }

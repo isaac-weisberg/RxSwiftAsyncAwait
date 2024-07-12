@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter observableFactory: Observable factory function to invoke for each observer that subscribes to the resulting sequence.
      - returns: An observable sequence whose observers trigger an invocation of the given observable factory function.
      */
-    static func deferred(_ observableFactory: @escaping () throws -> Observable<Element>)
+    static func deferred(_ observableFactory: @escaping () throws -> Observable<Element>) async
         -> Observable<Element>
     {
-        Deferred(observableFactory: observableFactory)
+        await Deferred(observableFactory: observableFactory)
     }
 }
 
@@ -57,8 +57,9 @@ private final class Deferred<Source: ObservableType>: Producer<Source.Element> {
 
     let observableFactory: Factory
 
-    init(observableFactory: @escaping Factory) {
+    init(observableFactory: @escaping Factory) async {
         self.observableFactory = observableFactory
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable)

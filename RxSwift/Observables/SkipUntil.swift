@@ -145,9 +145,10 @@ private final class SkipUntil<Element, Other>: Producer<Element> {
     fileprivate let source: Observable<Element>
     fileprivate let other: Observable<Other>
 
-    init(source: Observable<Element>, other: Observable<Other>) {
+    init(source: Observable<Element>, other: Observable<Other>) async {
         self.source = source
         self.other = other
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

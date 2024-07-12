@@ -86,10 +86,11 @@ private final class Scan<Element, Accumulate>: Producer<Accumulate> {
     fileprivate let seed: Accumulate
     fileprivate let accumulator: Accumulator
 
-    init(source: Observable<Element>, seed: Accumulate, accumulator: @escaping Accumulator) {
+    init(source: Observable<Element>, seed: Accumulate, accumulator: @escaping Accumulator) async {
         self.source = source
         self.seed = seed
         self.accumulator = accumulator
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Accumulate {

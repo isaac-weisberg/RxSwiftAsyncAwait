@@ -99,10 +99,11 @@ private final class Timer<Element: RxAbstractInteger>: Producer<Element> {
     fileprivate let dueTime: RxTimeInterval
     fileprivate let period: RxTimeInterval?
 
-    init(dueTime: RxTimeInterval, period: RxTimeInterval?, scheduler: SchedulerType) {
+    init(dueTime: RxTimeInterval, period: RxTimeInterval?, scheduler: SchedulerType) async {
         self.scheduler = scheduler
         self.dueTime = dueTime
         self.period = period
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

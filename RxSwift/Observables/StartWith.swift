@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter elements: Elements to prepend to the specified sequence.
      - returns: The source sequence prepended with the specified values.
      */
-    func startWith(_ elements: Element ...)
+    func startWith(_ elements: Element ...) async
         -> Observable<Element>
     {
-        return StartWith(source: self.asObservable(), elements: elements)
+        return await StartWith(source: self.asObservable(), elements: elements)
     }
 }
 
@@ -26,10 +26,10 @@ private final class StartWith<Element>: Producer<Element> {
     let elements: [Element]
     let source: Observable<Element>
 
-    init(source: Observable<Element>, elements: [Element]) {
+    init(source: Observable<Element>, elements: [Element]) async {
         self.source = source
         self.elements = elements
-        super.init()
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

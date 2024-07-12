@@ -17,8 +17,8 @@ public extension ObservableType {
      - parameter resultSelector: Function to invoke for each element from the self combined with the latest element from the second source, if any.
      - returns: An observable sequence containing the result of combining each element of the self  with the latest element from the second source, if any, using the specified result selector function.
      */
-    func withLatestFrom<Source: ObservableConvertibleType, ResultType>(_ second: Source, resultSelector: @escaping (Element, Source.Element) throws -> ResultType) -> Observable<ResultType> {
-        WithLatestFrom(first: self.asObservable(), second: second.asObservable(), resultSelector: resultSelector)
+    func withLatestFrom<Source: ObservableConvertibleType, ResultType>(_ second: Source, resultSelector: @escaping (Element, Source.Element) throws -> ResultType) async -> Observable<ResultType> {
+        await WithLatestFrom(first: self.asObservable(), second: second.asObservable(), resultSelector: resultSelector)
     }
 
     /**
@@ -30,8 +30,8 @@ public extension ObservableType {
      - parameter second: Second observable source.
      - returns: An observable sequence containing the result of combining each element of the self  with the latest element from the second source, if any, using the specified result selector function.
      */
-    func withLatestFrom<Source: ObservableConvertibleType>(_ second: Source) -> Observable<Source.Element> {
-        WithLatestFrom(first: self.asObservable(), second: second.asObservable(), resultSelector: { $1 })
+    func withLatestFrom<Source: ObservableConvertibleType>(_ second: Source) async -> Observable<Source.Element> {
+        await WithLatestFrom(first: self.asObservable(), second: second.asObservable(), resultSelector: { $1 })
     }
 }
 
@@ -138,10 +138,11 @@ private final class WithLatestFrom<FirstType, SecondType, ResultType>: Producer<
     fileprivate let second: Observable<SecondType>
     fileprivate let resultSelector: ResultSelector
 
-    init(first: Observable<FirstType>, second: Observable<SecondType>, resultSelector: @escaping ResultSelector) {
+    init(first: Observable<FirstType>, second: Observable<SecondType>, resultSelector: @escaping ResultSelector) async {
         self.first = first
         self.second = second
         self.resultSelector = resultSelector
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {

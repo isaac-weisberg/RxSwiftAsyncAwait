@@ -18,10 +18,10 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run the subscription delay timer on.
      - returns: Time-shifted sequence.
      */
-    func delaySubscription(_ dueTime: RxTimeInterval, scheduler: SchedulerType)
+    func delaySubscription(_ dueTime: RxTimeInterval, scheduler: SchedulerType) async
         -> Observable<Element>
     {
-        DelaySubscription(source: self.asObservable(), dueTime: dueTime, scheduler: scheduler)
+        await DelaySubscription(source: self.asObservable(), dueTime: dueTime, scheduler: scheduler)
     }
 }
 
@@ -43,10 +43,11 @@ private final class DelaySubscription<Element>: Producer<Element> {
     private let dueTime: RxTimeInterval
     private let scheduler: SchedulerType
 
-    init(source: Observable<Element>, dueTime: RxTimeInterval, scheduler: SchedulerType) {
+    init(source: Observable<Element>, dueTime: RxTimeInterval, scheduler: SchedulerType) async {
         self.source = source
         self.dueTime = dueTime
         self.scheduler = scheduler
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

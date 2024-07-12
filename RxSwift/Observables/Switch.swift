@@ -107,7 +107,7 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
         return nil
     }
 
-    func on(_ event: Event<Element>) {
+    func on(_ event: Event<Element>) async {
         switch event {
         case .next(let element):
             if let (latest, observable) = self.nextElementArrived(element: element) {
@@ -157,11 +157,11 @@ final private class SwitchSinkIter<SourceType, Source: ObservableConvertibleType
         self.this = this
     }
     
-    func on(_ event: Event<Element>) {
+    func on(_ event: Event<Element>) async {
         self.synchronizedOn(event)
     }
 
-    func synchronized_on(_ event: Event<Element>) {
+    func synchronized_on(_ event: Event<Element>) async {
         switch event {
         case .next: break
         case .error, .completed:
@@ -225,7 +225,7 @@ final private class Switch<Source: ObservableConvertibleType>: Producer<Source.E
         self.source = source
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
+    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = SwitchIdentitySink<Source, Observer>(observer: observer, cancel: cancel)
         let subscription = sink.run(self.source)
         return (sink: sink, subscription: subscription)
@@ -243,7 +243,7 @@ final private class FlatMapLatest<SourceType, Source: ObservableConvertibleType>
         self.selector = selector
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
+    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = MapSwitchSink<SourceType, Source, Observer>(selector: self.selector, observer: observer, cancel: cancel)
         let subscription = sink.run(self.source)
         return (sink: sink, subscription: subscription)

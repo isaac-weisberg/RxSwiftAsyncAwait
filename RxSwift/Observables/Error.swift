@@ -22,8 +22,9 @@ public extension ObservableType {
 private final class ErrorProducer<Element>: Producer<Element> {
     private let error: Swift.Error
 
-    init(error: Swift.Error) {
+    init(error: Swift.Error) async {
         self.error = error
+        await super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {

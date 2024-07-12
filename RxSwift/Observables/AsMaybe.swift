@@ -36,8 +36,9 @@ private final class AsMaybeSink<Observer: ObserverType>: Sink<Observer>, Observe
 final class AsMaybe<Element>: Producer<Element> {
     private let source: Observable<Element>
 
-    init(source: Observable<Element>) {
+    init(source: Observable<Element>) async {
         self.source = source
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

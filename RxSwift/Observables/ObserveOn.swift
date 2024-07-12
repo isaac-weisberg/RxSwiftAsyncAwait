@@ -56,9 +56,11 @@ private final class ObserveOn<Element>: Producer<Element> {
         self.scheduler = scheduler
         self.source = source
 
+        
         #if TRACE_RESOURCES
             _ = await Resources.incrementTotal()
         #endif
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
@@ -234,6 +236,7 @@ private final class ObserveOnSerialDispatchQueue<Element>: Producer<Element> {
             _ = await Resources.incrementTotal()
             _ = await increment(numberOfSerialDispatchObservables)
         #endif
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

@@ -12,8 +12,8 @@ public extension ObservableType where Element: EventConvertible {
      - seealso: [materialize operator on reactivex.io](http://reactivex.io/documentation/operators/materialize-dematerialize.html)
      - returns: The dematerialized observable sequence.
      */
-    func dematerialize() -> Observable<Element.Element> {
-        Dematerialize(source: self.asObservable())
+    func dematerialize() async -> Observable<Element.Element> {
+        await Dematerialize(source: self.asObservable())
     }
 }
 
@@ -38,8 +38,9 @@ private final class DematerializeSink<T: EventConvertible, Observer: ObserverTyp
 private final class Dematerialize<T: EventConvertible>: Producer<T.Element> {
     private let source: Observable<T>
 
-    init(source: Observable<T>) {
+    init(source: Observable<T>) async {
         self.source = source
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == T.Element {

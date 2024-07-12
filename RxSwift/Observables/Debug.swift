@@ -18,10 +18,10 @@ public extension ObservableType {
      - parameter trimOutput: Should output be trimmed to max 40 characters.
      - returns: An observable sequence whose events are printed to standard output.
      */
-    func debug(_ identifier: String? = nil, trimOutput: Bool = false, file: String = #file, line: UInt = #line, function: String = #function)
+    func debug(_ identifier: String? = nil, trimOutput: Bool = false, file: String = #file, line: UInt = #line, function: String = #function) async
         -> Observable<Element>
     {
-        return Debug(source: self, identifier: identifier, trimOutput: trimOutput, file: file, line: line, function: function)
+        return await Debug(source: self, identifier: identifier, trimOutput: trimOutput, file: file, line: line, function: function)
     }
 }
 
@@ -38,13 +38,13 @@ private final class DebugSink<Source: ObservableType, Observer: ObserverType>: S
     private let parent: Parent
     private let timestampFormatter = DateFormatter()
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) {
+    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
         self.timestampFormatter.dateFormat = dateFormat
 
         logEvent(self.parent.identifier, dateFormat: self.timestampFormatter, content: "subscribed")
 
-        super.init(observer: observer, cancel: cancel)
+        await super.init(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>) async {
@@ -76,7 +76,7 @@ private final class Debug<Source: ObservableType>: Producer<Source.Element> {
     fileprivate let trimOutput: Bool
     private let source: Source
 
-    init(source: Source, identifier: String?, trimOutput: Bool, file: String, line: UInt, function: String) {
+    init(source: Source, identifier: String?, trimOutput: Bool, file: String, line: UInt, function: String) async {
         self.trimOutput = trimOutput
         if let identifier = identifier {
             self.identifier = identifier
@@ -92,10 +92,11 @@ private final class Debug<Source: ObservableType>: Producer<Source.Element> {
             self.identifier = "\(trimmedFile):\(line) (\(function))"
         }
         self.source = source
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
-        let sink = DebugSink(parent: self, observer: observer, cancel: cancel)
+        let sink = await DebugSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await self.source.subscribe(sink)
         return (sink: sink, subscription: subscription)
     }

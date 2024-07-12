@@ -19,10 +19,10 @@ public extension ObservableType {
      - parameter mapResult: A function to transform the final accumulator value into the result value.
      - returns: An observable sequence containing a single element with the final accumulator value.
      */
-    func reduce<A, Result>(_ seed: A, accumulator: @escaping (A, Element) throws -> A, mapResult: @escaping (A) throws -> Result)
+    func reduce<A, Result>(_ seed: A, accumulator: @escaping (A, Element) throws -> A, mapResult: @escaping (A) throws -> Result) async
         -> Observable<Result>
     {
-        Reduce(source: self.asObservable(), seed: seed, accumulator: accumulator, mapResult: mapResult)
+        await Reduce(source: self.asObservable(), seed: seed, accumulator: accumulator, mapResult: mapResult)
     }
 
     /**
@@ -36,10 +36,10 @@ public extension ObservableType {
      - parameter accumulator: A accumulator function to be invoked on each element.
      - returns: An observable sequence containing a single element with the final accumulator value.
      */
-    func reduce<A>(_ seed: A, accumulator: @escaping (A, Element) throws -> A)
+    func reduce<A>(_ seed: A, accumulator: @escaping (A, Element) throws -> A) async
         -> Observable<A>
     {
-        Reduce(source: self.asObservable(), seed: seed, accumulator: accumulator, mapResult: { $0 })
+        await Reduce(source: self.asObservable(), seed: seed, accumulator: accumulator, mapResult: { $0 })
     }
 }
 
@@ -94,11 +94,12 @@ private final class Reduce<SourceType, AccumulateType, ResultType>: Producer<Res
     fileprivate let accumulator: AccumulatorType
     fileprivate let mapResult: ResultSelectorType
 
-    init(source: Observable<SourceType>, seed: AccumulateType, accumulator: @escaping AccumulatorType, mapResult: @escaping ResultSelectorType) {
+    init(source: Observable<SourceType>, seed: AccumulateType, accumulator: @escaping AccumulatorType, mapResult: @escaping ResultSelectorType) async {
         self.source = source
         self.seed = seed
         self.accumulator = accumulator
         self.mapResult = mapResult
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {

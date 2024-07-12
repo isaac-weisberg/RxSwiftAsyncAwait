@@ -14,12 +14,24 @@ public extension ObservableType {
 
      - returns: An observable sequence that surfaces any of the given sequences, whichever reacted first.
      */
-    static func amb<Sequence: Swift.Sequence>(_ sequence: Sequence) -> Observable<Element>
+    static func amb<Sequence: Swift.Sequence>(_ sequence: Sequence) async -> Observable<Element>
         where Sequence.Element == Observable<Element>
     {
-        sequence.reduce(Observable<Sequence.Element.Element>.never()) { a, o in
-            a.amb(o.asObservable())
+        await sequence.reduceAsync(Observable<Sequence.Element.Element>.never()) { a, o in
+            await a.amb(o.asObservable())
         }
+    }
+}
+
+public extension Sequence {
+    @inlinable func reduceAsync<Result>(_ initialResult: Result, _ nextPartialResult: (_ partialResult: Result, Self.Element) async throws -> Result) async rethrows -> Result {
+        var initial = initialResult
+        var iterator = self.makeIterator()
+        while let element = iterator.next() {
+            initial = try await nextPartialResult(initial, element)
+        }
+        
+        return initial
     }
 }
 
@@ -33,10 +45,10 @@ public extension ObservableType {
      - returns: An observable sequence that surfaces either of the given sequences, whichever reacted first.
      */
     func amb<O2: ObservableType>
-    (_ right: O2)
+    (_ right: O2) async
         -> Observable<Element> where O2.Element == Element
     {
-        Amb(left: self.asObservable(), right: right.asObservable())
+        await Amb(left: self.asObservable(), right: right.asObservable())
     }
 }
 
@@ -148,9 +160,10 @@ private final class Amb<Element>: Producer<Element> {
     fileprivate let left: Observable<Element>
     fileprivate let right: Observable<Element>
     
-    init(left: Observable<Element>, right: Observable<Element>) {
+    init(left: Observable<Element>, right: Observable<Element>) async {
         self.left = left
         self.right = right
+        await super.init()
     }
     
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

@@ -128,7 +128,7 @@ private final class RetryWhenSequenceSinkIter<Sequence: Swift.Sequence, Observer
 
                 let errorHandlerSubscription = await self.parent.notifier.subscribe(RetryTriggerSink(parent: self))
                 await self.errorHandlerSubscription.setDisposable(errorHandlerSubscription)
-                self.parent.errorSubject.on(.next(failedWith))
+                await self.parent.errorSubject.on(.next(failedWith))
             }
             else {
                 await self.parent.forwardOn(.error(error))
@@ -157,11 +157,13 @@ private final class RetryWhenSequenceSink<Sequence: Swift.Sequence, Observer: Ob
     private let parent: Parent
 
     fileprivate var lastError: Swift.Error?
-    fileprivate let errorSubject = PublishSubject<Error>()
+    fileprivate let errorSubject: PublishSubject<Error>
     private let handler: Observable<TriggerObservable.Element>
-    fileprivate let notifier = PublishSubject<TriggerObservable.Element>()
+    fileprivate let notifier: PublishSubject<TriggerObservable.Element>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+        self.errorSubject = await PublishSubject<Error>()
+        self.notifier = await PublishSubject<TriggerObservable.Element>()
         self.lock = await RecursiveLock()
         self.parent = parent
         self.handler = parent.notificationHandler(self.errorSubject).asObservable()

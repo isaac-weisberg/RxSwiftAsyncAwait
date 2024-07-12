@@ -18,8 +18,8 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to send elements on. If `nil`, elements are sent immediately on subscription.
      - returns: The observable sequence whose elements are pulled from the given arguments.
      */
-    static func of(_ elements: Element ..., scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) -> Observable<Element> {
-        ObservableSequence(elements: elements, scheduler: scheduler)
+    static func of(_ elements: Element ..., scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async -> Observable<Element> {
+        await ObservableSequence(elements: elements, scheduler: scheduler)
     }
 }
 
@@ -31,8 +31,8 @@ public extension ObservableType {
 
      - returns: The observable sequence whose elements are pulled from the given enumerable sequence.
      */
-    static func from(_ array: [Element], scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) -> Observable<Element> {
-        ObservableSequence(elements: array, scheduler: scheduler)
+    static func from(_ array: [Element], scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async -> Observable<Element> {
+        await ObservableSequence(elements: array, scheduler: scheduler)
     }
 
     /**
@@ -42,8 +42,8 @@ public extension ObservableType {
 
      - returns: The observable sequence whose elements are pulled from the given enumerable sequence.
      */
-    static func from<Sequence: Swift.Sequence>(_ sequence: Sequence, scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) -> Observable<Element> where Sequence.Element == Element {
-        ObservableSequence(elements: sequence, scheduler: scheduler)
+    static func from<Sequence: Swift.Sequence>(_ sequence: Sequence, scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async -> Observable<Element> where Sequence.Element == Element {
+        await ObservableSequence(elements: sequence, scheduler: scheduler)
     }
 }
 
@@ -76,9 +76,10 @@ private final class ObservableSequence<Sequence: Swift.Sequence>: Producer<Seque
     fileprivate let elements: Sequence
     fileprivate let scheduler: ImmediateSchedulerType
 
-    init(elements: Sequence, scheduler: ImmediateSchedulerType) {
+    init(elements: Sequence, scheduler: ImmediateSchedulerType) async {
         self.elements = elements
         self.scheduler = scheduler
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

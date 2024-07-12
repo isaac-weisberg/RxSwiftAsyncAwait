@@ -127,10 +127,11 @@ private final class DistinctUntilChanged<Element, Key>: Producer<Element> {
     fileprivate let selector: KeySelector
     fileprivate let comparer: EqualityComparer
 
-    init(source: Observable<Element>, selector: @escaping KeySelector, comparer: @escaping EqualityComparer) {
+    init(source: Observable<Element>, selector: @escaping KeySelector, comparer: @escaping EqualityComparer) async {
         self.source = source
         self.selector = selector
         self.comparer = comparer
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

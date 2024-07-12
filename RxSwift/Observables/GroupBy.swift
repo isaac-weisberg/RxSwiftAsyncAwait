@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter keySelector: A function to extract the key for each element.
      - returns: A sequence of observable groups, each of which corresponds to a unique key value, containing all elements that share that same key value.
      */
-    func groupBy<Key: Hashable>(keySelector: @escaping (Element) throws -> Key)
+    func groupBy<Key: Hashable>(keySelector: @escaping (Element) throws -> Key) async
         -> Observable<GroupedObservable<Key, Element>>
     {
-        GroupBy(source: self.asObservable(), selector: keySelector)
+        await GroupBy(source: self.asObservable(), selector: keySelector)
     }
 }
 
@@ -68,9 +68,9 @@ private final class GroupBySink<Key: Hashable, Element, Observer: ObserverType>:
 
     private func onGroupEvent(key: Key, value: Element) async {
         if let writer = self.groupedSubjectTable[key] {
-            writer.on(.next(value))
+            await writer.on(.next(value))
         } else {
-            let writer = PublishSubject<Element>()
+            let writer = await PublishSubject<Element>()
             self.groupedSubjectTable[key] = writer
 
             let group = await GroupedObservable(
@@ -79,7 +79,7 @@ private final class GroupBySink<Key: Hashable, Element, Observer: ObserverType>:
             )
 
             await self.forwardOn(.next(group))
-            writer.on(.next(value))
+            await writer.on(.next(value))
         }
     }
 
@@ -96,7 +96,7 @@ private final class GroupBySink<Key: Hashable, Element, Observer: ObserverType>:
         case let .error(e):
             await self.error(e)
         case .completed:
-            self.forwardOnGroups(event: .completed)
+            await self.forwardOnGroups(event: .completed)
             await self.forwardOn(.completed)
             await self.subscription.dispose()
             await self.dispose()
@@ -104,15 +104,15 @@ private final class GroupBySink<Key: Hashable, Element, Observer: ObserverType>:
     }
 
     final func error(_ error: Swift.Error) async {
-        self.forwardOnGroups(event: .error(error))
+        await self.forwardOnGroups(event: .error(error))
         await self.forwardOn(.error(error))
         await self.subscription.dispose()
         await self.dispose()
     }
 
-    final func forwardOnGroups(event: Event<Element>) {
+    final func forwardOnGroups(event: Event<Element>) async {
         for writer in self.groupedSubjectTable.values {
-            writer.on(event)
+            await writer.on(event)
         }
     }
 }
@@ -123,9 +123,10 @@ private final class GroupBy<Key: Hashable, Element>: Producer<GroupedObservable<
     fileprivate let source: Observable<Element>
     fileprivate let selector: KeySelector
 
-    init(source: Observable<Element>, selector: @escaping KeySelector) {
+    init(source: Observable<Element>, selector: @escaping KeySelector) async {
         self.source = source
         self.selector = selector
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == GroupedObservable<Key, Element> {

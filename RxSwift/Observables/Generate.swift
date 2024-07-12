@@ -19,8 +19,8 @@ public extension ObservableType {
      - parameter scheduler: Scheduler on which to run the generator loop.
      - returns: The generated sequence.
      */
-    static func generate(initialState: Element, condition: @escaping (Element) throws -> Bool, scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance, iterate: @escaping (Element) throws -> Element) -> Observable<Element> {
-        Generate(initialState: initialState, condition: condition, iterate: iterate, resultSelector: { $0 }, scheduler: scheduler)
+    static func generate(initialState: Element, condition: @escaping (Element) throws -> Bool, scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance, iterate: @escaping (Element) throws -> Element) async -> Observable<Element> {
+        await Generate(initialState: initialState, condition: condition, iterate: iterate, resultSelector: { $0 }, scheduler: scheduler)
     }
 }
 
@@ -70,13 +70,13 @@ private final class Generate<Sequence, Element>: Producer<Element> {
     fileprivate let resultSelector: (Sequence) throws -> Element
     fileprivate let scheduler: ImmediateSchedulerType
     
-    init(initialState: Sequence, condition: @escaping (Sequence) throws -> Bool, iterate: @escaping (Sequence) throws -> Sequence, resultSelector: @escaping (Sequence) throws -> Element, scheduler: ImmediateSchedulerType) {
+    init(initialState: Sequence, condition: @escaping (Sequence) throws -> Bool, iterate: @escaping (Sequence) throws -> Sequence, resultSelector: @escaping (Sequence) throws -> Element, scheduler: ImmediateSchedulerType) async {
         self.initialState = initialState
         self.condition = condition
         self.iterate = iterate
         self.resultSelector = resultSelector
         self.scheduler = scheduler
-        super.init()
+        await super.init()
     }
     
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

@@ -128,10 +128,11 @@ private final class Sample<Element, SampleType>: Producer<Element> {
     fileprivate let sampler: Observable<SampleType>
     fileprivate let defaultValue: Element?
 
-    init(source: Observable<Element>, sampler: Observable<SampleType>, defaultValue: Element? = nil) {
+    init(source: Observable<Element>, sampler: Observable<SampleType>, defaultValue: Element? = nil) async {
         self.source = source
         self.sampler = sampler
         self.defaultValue = defaultValue
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

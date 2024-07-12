@@ -42,7 +42,7 @@ private final class RangeProducer<Element: RxAbstractInteger>: Producer<Element>
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        let sink = RangeSink(parent: self, observer: observer, cancel: cancel)
+        let sink = await RangeSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run()
         return (sink: sink, subscription: subscription)
     }
@@ -53,9 +53,9 @@ private final class RangeSink<Observer: ObserverType>: Sink<Observer> where Obse
 
     private let parent: Parent
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) {
+    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        super.init(observer: observer, cancel: cancel)
+        await super.init(observer: observer, cancel: cancel)
     }
 
     func run() async -> Disposable {

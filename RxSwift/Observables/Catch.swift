@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter handler: Error handler function, producing another observable sequence.
      - returns: An observable sequence containing the source sequence's elements, followed by the elements produced by the handler's resulting observable sequence in case an error occurred.
      */
-    func `catch`(_ handler: @escaping (Swift.Error) throws -> Observable<Element>)
+    func `catch`(_ handler: @escaping (Swift.Error) throws -> Observable<Element>) async
         -> Observable<Element>
     {
-        Catch(source: self.asObservable(), handler: handler)
+        await Catch(source: self.asObservable(), handler: handler)
     }
 
     /**
@@ -30,10 +30,10 @@ public extension ObservableType {
      - returns: An observable sequence containing the source sequence's elements, followed by the elements produced by the handler's resulting observable sequence in case an error occurred.
      */
     @available(*, deprecated, renamed: "catch(_:)")
-    func catchError(_ handler: @escaping (Swift.Error) throws -> Observable<Element>)
+    func catchError(_ handler: @escaping (Swift.Error) throws -> Observable<Element>) async
         -> Observable<Element>
     {
-        self.catch(handler)
+        await self.catch(handler)
     }
 
     /**
@@ -44,10 +44,10 @@ public extension ObservableType {
      - parameter element: Last element in an observable sequence in case error occurs.
      - returns: An observable sequence containing the source sequence's elements, followed by the `element` in case an error occurred.
      */
-    func catchAndReturn(_ element: Element)
+    func catchAndReturn(_ element: Element) async
         -> Observable<Element>
     {
-        Catch(source: self.asObservable(), handler: { _ in Observable.just(element) })
+        await Catch(source: self.asObservable(), handler: { _ in Observable.just(element) })
     }
 
     /**
@@ -59,10 +59,10 @@ public extension ObservableType {
      - returns: An observable sequence containing the source sequence's elements, followed by the `element` in case an error occurred.
      */
     @available(*, deprecated, renamed: "catchAndReturn(_:)")
-    func catchErrorJustReturn(_ element: Element)
+    func catchErrorJustReturn(_ element: Element) async
         -> Observable<Element>
     {
-        self.catchAndReturn(element)
+        await self.catchAndReturn(element)
     }
 }
 
@@ -75,10 +75,10 @@ public extension ObservableType {
      - returns: An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.
      */
     @available(*, deprecated, renamed: "catch(onSuccess:onFailure:onDisposed:)")
-    static func catchError<Sequence: Swift.Sequence>(_ sequence: Sequence) -> Observable<Element>
+    static func catchError<Sequence: Swift.Sequence>(_ sequence: Sequence) async -> Observable<Element>
         where Sequence.Element == Observable<Element>
     {
-        self.catch(sequence: sequence)
+        await self.catch(sequence: sequence)
     }
 
     /**
@@ -88,10 +88,10 @@ public extension ObservableType {
 
      - returns: An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.
      */
-    static func `catch`<Sequence: Swift.Sequence>(sequence: Sequence) -> Observable<Element>
+    static func `catch`<Sequence: Swift.Sequence>(sequence: Sequence) async -> Observable<Element>
         where Sequence.Element == Observable<Element>
     {
-        CatchSequence(sources: sequence)
+        await CatchSequence(sources: sequence)
     }
 }
 
@@ -105,8 +105,8 @@ public extension ObservableType {
 
      - returns: Observable sequence to repeat until it successfully terminates.
      */
-    func retry() -> Observable<Element> {
-        CatchSequence(sources: InfiniteSequence(repeatedValue: self.asObservable()))
+    func retry() async -> Observable<Element> {
+        await CatchSequence(sources: InfiniteSequence(repeatedValue: self.asObservable()))
     }
 
     /**
@@ -119,10 +119,10 @@ public extension ObservableType {
      - parameter maxAttemptCount: Maximum number of times to repeat the sequence.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully.
      */
-    func retry(_ maxAttemptCount: Int)
+    func retry(_ maxAttemptCount: Int) async
         -> Observable<Element>
     {
-        CatchSequence(sources: Swift.repeatElement(self.asObservable(), count: maxAttemptCount))
+        await CatchSequence(sources: Swift.repeatElement(self.asObservable(), count: maxAttemptCount))
     }
 }
 
@@ -200,9 +200,10 @@ private final class Catch<Element>: Producer<Element> {
     fileprivate let source: Observable<Element>
     fileprivate let handler: Handler
 
-    init(source: Observable<Element>, handler: @escaping Handler) {
+    init(source: Observable<Element>, handler: @escaping Handler) async {
         self.source = source
         self.handler = handler
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
@@ -270,8 +271,9 @@ private final class CatchSequence<Sequence: Swift.Sequence>: Producer<Sequence.E
 
     let sources: Sequence
 
-    init(sources: Sequence) {
+    init(sources: Sequence) async {
         self.sources = sources
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

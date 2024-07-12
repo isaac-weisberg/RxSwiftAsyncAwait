@@ -17,8 +17,8 @@ public extension ObservableType {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(_ subscribe: @escaping (AnyObserver<Element>) async -> Disposable) -> Observable<Element> {
-        AnonymousObservable(subscribe)
+    static func create(_ subscribe: @escaping (AnyObserver<Element>) async -> Disposable) async -> Observable<Element> {
+        await AnonymousObservable(subscribe)
     }
 }
 
@@ -34,7 +34,7 @@ private final class AnonymousObservableSink<Observer: ObserverType>: Sink<Observ
     #endif
 
     override init(observer: Observer, cancel: Cancelable) async {
-        isStopped = await AtomicInt(0)
+        self.isStopped = await AtomicInt(0)
         self.synchronizationTracker = await SynchronizationTracker()
         await super.init(observer: observer, cancel: cancel)
     }
@@ -72,8 +72,9 @@ private final class AnonymousObservable<Element>: Producer<Element> {
 
     let subscribeHandler: SubscribeHandler
 
-    init(_ subscribeHandler: @escaping SubscribeHandler) {
+    init(_ subscribeHandler: @escaping SubscribeHandler) async {
         self.subscribeHandler = subscribeHandler
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

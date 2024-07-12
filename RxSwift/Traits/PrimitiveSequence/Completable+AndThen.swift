@@ -15,9 +15,9 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    func andThen<Element>(_ second: Single<Element>) -> Single<Element> {
+    func andThen<Element>(_ second: Single<Element>) async -> Single<Element> {
         let completable = self.primitiveSequence.asObservable()
-        return Single(raw: ConcatCompletable(completable: completable, second: second.asObservable()))
+        return await Single(raw: ConcatCompletable(completable: completable, second: second.asObservable()))
     }
 
     /**
@@ -28,9 +28,9 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    func andThen<Element>(_ second: Maybe<Element>) -> Maybe<Element> {
+    func andThen<Element>(_ second: Maybe<Element>) async -> Maybe<Element> {
         let completable = self.primitiveSequence.asObservable()
-        return Maybe(raw: ConcatCompletable(completable: completable, second: second.asObservable()))
+        return await Maybe(raw: ConcatCompletable(completable: completable, second: second.asObservable()))
     }
 
     /**
@@ -41,9 +41,9 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    func andThen(_ second: Completable) -> Completable {
+    func andThen(_ second: Completable) async -> Completable {
         let completable = self.primitiveSequence.asObservable()
-        return Completable(raw: ConcatCompletable(completable: completable, second: second.asObservable()))
+        return await Completable(raw: ConcatCompletable(completable: completable, second: second.asObservable()))
     }
 
     /**
@@ -54,9 +54,9 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    func andThen<Element>(_ second: Observable<Element>) -> Observable<Element> {
+    func andThen<Element>(_ second: Observable<Element>) async -> Observable<Element> {
         let completable = self.primitiveSequence.asObservable()
-        return ConcatCompletable(completable: completable, second: second.asObservable())
+        return await ConcatCompletable(completable: completable, second: second.asObservable())
     }
 }
 
@@ -64,9 +64,10 @@ private final class ConcatCompletable<Element>: Producer<Element> {
     fileprivate let completable: Observable<Never>
     fileprivate let second: Observable<Element>
 
-    init(completable: Observable<Never>, second: Observable<Element>) {
+    init(completable: Observable<Never>, second: Observable<Element>) async {
         self.completable = completable
         self.second = second
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

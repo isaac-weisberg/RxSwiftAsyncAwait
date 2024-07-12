@@ -7,22 +7,22 @@
 //
 
 class Producer<Element>: Observable<Element> {
-    override init() {
-        super.init()
+    override init() async {
+        await super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
         if !CurrentThreadScheduler.isScheduleRequired {
             // The returned disposable needs to release all references once it was disposed.
-            let disposer = SinkDisposer()
+            let disposer = await SinkDisposer()
             let sinkAndSubscription = await self.run(observer, cancel: disposer)
             await disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
 
             return disposer
         }
         else {
-            return CurrentThreadScheduler.instance.schedule(()) { _ in
-                let disposer = SinkDisposer()
+            return await CurrentThreadScheduler.instance.schedule(()) { _ in
+                let disposer = await SinkDisposer()
                 let sinkAndSubscription = await self.run(observer, cancel: disposer)
                 await disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
 

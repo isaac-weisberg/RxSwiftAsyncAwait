@@ -16,10 +16,10 @@ public extension ObservableType {
      - returns: An observable sequence whose elements are the result of invoking the transform function on each element of source.
 
      */
-    func map<Result>(_ transform: @escaping (Element) throws -> Result)
+    func map<Result>(_ transform: @escaping (Element) throws -> Result) async
         -> Observable<Result>
     {
-        Map(source: self.asObservable(), transform: transform)
+        await Map(source: self.asObservable(), transform: transform)
     }
 }
 
@@ -63,9 +63,10 @@ private final class Map<SourceType, ResultType>: Producer<ResultType> {
 
     private let transform: Transform
 
-    init(source: Observable<SourceType>, transform: @escaping Transform) {
+    init(source: Observable<SourceType>, transform: @escaping Transform) async {
         self.source = source
         self.transform = transform
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
