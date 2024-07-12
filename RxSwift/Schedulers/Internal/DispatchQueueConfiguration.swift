@@ -15,25 +15,26 @@ struct DispatchQueueConfiguration {
 }
 
 extension DispatchQueueConfiguration {
-    func schedule<StateType>(_ state: StateType, action: @escaping (StateType) -> Disposable) -> Disposable {
-        let cancel = SingleAssignmentDisposable()
+    func schedule<StateType>(_ state: StateType, action: @escaping (StateType) async -> Disposable) async -> Disposable {
+        let cancel = await SingleAssignmentDisposable()
 
         self.queue.async {
-            if cancel.isDisposed {
-                return
+            Task {
+                if await cancel.isDisposed() {
+                    return
+                }
+
+                await cancel.setDisposable(action(state))
             }
-
-
-            cancel.setDisposable(action(state))
         }
 
         return cancel
     }
 
-    func scheduleRelative<StateType>(_ state: StateType, dueTime: RxTimeInterval, action: @escaping (StateType) -> Disposable) -> Disposable {
+    func scheduleRelative<StateType>(_ state: StateType, dueTime: RxTimeInterval, action: @escaping (StateType) async -> Disposable) async -> Disposable {
         let deadline = DispatchTime.now() + dueTime
 
-        let compositeDisposable = CompositeDisposable()
+        let compositeDisposable = await CompositeDisposable()
 
         let timer = DispatchSource.makeTimerSource(queue: self.queue)
         timer.schedule(deadline: deadline, leeway: self.leeway)
@@ -45,33 +46,35 @@ extension DispatchQueueConfiguration {
         // It looks like just setting timer to fire and not holding a reference to it
         // until deadline causes timer cancellation.
         var timerReference: DispatchSourceTimer? = timer
-        let cancelTimer = Disposables.create {
+        let cancelTimer = await Disposables.create {
             timerReference?.cancel()
             timerReference = nil
         }
 
         timer.setEventHandler(handler: {
-            if compositeDisposable.isDisposed {
-                return
+            Task {
+                if await compositeDisposable.isDisposed() {
+                    return
+                }
+                _ = await compositeDisposable.insert(action(state))
+                await cancelTimer.dispose()
             }
-            _ = compositeDisposable.insert(action(state))
-            cancelTimer.dispose()
         })
         timer.resume()
 
-        _ = compositeDisposable.insert(cancelTimer)
+        _ = await compositeDisposable.insert(cancelTimer)
 
         return compositeDisposable
     }
 
-    func schedulePeriodic<StateType>(_ state: StateType, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (StateType) -> StateType) -> Disposable {
+    func schedulePeriodic<StateType>(_ state: StateType, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (StateType) -> StateType) async -> Disposable {
         let initial = DispatchTime.now() + startAfter
 
         var timerState = state
 
         let timer = DispatchSource.makeTimerSource(queue: self.queue)
         timer.schedule(deadline: initial, repeating: period, leeway: self.leeway)
-        
+
         // TODO:
         // This looks horrible, and yes, it is.
         // It looks like Apple has made a conceptual change here, and I'm unsure why.
@@ -79,19 +82,22 @@ extension DispatchQueueConfiguration {
         // It looks like just setting timer to fire and not holding a reference to it
         // until deadline causes timer cancellation.
         var timerReference: DispatchSourceTimer? = timer
-        let cancelTimer = Disposables.create {
+        let cancelTimer = await Disposables.create {
             timerReference?.cancel()
             timerReference = nil
         }
 
         timer.setEventHandler(handler: {
-            if cancelTimer.isDisposed {
-                return
+            Task {
+                if await cancelTimer.isDisposed() {
+                    return
+                }
+                fatalError("sorry")
+//                timerState = action(timerState)
             }
-            timerState = action(timerState)
         })
         timer.resume()
-        
+
         return cancelTimer
     }
 }

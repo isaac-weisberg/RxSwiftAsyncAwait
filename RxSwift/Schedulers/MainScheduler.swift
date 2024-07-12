@@ -12,33 +12,38 @@ import Dispatch
 #endif
 
 /**
-Abstracts work that needs to be performed on `DispatchQueue.main`. In case `schedule` methods are called from `DispatchQueue.main`, it will perform action immediately without scheduling.
+ Abstracts work that needs to be performed on `DispatchQueue.main`. In case `schedule` methods are called from `DispatchQueue.main`, it will perform action immediately without scheduling.
 
-This scheduler is usually used to perform UI work.
+ This scheduler is usually used to perform UI work.
 
-Main scheduler is a specialization of `SerialDispatchQueueScheduler`.
+ Main scheduler is a specialization of `SerialDispatchQueueScheduler`.
 
-This scheduler is optimized for `observeOn` operator. To ensure observable sequence is subscribed on main thread using `subscribeOn`
-operator please use `ConcurrentMainScheduler` because it is more optimized for that purpose.
-*/
-public final class MainScheduler : SerialDispatchQueueScheduler {
-
+ This scheduler is optimized for `observeOn` operator. To ensure observable sequence is subscribed on main thread using `subscribeOn`
+ operator please use `ConcurrentMainScheduler` because it is more optimized for that purpose.
+ */
+public final class MainScheduler: SerialDispatchQueueScheduler {
     private let mainQueue: DispatchQueue
 
-    let numberEnqueued = AtomicInt(0)
+    let numberEnqueued: AtomicInt
 
     /// Initializes new instance of `MainScheduler`.
-    public init() {
+    public init() async {
+        self.numberEnqueued = await AtomicInt(0)
         self.mainQueue = DispatchQueue.main
         super.init(serialQueue: self.mainQueue)
     }
 
+    static func initialize() async {
+        self.instance = await MainScheduler()
+        self.asyncInstance = SerialDispatchQueueScheduler(serialQueue: DispatchQueue.main)
+    }
+
     /// Singleton instance of `MainScheduler`
-    public static let instance = MainScheduler()
+    public static var instance: MainScheduler!
 
     /// Singleton instance of `MainScheduler` that always schedules work asynchronously
     /// and doesn't perform optimizations for calls scheduled from main queue.
-    public static let asyncInstance = SerialDispatchQueueScheduler(serialQueue: DispatchQueue.main)
+    public static var asyncInstance: SerialDispatchQueueScheduler!
 
     /// In case this method is called on a background thread it will throw an exception.
     public static func ensureExecutingOnScheduler(errorMessage: String? = nil) {
@@ -56,23 +61,25 @@ public final class MainScheduler : SerialDispatchQueueScheduler {
         #endif
     }
 
-    override func scheduleInternal<StateType>(_ state: StateType, action: @escaping (StateType) -> Disposable) -> Disposable {
-        let previousNumberEnqueued = increment(self.numberEnqueued)
+    override func scheduleInternal<StateType>(_ state: StateType, action: @escaping (StateType) async -> Disposable) async -> Disposable {
+        let previousNumberEnqueued = await increment(self.numberEnqueued)
 
         if DispatchQueue.isMain && previousNumberEnqueued == 0 {
-            let disposable = action(state)
-            decrement(self.numberEnqueued)
+            let disposable = await action(state)
+            await decrement(self.numberEnqueued)
             return disposable
         }
 
-        let cancel = SingleAssignmentDisposable()
+        let cancel = await SingleAssignmentDisposable()
 
         self.mainQueue.async {
-            if !cancel.isDisposed {
-                cancel.setDisposable(action(state))
-            }
+            Task { @MainActor in
+                if await !cancel.isDisposed() {
+                    await cancel.setDisposable(action(state))
+                }
 
-            decrement(self.numberEnqueued)
+                await decrement(self.numberEnqueued)
+            }
         }
 
         return cancel

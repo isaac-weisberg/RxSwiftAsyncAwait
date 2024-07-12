@@ -114,6 +114,7 @@
 		A2FD4E9D225D050A00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
 		A2FD4E9E225D050B00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
 		A2FD4E9F225D050B00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
+		A4EF0BE82C4114D9009EE9DE /* AsyncAwaitLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4EF0BE72C4114D9009EE9DE /* AsyncAwaitLock.swift */; };
 		A520FFF71F0D258E00573734 /* RxPickerViewDataSourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A520FFF61F0D258E00573734 /* RxPickerViewDataSourceType.swift */; };
 		A520FFFC1F0D291500573734 /* RxPickerViewDataSourceProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A520FFFB1F0D291500573734 /* RxPickerViewDataSourceProxy.swift */; };
 		A5CD038A1F1660F40005A376 /* RxPickerViewAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5CD03891F1660F40005A376 /* RxPickerViewAdapter.swift */; };
@@ -1017,6 +1018,7 @@
 		A2897D68225D023A004EA481 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Observable+RelayBindTests.swift"; sourceTree = "<group>"; };
 		A2FD4EA4225D0A8100288525 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A4EF0BE72C4114D9009EE9DE /* AsyncAwaitLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncAwaitLock.swift; sourceTree = "<group>"; };
 		A520FFF61F0D258E00573734 /* RxPickerViewDataSourceType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RxPickerViewDataSourceType.swift; sourceTree = "<group>"; };
 		A520FFFB1F0D291500573734 /* RxPickerViewDataSourceProxy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RxPickerViewDataSourceProxy.swift; sourceTree = "<group>"; };
 		A5CD03891F1660F40005A376 /* RxPickerViewAdapter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RxPickerViewAdapter.swift; sourceTree = "<group>"; };
@@ -1671,6 +1673,7 @@
 				C84CC5521BDCF49300E06A64 /* SynchronizedOnType.swift */,
 				C84CC55C1BDD010800E06A64 /* SynchronizedUnsubscribeType.swift */,
 				C84CC5611BDD037900E06A64 /* SynchronizedDisposeType.swift */,
+				A4EF0BE72C4114D9009EE9DE /* AsyncAwaitLock.swift */,
 			);
 			path = Concurrency;
 			sourceTree = "<group>";
@@ -3708,6 +3711,7 @@
 				C820A8841EB4DA5A00D431BC /* Dematerialize.swift in Sources */,
 				C820A8941EB4DA5A00D431BC /* RetryWhen.swift in Sources */,
 				C820A8441EB4DA5900D431BC /* DelaySubscription.swift in Sources */,
+				A4EF0BE82C4114D9009EE9DE /* AsyncAwaitLock.swift in Sources */,
 				C820A8E81EB4DA5A00D431BC /* Just.swift in Sources */,
 				C8093D691B8A72BE0088E94D /* AnyObserver.swift in Sources */,
 				C8B144FB1BD2D44500267DCE /* ConcurrentMainScheduler.swift in Sources */,
@@ -4109,6 +4113,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/RxBlocking/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -4132,6 +4137,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/RxBlocking/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -4155,6 +4161,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/RxBlocking/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -4513,6 +4520,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/RxSwift/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -4755,6 +4763,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/RxSwift/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -4778,6 +4787,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/RxSwift/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

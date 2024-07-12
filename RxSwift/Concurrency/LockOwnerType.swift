@@ -11,6 +11,9 @@ protocol LockOwnerType: AnyObject, Lock {
 }
 
 extension LockOwnerType {
-    func lock() { self.lock.lock() }
-    func unlock() { self.lock.unlock() }
+    func performLocked<R>(_ work: @escaping () async -> R) async -> R {
+        await lock.performLocked {
+            await work()
+        }
+    }
 }

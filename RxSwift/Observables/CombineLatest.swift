@@ -7,17 +7,18 @@
 //
 
 protocol CombineLatestProtocol: AnyObject {
-    func next(_ index: Int)
-    func fail(_ error: Swift.Error)
-    func done(_ index: Int)
+    func next(_ index: Int) async
+    func fail(_ error: Swift.Error) async
+    func done(_ index: Int) async
 }
 
-class CombineLatestSink<Observer: ObserverType>
-    : Sink<Observer>
-    , CombineLatestProtocol {
-    typealias Element = Observer.Element 
+class CombineLatestSink<Observer: ObserverType>:
+    Sink<Observer>,
+    CombineLatestProtocol
+{
+    typealias Element = Observer.Element
    
-    let lock = RecursiveLock()
+    let lock: RecursiveLock
 
     private let arity: Int
     private var numberOfValues = 0
@@ -25,19 +26,20 @@ class CombineLatestSink<Observer: ObserverType>
     private var hasValue: [Bool]
     private var isDone: [Bool]
    
-    init(arity: Int, observer: Observer, cancel: Cancelable) {
+    init(arity: Int, observer: Observer, cancel: Cancelable) async {
+        self.lock = await RecursiveLock()
         self.arity = arity
         self.hasValue = [Bool](repeating: false, count: arity)
         self.isDone = [Bool](repeating: false, count: arity)
         
-        super.init(observer: observer, cancel: cancel)
+        await super.init(observer: observer, cancel: cancel)
     }
     
-    func getResult() throws -> Element {
+    func getResult() async throws -> Element {
         rxAbstractMethod()
     }
     
-    func next(_ index: Int) {
+    func next(_ index: Int) async {
         if !self.hasValue[index] {
             self.hasValue[index] = true
             self.numberOfValues += 1
@@ -45,12 +47,12 @@ class CombineLatestSink<Observer: ObserverType>
 
         if self.numberOfValues == self.arity {
             do {
-                let result = try self.getResult()
-                self.forwardOn(.next(result))
+                let result = try await self.getResult()
+                await self.forwardOn(.next(result))
             }
             catch let e {
-                self.forwardOn(.error(e))
-                self.dispose()
+                await self.forwardOn(.error(e))
+                await self.dispose()
             }
         }
         else {
@@ -64,18 +66,18 @@ class CombineLatestSink<Observer: ObserverType>
             }
             
             if allOthersDone {
-                self.forwardOn(.completed)
-                self.dispose()
+                await self.forwardOn(.completed)
+                await self.dispose()
             }
         }
     }
     
-    func fail(_ error: Swift.Error) {
-        self.forwardOn(.error(error))
-        self.dispose()
+    func fail(_ error: Swift.Error) async {
+        await self.forwardOn(.error(error))
+        await self.dispose()
     }
     
-    func done(_ index: Int) {
+    func done(_ index: Int) async {
         if self.isDone[index] {
             return
         }
@@ -84,16 +86,17 @@ class CombineLatestSink<Observer: ObserverType>
         self.numberOfDone += 1
 
         if self.numberOfDone == self.arity {
-            self.forwardOn(.completed)
-            self.dispose()
+            await self.forwardOn(.completed)
+            await self.dispose()
         }
     }
 }
 
-final class CombineLatestObserver<Element>
-    : ObserverType
-    , LockOwnerType
-    , SynchronizedOnType {
+final class CombineLatestObserver<Element>:
+    ObserverType,
+    LockOwnerType,
+    SynchronizedOnType
+{
     typealias ValueSetter = (Element) -> Void
     
     private let parent: CombineLatestProtocol
@@ -111,21 +114,21 @@ final class CombineLatestObserver<Element>
         self.setLatestValue = setLatestValue
     }
     
-    func on(_ event: Event<Element>) {
-        self.synchronizedOn(event)
+    func on(_ event: Event<Element>) async {
+        await self.synchronizedOn(event)
     }
 
-    func synchronized_on(_ event: Event<Element>) {
+    func synchronized_on(_ event: Event<Element>) async {
         switch event {
         case .next(let value):
             self.setLatestValue(value)
-            self.parent.next(self.index)
+            await self.parent.next(self.index)
         case .error(let error):
-            self.this.dispose()
-            self.parent.fail(error)
+            await self.this.dispose()
+            await self.parent.fail(error)
         case .completed:
-            self.this.dispose()
-            self.parent.done(self.index)
+            await self.this.dispose()
+            await self.parent.done(self.index)
         }
     }
 }

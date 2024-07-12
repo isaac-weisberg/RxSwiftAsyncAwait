@@ -7,12 +7,13 @@
 //
 
 protocol SynchronizedDisposeType: AnyObject, Disposable, Lock {
-    func synchronized_dispose()
+    func synchronized_dispose() async
 }
 
 extension SynchronizedDisposeType {
-    func synchronizedDispose() {
-        self.lock(); defer { self.unlock() }
-        self.synchronized_dispose()
+    func synchronizedDispose() async {
+        return await performLocked {
+            await self.synchronized_dispose()
+        }
     }
 }

@@ -11,27 +11,27 @@ class Producer<Element>: Observable<Element> {
         super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
         if !CurrentThreadScheduler.isScheduleRequired {
             // The returned disposable needs to release all references once it was disposed.
             let disposer = SinkDisposer()
-            let sinkAndSubscription = self.run(observer, cancel: disposer)
-            disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
+            let sinkAndSubscription = await self.run(observer, cancel: disposer)
+            await disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
 
             return disposer
         }
         else {
             return CurrentThreadScheduler.instance.schedule(()) { _ in
                 let disposer = SinkDisposer()
-                let sinkAndSubscription = self.run(observer, cancel: disposer)
-                disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
+                let sinkAndSubscription = await self.run(observer, cancel: disposer)
+                await disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
 
                 return disposer
             }
         }
     }
 
-    func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         rxAbstractMethod()
     }
 }
@@ -42,33 +42,37 @@ private final class SinkDisposer: Cancelable {
         case sinkAndSubscriptionSet = 2
     }
 
-    private let state = AtomicInt(0)
+    private let state: AtomicInt
     private var sink: Disposable?
     private var subscription: Disposable?
 
-    var isDisposed: Bool {
-        isFlagSet(self.state, DisposeState.disposed.rawValue)
+    init() async {
+        self.state = await AtomicInt(0)
     }
 
-    func setSinkAndSubscription(sink: Disposable, subscription: Disposable) {
+    func isDisposed() async -> Bool {
+        await isFlagSet(self.state, DisposeState.disposed.rawValue)
+    }
+
+    func setSinkAndSubscription(sink: Disposable, subscription: Disposable) async {
         self.sink = sink
         self.subscription = subscription
 
-        let previousState = fetchOr(self.state, DisposeState.sinkAndSubscriptionSet.rawValue)
+        let previousState = await fetchOr(self.state, DisposeState.sinkAndSubscriptionSet.rawValue)
         if (previousState & DisposeState.sinkAndSubscriptionSet.rawValue) != 0 {
             rxFatalError("Sink and subscription were already set")
         }
 
         if (previousState & DisposeState.disposed.rawValue) != 0 {
-            sink.dispose()
-            subscription.dispose()
+            await sink.dispose()
+            await subscription.dispose()
             self.sink = nil
             self.subscription = nil
         }
     }
 
-    func dispose() {
-        let previousState = fetchOr(self.state, DisposeState.disposed.rawValue)
+    func dispose() async {
+        let previousState = await fetchOr(self.state, DisposeState.disposed.rawValue)
 
         if (previousState & DisposeState.disposed.rawValue) != 0 {
             return
@@ -82,8 +86,8 @@ private final class SinkDisposer: Cancelable {
                 rxFatalError("Subscription not set")
             }
 
-            sink.dispose()
-            subscription.dispose()
+            await sink.dispose()
+            await subscription.dispose()
 
             self.sink = nil
             self.subscription = nil

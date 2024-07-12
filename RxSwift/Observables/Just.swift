@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
+public extension ObservableType {
     /**
      Returns an observable sequence that contains a single element.
 
@@ -15,7 +15,7 @@ extension ObservableType {
      - parameter element: Single element in the resulting observable sequence.
      - returns: An observable sequence containing the single specified element.
      */
-    public static func just(_ element: Element) -> Observable<Element> {
+    static func just(_ element: Element) -> Observable<Element> {
         Just(element: element)
     }
 
@@ -28,35 +28,35 @@ extension ObservableType {
      - parameter scheduler: Scheduler to send the single element on.
      - returns: An observable sequence containing the single specified element.
      */
-    public static func just(_ element: Element, scheduler: ImmediateSchedulerType) -> Observable<Element> {
+    static func just(_ element: Element, scheduler: ImmediateSchedulerType) -> Observable<Element> {
         JustScheduled(element: element, scheduler: scheduler)
     }
 }
 
-final private class JustScheduledSink<Observer: ObserverType>: Sink<Observer> {
+private final class JustScheduledSink<Observer: ObserverType>: Sink<Observer> {
     typealias Parent = JustScheduled<Observer.Element>
 
     private let parent: Parent
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) {
+    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        super.init(observer: observer, cancel: cancel)
+        await super.init(observer: observer, cancel: cancel)
     }
 
-    func run() -> Disposable {
+    func run() async -> Disposable {
         let scheduler = self.parent.scheduler
-        return scheduler.schedule(self.parent.element) { element in
-            self.forwardOn(.next(element))
-            return scheduler.schedule(()) { _ in
-                self.forwardOn(.completed)
-                self.dispose()
+        return await scheduler.schedule(self.parent.element) { element in
+            await self.forwardOn(.next(element))
+            return await scheduler.schedule(()) { _ in
+                await self.forwardOn(.completed)
+                await self.dispose()
                 return Disposables.create()
             }
         }
     }
 }
 
-final private class JustScheduled<Element>: Producer<Element> {
+private final class JustScheduled<Element>: Producer<Element> {
     fileprivate let scheduler: ImmediateSchedulerType
     fileprivate let element: Element
 
@@ -65,23 +65,23 @@ final private class JustScheduled<Element>: Producer<Element> {
         self.element = element
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        let sink = JustScheduledSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+        let sink = await JustScheduledSink(parent: self, observer: observer, cancel: cancel)
+        let subscription = await sink.run()
         return (sink: sink, subscription: subscription)
     }
 }
 
-final private class Just<Element>: Producer<Element> {
+private final class Just<Element>: Producer<Element> {
     private let element: Element
-    
+
     init(element: Element) {
         self.element = element
     }
-    
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        observer.on(.next(self.element))
-        observer.on(.completed)
+
+    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await observer.on(.next(self.element))
+        await observer.on(.completed)
         return Disposables.create()
     }
 }

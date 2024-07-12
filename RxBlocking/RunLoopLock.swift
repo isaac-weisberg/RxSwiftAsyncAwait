@@ -12,21 +12,24 @@ import RxSwift
 
 #if os(Linux)
     import Foundation
+
     let runLoopMode: RunLoop.Mode = .default
     let runLoopModeRaw: CFString = unsafeBitCast(runLoopMode.rawValue._bridgeToObjectiveC(), to: CFString.self)
 #else
-    let runLoopMode: CFRunLoopMode = CFRunLoopMode.defaultMode
+    let runLoopMode: CFRunLoopMode = .defaultMode
     let runLoopModeRaw = runLoopMode.rawValue
 #endif
 
 final class RunLoopLock {
     let currentRunLoop: CFRunLoop
 
-    let calledRun = AtomicInt(0)
-    let calledStop = AtomicInt(0)
+    let calledRun: AtomicInt
+    let calledStop: AtomicInt
     var timeout: TimeInterval?
 
-    init(timeout: TimeInterval?) {
+    init(timeout: TimeInterval?) async {
+        self.calledRun = await AtomicInt(0)
+        self.calledStop = await AtomicInt(0)
         self.timeout = timeout
         self.currentRunLoop = CFRunLoopGetCurrent()
     }
@@ -62,9 +65,9 @@ final class RunLoopLock {
         }
         if let timeout = self.timeout {
             #if os(Linux)
-            let runLoopResult = CFRunLoopRunInMode(runLoopModeRaw, timeout, false)
+                let runLoopResult = CFRunLoopRunInMode(runLoopModeRaw, timeout, false)
             #else
-            let runLoopResult = CFRunLoopRunInMode(runLoopMode, timeout, false)
+                let runLoopResult = CFRunLoopRunInMode(runLoopMode, timeout, false)
             #endif
 
             switch runLoopResult {

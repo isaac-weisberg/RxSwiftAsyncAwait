@@ -6,30 +6,32 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-struct ScheduledItem<T>
-    : ScheduledItemType
-    , InvocableType {
-    typealias Action = (T) -> Disposable
-    
+struct ScheduledItem<T>:
+    ScheduledItemType,
+    InvocableType
+{
+    typealias Action = (T) async -> Disposable
+
     private let action: Action
     private let state: T
 
-    private let disposable = SingleAssignmentDisposable()
+    private let disposable: SingleAssignmentDisposable
 
-    var isDisposed: Bool {
-        self.disposable.isDisposed
+    func isDisposed() async -> Bool {
+        await self.disposable.isDisposed()
     }
-    
-    init(action: @escaping Action, state: T) {
+
+    init(action: @escaping Action, state: T) async {
+        self.disposable = await SingleAssignmentDisposable()
         self.action = action
         self.state = state
     }
-    
-    func invoke() {
-         self.disposable.setDisposable(self.action(self.state))
+
+    func invoke() async {
+        await self.disposable.setDisposable(self.action(self.state))
     }
-    
-    func dispose() {
-        self.disposable.dispose()
+
+    func dispose() async {
+        await self.disposable.dispose()
     }
 }

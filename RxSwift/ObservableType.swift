@@ -31,7 +31,7 @@ public protocol ObservableType: ObservableConvertibleType {
     
     - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
     */
-    func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element
+    func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element
 }
 
 extension ObservableType {
@@ -40,6 +40,6 @@ extension ObservableType {
     public func asObservable() -> Observable<Element> {
         // temporary workaround
         //return Observable.create(subscribe: self.subscribe)
-        Observable.create { o in self.subscribe(o) }
+        Observable.create { o in await self.subscribe(o) }
     }
 }

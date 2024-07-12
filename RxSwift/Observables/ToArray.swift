@@ -6,59 +6,60 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
+public extension ObservableType {
     /**
-    Converts an Observable into a Single that emits the whole sequence as a single array and then terminates.
+     Converts an Observable into a Single that emits the whole sequence as a single array and then terminates.
     
-    For aggregation behavior see `reduce`.
+     For aggregation behavior see `reduce`.
 
-    - seealso: [toArray operator on reactivex.io](http://reactivex.io/documentation/operators/to.html)
+     - seealso: [toArray operator on reactivex.io](http://reactivex.io/documentation/operators/to.html)
     
-    - returns: A Single sequence containing all the emitted elements as array.
-    */
-    public func toArray()
-        -> Single<[Element]> {
+     - returns: A Single sequence containing all the emitted elements as array.
+     */
+    func toArray()
+        -> Single<[Element]>
+    {
         PrimitiveSequence(raw: ToArray(source: self.asObservable()))
     }
 }
 
-final private class ToArraySink<SourceType, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == [SourceType] {
+private final class ToArraySink<SourceType, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == [SourceType] {
     typealias Parent = ToArray<SourceType>
     
     let parent: Parent
     var list = [SourceType]()
     
-    init(parent: Parent, observer: Observer, cancel: Cancelable) {
+    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
         
-        super.init(observer: observer, cancel: cancel)
+        await super.init(observer: observer, cancel: cancel)
     }
     
-    func on(_ event: Event<SourceType>) {
+    func on(_ event: Event<SourceType>) async {
         switch event {
         case .next(let value):
             self.list.append(value)
         case .error(let e):
-            self.forwardOn(.error(e))
-            self.dispose()
+            await self.forwardOn(.error(e))
+            await self.dispose()
         case .completed:
-            self.forwardOn(.next(self.list))
-            self.forwardOn(.completed)
-            self.dispose()
+            await self.forwardOn(.next(self.list))
+            await self.forwardOn(.completed)
+            await self.dispose()
         }
     }
 }
 
-final private class ToArray<SourceType>: Producer<[SourceType]> {
+private final class ToArray<SourceType>: Producer<[SourceType]> {
     let source: Observable<SourceType>
 
     init(source: Observable<SourceType>) {
         self.source = source
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == [SourceType] {
-        let sink = ToArraySink(parent: self, observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
+    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == [SourceType] {
+        let sink = await ToArraySink(parent: self, observer: observer, cancel: cancel)
+        let subscription = await self.source.subscribe(sink)
         return (sink: sink, subscription: subscription)
     }
 }

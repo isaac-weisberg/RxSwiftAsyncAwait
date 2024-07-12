@@ -7,26 +7,27 @@
 //
 
 protocol ZipSinkProtocol: AnyObject {
-    func next(_ index: Int)
-    func fail(_ error: Swift.Error)
-    func done(_ index: Int)
+    func next(_ index: Int) async
+    func fail(_ error: Swift.Error) async
+    func done(_ index: Int) async
 }
 
-class ZipSink<Observer: ObserverType> : Sink<Observer>, ZipSinkProtocol {
+class ZipSink<Observer: ObserverType>: Sink<Observer>, ZipSinkProtocol {
     typealias Element = Observer.Element
     
     let arity: Int
 
-    let lock = RecursiveLock()
+    let lock: RecursiveLock
 
     // state
     private var isDone: [Bool]
     
-    init(arity: Int, observer: Observer, cancel: Cancelable) {
+    init(arity: Int, observer: Observer, cancel: Cancelable) async {
+        self.lock = await RecursiveLock()
         self.isDone = [Bool](repeating: false, count: arity)
         self.arity = arity
         
-        super.init(observer: observer, cancel: cancel)
+        await super.init(observer: observer, cancel: cancel)
     }
 
     func getResult() throws -> Element {
@@ -37,7 +38,7 @@ class ZipSink<Observer: ObserverType> : Sink<Observer>, ZipSinkProtocol {
         rxAbstractMethod()
     }
     
-    func next(_ index: Int) {
+    func next(_ index: Int) async {
         var hasValueAll = true
         
         for i in 0 ..< self.arity {
@@ -50,21 +51,21 @@ class ZipSink<Observer: ObserverType> : Sink<Observer>, ZipSinkProtocol {
         if hasValueAll {
             do {
                 let result = try self.getResult()
-                self.forwardOn(.next(result))
+                await self.forwardOn(.next(result))
             }
             catch let e {
-                self.forwardOn(.error(e))
-                self.dispose()
+                await self.forwardOn(.error(e))
+                await self.dispose()
             }
         }
     }
     
-    func fail(_ error: Swift.Error) {
-        self.forwardOn(.error(error))
-        self.dispose()
+    func fail(_ error: Swift.Error) async {
+        await self.forwardOn(.error(error))
+        await self.dispose()
     }
     
-    func done(_ index: Int) {
+    func done(_ index: Int) async {
         self.isDone[index] = true
         
         var allDone = true
@@ -75,16 +76,17 @@ class ZipSink<Observer: ObserverType> : Sink<Observer>, ZipSinkProtocol {
         }
         
         if allDone {
-            self.forwardOn(.completed)
-            self.dispose()
+            await self.forwardOn(.completed)
+            await self.dispose()
         }
     }
 }
 
-final class ZipObserver<Element>
-    : ObserverType
-    , LockOwnerType
-    , SynchronizedOnType {
+final class ZipObserver<Element>:
+    ObserverType,
+    LockOwnerType,
+    SynchronizedOnType
+{
     typealias ValueSetter = (Element) -> Void
 
     private var parent: ZipSinkProtocol?
@@ -104,19 +106,19 @@ final class ZipObserver<Element>
         self.setNextValue = setNextValue
     }
     
-    func on(_ event: Event<Element>) {
-        self.synchronizedOn(event)
+    func on(_ event: Event<Element>) async {
+        await self.synchronizedOn(event)
     }
 
-    func synchronized_on(_ event: Event<Element>) {
+    func synchronized_on(_ event: Event<Element>) async {
         if self.parent != nil {
             switch event {
             case .next:
                 break
             case .error:
-                self.this.dispose()
+                await self.this.dispose()
             case .completed:
-                self.this.dispose()
+                await self.this.dispose()
             }
         }
         
@@ -124,11 +126,11 @@ final class ZipObserver<Element>
             switch event {
             case .next(let value):
                 self.setNextValue(value)
-                parent.next(self.index)
+                await parent.next(self.index)
             case .error(let error):
-                parent.fail(error)
+                await parent.fail(error)
             case .completed:
-                parent.done(self.index)
+                await parent.done(self.index)
             }
         }
     }

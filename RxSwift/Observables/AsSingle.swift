@@ -6,32 +6,32 @@
 //  Copyright © 2017 Krunoslav Zaher. All rights reserved.
 //
 
-private final class AsSingleSink<Observer: ObserverType> : Sink<Observer>, ObserverType {
+private final class AsSingleSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
     typealias Element = Observer.Element
 
     private var element: Event<Element>?
 
-    func on(_ event: Event<Element>) {
+    func on(_ event: Event<Element>) async {
         switch event {
         case .next:
             if self.element != nil {
-                self.forwardOn(.error(RxError.moreThanOneElement))
-                self.dispose()
+                await self.forwardOn(.error(RxError.moreThanOneElement))
+                await self.dispose()
             }
 
             self.element = event
         case .error:
-            self.forwardOn(event)
-            self.dispose()
+            await self.forwardOn(event)
+            await self.dispose()
         case .completed:
             if let element = self.element {
-                self.forwardOn(element)
-                self.forwardOn(.completed)
+                await self.forwardOn(element)
+                await self.forwardOn(.completed)
             }
             else {
-                self.forwardOn(.error(RxError.noElements))
+                await self.forwardOn(.error(RxError.noElements))
             }
-            self.dispose()
+            await self.dispose()
         }
     }
 }
@@ -43,9 +43,9 @@ final class AsSingle<Element>: Producer<Element> {
         self.source = source
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        let sink = AsSingleSink(observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
+    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+        let sink = await AsSingleSink(observer: observer, cancel: cancel)
+        let subscription = await self.source.subscribe(sink)
         return (sink: sink, subscription: subscription)
     }
 }

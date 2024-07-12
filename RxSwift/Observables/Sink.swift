@@ -9,53 +9,63 @@
 class Sink<Observer: ObserverType>: Disposable {
     fileprivate let observer: Observer
     fileprivate let cancel: Cancelable
-    private let disposed = AtomicInt(0)
+    private let disposed: AtomicInt
 
     #if DEBUG
-        private let synchronizationTracker = SynchronizationTracker()
+        private let synchronizationTracker: SynchronizationTracker
     #endif
 
-    init(observer: Observer, cancel: Cancelable) {
-#if TRACE_RESOURCES
-        _ = Resources.incrementTotal()
-#endif
+    init(observer: Observer, cancel: Cancelable) async {
+        disposed = await AtomicInt(0)
+        #if TRACE_RESOURCES
+            _ = await Resources.incrementTotal()
+        #endif
+        #if DEBUG
+            self.synchronizationTracker = await SynchronizationTracker()
+        #endif
         self.observer = observer
         self.cancel = cancel
     }
 
-    final func forwardOn(_ event: Event<Observer.Element>) {
+    final func forwardOn(_ event: Event<Observer.Element>) async {
         #if DEBUG
-            self.synchronizationTracker.register(synchronizationErrorMessage: .default)
-            defer { self.synchronizationTracker.unregister() }
+            await self.synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
-        if isFlagSet(self.disposed, 1) {
-            return
+        await scope {
+            if await isFlagSet(self.disposed, 1) {
+                return
+            }
+            await self.observer.on(event)
         }
-        self.observer.on(event)
+        #if DEBUG
+            await self.synchronizationTracker.unregister()
+        #endif
     }
 
     final func forwarder() -> SinkForward<Observer> {
         SinkForward(forward: self)
     }
 
-    final var isDisposed: Bool {
-        isFlagSet(self.disposed, 1)
+    final func isDisposed() async -> Bool {
+        await isFlagSet(self.disposed, 1)
     }
 
-    func dispose() {
-        fetchOr(self.disposed, 1)
-        self.cancel.dispose()
+    func dispose() async {
+        await fetchOr(self.disposed, 1)
+        await self.cancel.dispose()
     }
 
     deinit {
-#if TRACE_RESOURCES
-       _ =  Resources.decrementTotal()
-#endif
+        #if TRACE_RESOURCES
+            Task {
+                _ = await Resources.decrementTotal()
+            }
+        #endif
     }
 }
 
 final class SinkForward<Observer: ObserverType>: ObserverType {
-    typealias Element = Observer.Element 
+    typealias Element = Observer.Element
 
     private let forward: Sink<Observer>
 
@@ -63,13 +73,13 @@ final class SinkForward<Observer: ObserverType>: ObserverType {
         self.forward = forward
     }
 
-    final func on(_ event: Event<Element>) {
+    final func on(_ event: Event<Element>) async {
         switch event {
         case .next:
-            self.forward.observer.on(event)
+            await self.forward.observer.on(event)
         case .error, .completed:
-            self.forward.observer.on(event)
-            self.forward.cancel.dispose()
+            await self.forward.observer.on(event)
+            await self.forward.cancel.dispose()
         }
     }
 }

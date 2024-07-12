@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
+public extension ObservableType {
     /**
      Generates an observable sequence by running a state-driven loop producing the sequence's elements, using the specified scheduler
      to run the loop send out observer messages.
@@ -19,26 +19,26 @@ extension ObservableType {
      - parameter scheduler: Scheduler on which to run the generator loop.
      - returns: The generated sequence.
      */
-    public static func generate(initialState: Element, condition: @escaping (Element) throws -> Bool, scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance, iterate: @escaping (Element) throws -> Element) -> Observable<Element> {
+    static func generate(initialState: Element, condition: @escaping (Element) throws -> Bool, scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance, iterate: @escaping (Element) throws -> Element) -> Observable<Element> {
         Generate(initialState: initialState, condition: condition, iterate: iterate, resultSelector: { $0 }, scheduler: scheduler)
     }
 }
 
-final private class GenerateSink<Sequence, Observer: ObserverType>: Sink<Observer> {
+private final class GenerateSink<Sequence, Observer: ObserverType>: Sink<Observer> {
     typealias Parent = Generate<Sequence, Observer.Element>
     
     private let parent: Parent
     
     private var state: Sequence
     
-    init(parent: Parent, observer: Observer, cancel: Cancelable) {
+    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
         self.state = parent.initialState
-        super.init(observer: observer, cancel: cancel)
+        await super.init(observer: observer, cancel: cancel)
     }
     
-    func run() -> Disposable {
-        return self.parent.scheduler.scheduleRecursive(true) { isFirst, recurse -> Void in
+    func run() async -> Disposable {
+        return await self.parent.scheduler.scheduleRecursive(true) { isFirst, recurse in
             do {
                 if !isFirst {
                     self.state = try self.parent.iterate(self.state)
@@ -46,24 +46,24 @@ final private class GenerateSink<Sequence, Observer: ObserverType>: Sink<Observe
                 
                 if try self.parent.condition(self.state) {
                     let result = try self.parent.resultSelector(self.state)
-                    self.forwardOn(.next(result))
+                    await self.forwardOn(.next(result))
                     
-                    recurse(false)
+                    await recurse(false)
                 }
                 else {
-                    self.forwardOn(.completed)
-                    self.dispose()
+                    await self.forwardOn(.completed)
+                    await self.dispose()
                 }
             }
-            catch let error {
-                self.forwardOn(.error(error))
-                self.dispose()
+            catch {
+                await self.forwardOn(.error(error))
+                await self.dispose()
             }
         }
     }
 }
 
-final private class Generate<Sequence, Element>: Producer<Element> {
+private final class Generate<Sequence, Element>: Producer<Element> {
     fileprivate let initialState: Sequence
     fileprivate let condition: (Sequence) throws -> Bool
     fileprivate let iterate: (Sequence) throws -> Sequence
@@ -79,9 +79,9 @@ final private class Generate<Sequence, Element>: Producer<Element> {
         super.init()
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        let sink = GenerateSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+        let sink = await GenerateSink(parent: self, observer: observer, cancel: cancel)
+        let subscription = await sink.run()
         return (sink: sink, subscription: subscription)
     }
 }

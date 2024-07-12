@@ -20,7 +20,7 @@ class RxTarget : NSObject
         self.retainSelf = self
 
 #if TRACE_RESOURCES
-        _ = Resources.incrementTotal()
+        _ = await Resources.incrementTotal()
 #endif
 
 #if DEBUG
@@ -37,7 +37,7 @@ class RxTarget : NSObject
 
 #if TRACE_RESOURCES
     deinit {
-        _ = Resources.decrementTotal()
+        _ = await Resources.decrementTotal()
     }
 #endif
 }

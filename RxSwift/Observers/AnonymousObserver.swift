@@ -7,24 +7,27 @@
 //
 
 final class AnonymousObserver<Element>: ObserverBase<Element> {
-    typealias EventHandler = (Event<Element>) -> Void
-    
-    private let eventHandler : EventHandler
-    
-    init(_ eventHandler: @escaping EventHandler) {
+    typealias EventHandler = (Event<Element>) async -> Void
+
+    private let eventHandler: EventHandler
+
+    init(_ eventHandler: @escaping EventHandler) async {
 #if TRACE_RESOURCES
-        _ = Resources.incrementTotal()
+        _ = await Resources.incrementTotal()
 #endif
         self.eventHandler = eventHandler
+        await super.init()
     }
 
-    override func onCore(_ event: Event<Element>) {
-        self.eventHandler(event)
+    override func onCore(_ event: Event<Element>) async {
+        await self.eventHandler(event)
     }
-    
+
 #if TRACE_RESOURCES
     deinit {
-        _ = Resources.decrementTotal()
+        Task {
+            _ = await Resources.decrementTotal()
+        }
     }
 #endif
 }

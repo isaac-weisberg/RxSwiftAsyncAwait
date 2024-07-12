@@ -10,18 +10,18 @@
     import Foundation
 #endif
 
-extension ObservableType {
+public extension ObservableType {
     /**
      Subscribes an event handler to an observable sequence.
      
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    public func subscribe(_ on: @escaping (Event<Element>) -> Void) -> Disposable {
-        let observer = AnonymousObserver { e in
-            on(e)
+    func subscribe(_ on: @escaping (Event<Element>) async -> Void) async -> Disposable {
+        let observer = await AnonymousObserver { e in
+            await on(e)
         }
-        return self.asObservable().subscribe(observer)
+        return await self.asObservable().subscribe(observer)
     }
     
     /**
@@ -39,14 +39,14 @@ extension ObservableType {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    public func subscribe<Object: AnyObject>(
+    func subscribe<Object: AnyObject>(
         with object: Object,
         onNext: ((Object, Element) -> Void)? = nil,
         onError: ((Object, Swift.Error) -> Void)? = nil,
         onCompleted: ((Object) -> Void)? = nil,
         onDisposed: ((Object) -> Void)? = nil
-    ) -> Disposable {
-        subscribe(
+    ) async -> Disposable {
+        await self.subscribe(
             onNext: { [weak object] in
                 guard let object = object else { return }
                 onNext?(object, $0)
@@ -76,34 +76,32 @@ extension ObservableType {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    public func subscribe(
+    func subscribe(
         onNext: ((Element) -> Void)? = nil,
         onError: ((Swift.Error) -> Void)? = nil,
         onCompleted: (() -> Void)? = nil,
         onDisposed: (() -> Void)? = nil
-    ) -> Disposable {
-            let disposable: Disposable
+    ) async -> Disposable {
+        let disposable: Disposable
             
-            if let disposed = onDisposed {
-                disposable = Disposables.create(with: disposed)
-            }
-            else {
-                disposable = Disposables.create()
-            }
+        if let disposed = onDisposed {
+            disposable = await Disposables.create(with: disposed)
+        }
+        else {
+            disposable = Disposables.create()
+        }
             
+        #if DEBUG
+            let synchronizationTracker = await SynchronizationTracker()
+        #endif
+            
+        let callStack = Hooks.recordCallStackOnError ? await Hooks.getCustomCaptureSubscriptionCallstack()() : []
+            
+        let observer = await AnonymousObserver<Element> { event in
             #if DEBUG
-                let synchronizationTracker = SynchronizationTracker()
+                await synchronizationTracker.register(synchronizationErrorMessage: .default)
             #endif
-            
-            let callStack = Hooks.recordCallStackOnError ? Hooks.customCaptureSubscriptionCallstack() : []
-            
-            let observer = AnonymousObserver<Element> { event in
-                
-                #if DEBUG
-                    synchronizationTracker.register(synchronizationErrorMessage: .default)
-                    defer { synchronizationTracker.unregister() }
-                #endif
-                
+            await scope {
                 switch event {
                 case .next(let value):
                     onNext?(value)
@@ -112,28 +110,42 @@ extension ObservableType {
                         onError(error)
                     }
                     else {
-                        Hooks.defaultErrorHandler(callStack, error)
+                        await Hooks.getDefaultErrorHandler()(callStack, error)
                     }
-                    disposable.dispose()
+                    await disposable.dispose()
                 case .completed:
                     onCompleted?()
-                    disposable.dispose()
+                    await disposable.dispose()
                 }
             }
-            return Disposables.create(
-                self.asObservable().subscribe(observer),
-                disposable
-            )
+            #if DEBUG
+                await synchronizationTracker.unregister()
+            #endif
+        }
+        return await Disposables.create(
+            await self.asObservable().subscribe(observer),
+            disposable
+        )
     }
 }
 
 import Foundation
 
-extension Hooks {
-    public typealias DefaultErrorHandler = (_ subscriptionCallStack: [String], _ error: Error) -> Void
-    public typealias CustomCaptureSubscriptionCallstack = () -> [String]
+public extension Hooks {
+    typealias DefaultErrorHandler = (_ subscriptionCallStack: [String], _ error: Error) -> Void
+    typealias CustomCaptureSubscriptionCallstack = () -> [String]
 
-    private static let lock = RecursiveLock()
+    private static var lock: RecursiveLock!
+    
+    // call me manually plz
+    static func initialize() async {
+        BooleanDisposable.BooleanDisposableTrue = await BooleanDisposable(isDisposed: true)
+        #if TRACE_RESOURCES
+            await Resources.initialize()
+        #endif
+        self.lock = await RecursiveLock()
+    }
+    
     private static var _defaultErrorHandler: DefaultErrorHandler = { subscriptionCallStack, error in
         #if DEBUG
             let serializedCallStack = subscriptionCallStack.joined(separator: "\n")
@@ -143,6 +155,7 @@ extension Hooks {
             }
         #endif
     }
+
     private static var _customCaptureSubscriptionCallstack: CustomCaptureSubscriptionCallstack = {
         #if DEBUG
             return Thread.callStackSymbols
@@ -152,23 +165,24 @@ extension Hooks {
     }
 
     /// Error handler called in case onError handler wasn't provided.
-    public static var defaultErrorHandler: DefaultErrorHandler {
-        get {
-            lock.performLocked { _defaultErrorHandler }
+    static func getDefaultErrorHandler() async -> DefaultErrorHandler {
+        await self.lock.performLocked {
+            self._defaultErrorHandler
         }
-        set {
-            lock.performLocked { _defaultErrorHandler = newValue }
+    }
+
+    static func setDefaultErrorHandler(_ newValue: @escaping DefaultErrorHandler) async {
+        await self.lock.performLocked {
+            self._defaultErrorHandler = newValue
         }
     }
     
     /// Subscription callstack block to fetch custom callstack information.
-    public static var customCaptureSubscriptionCallstack: CustomCaptureSubscriptionCallstack {
-        get {
-            lock.performLocked { _customCaptureSubscriptionCallstack }
-        }
-        set {
-            lock.performLocked { _customCaptureSubscriptionCallstack = newValue }
-        }
+    static func getCustomCaptureSubscriptionCallstack() async -> CustomCaptureSubscriptionCallstack {
+        await self.lock.performLocked { self._customCaptureSubscriptionCallstack }
+    }
+    
+    static func setCustomCaptureSubscriptionCallstack(_ newValue: @escaping CustomCaptureSubscriptionCallstack) async {
+        await self.lock.performLocked { self._customCaptureSubscriptionCallstack = newValue }
     }
 }
-

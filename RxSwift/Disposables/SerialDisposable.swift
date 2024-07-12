@@ -7,62 +7,63 @@
 //
 
 /// Represents a disposable resource whose underlying disposable resource can be replaced by another disposable resource, causing automatic disposal of the previous underlying disposable resource.
-public final class SerialDisposable : DisposeBase, Cancelable {
-    private var lock = SpinLock()
+public final class SerialDisposable: DisposeBase, Cancelable {
+    private let lock: SpinLock
     
     // state
     private var current = nil as Disposable?
     private var disposed = false
     
     /// - returns: Was resource disposed.
-    public var isDisposed: Bool {
+    public func isDisposed() async -> Bool {
         self.disposed
     }
     
     /// Initializes a new instance of the `SerialDisposable`.
-    override public init() {
-        super.init()
+    override public init() async {
+        self.lock = await SpinLock()
+        await super.init()
     }
     
     /**
-    Gets or sets the underlying disposable.
+     Gets or sets the underlying disposable.
     
-    Assigning this property disposes the previous disposable object.
+     Assigning this property disposes the previous disposable object.
     
-    If the `SerialDisposable` has already been disposed, assignment to this property causes immediate disposal of the given disposable object.
-    */
-    public var disposable: Disposable {
-        get {
-            self.lock.performLocked {
-                self.current ?? Disposables.create()
+     If the `SerialDisposable` has already been disposed, assignment to this property causes immediate disposal of the given disposable object.
+     */
+    
+    public func getDisposable() async -> Disposable {
+        await self.lock.performLocked {
+            self.current ?? Disposables.create()
+        }
+    }
+    
+    public func setDisposable(_ newDisposable: Disposable) async {
+        let disposable: Disposable? = await self.lock.performLocked {
+            if await self.isDisposed() {
+                return newDisposable
+            }
+            else {
+                let toDispose = self.current
+                self.current = newDisposable
+                return toDispose
             }
         }
-        set (newDisposable) {
-            let disposable: Disposable? = self.lock.performLocked {
-                if self.isDisposed {
-                    return newDisposable
-                }
-                else {
-                    let toDispose = self.current
-                    self.current = newDisposable
-                    return toDispose
-                }
-            }
-            
-            if let disposable = disposable {
-                disposable.dispose()
-            }
+        
+        if let disposable = disposable {
+            await disposable.dispose()
         }
     }
     
     /// Disposes the underlying disposable as well as all future replacements.
-    public func dispose() {
-        self._dispose()?.dispose()
+    public func dispose() async {
+        await self._dispose()?.dispose()
     }
 
-    private func _dispose() -> Disposable? {
-        self.lock.performLocked {
-            guard !self.isDisposed else { return nil }
+    private func _dispose() async -> Disposable? {
+        await self.lock.performLocked {
+            guard await !self.isDisposed() else { return nil }
 
             self.disposed = true
             let current = self.current

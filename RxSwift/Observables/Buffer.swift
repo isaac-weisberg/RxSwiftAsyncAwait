@@ -8,8 +8,7 @@
 
 import Foundation
 
-extension ObservableType {
-
+public extension ObservableType {
     /**
      Projects each element of an observable sequence into a buffer that's sent out when either it's full or a given amount of time has elapsed, using the specified scheduler to run timers.
 
@@ -22,14 +21,14 @@ extension ObservableType {
      - parameter scheduler: Scheduler to run buffering timers on.
      - returns: An observable sequence of buffers.
      */
-    public func buffer(timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType)
-        -> Observable<[Element]> {
+    func buffer(timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType)
+        -> Observable<[Element]>
+    {
         BufferTimeCount(source: self.asObservable(), timeSpan: timeSpan, count: count, scheduler: scheduler)
     }
 }
 
-final private class BufferTimeCount<Element>: Producer<[Element]> {
-    
+private final class BufferTimeCount<Element>: Producer<[Element]> {
     fileprivate let timeSpan: RxTimeInterval
     fileprivate let count: Int
     fileprivate let scheduler: SchedulerType
@@ -42,76 +41,80 @@ final private class BufferTimeCount<Element>: Producer<[Element]> {
         self.scheduler = scheduler
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == [Element] {
-        let sink = BufferTimeCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == [Element] {
+        let sink = await BufferTimeCountSink(parent: self, observer: observer, cancel: cancel)
+        let subscription = await sink.run()
         return (sink: sink, subscription: subscription)
     }
 }
 
-final private class BufferTimeCountSink<Element, Observer: ObserverType>
-    : Sink<Observer>
-    , LockOwnerType
-    , ObserverType
-    , SynchronizedOnType where Observer.Element == [Element] {
+private final class BufferTimeCountSink<Element, Observer: ObserverType>:
+    Sink<Observer>,
+    LockOwnerType,
+    ObserverType,
+    SynchronizedOnType where Observer.Element == [Element]
+{
     typealias Parent = BufferTimeCount<Element>
     
     private let parent: Parent
     
-    let lock = RecursiveLock()
+    let lock: RecursiveLock
     
     // state
-    private let timerD = SerialDisposable()
+    private let timerD: SerialDisposable
     private var buffer = [Element]()
     private var windowID = 0
     
-    init(parent: Parent, observer: Observer, cancel: Cancelable) {
+    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+        self.timerD = await SerialDisposable()
+        self.lock = await RecursiveLock()
         self.parent = parent
-        super.init(observer: observer, cancel: cancel)
+        await super.init(observer: observer, cancel: cancel)
     }
  
-    func run() -> Disposable {
-        self.createTimer(self.windowID)
-        return Disposables.create(timerD, parent.source.subscribe(self))
+    func run() async -> Disposable {
+        await self.createTimer(self.windowID)
+        return await Disposables.create(self.timerD, await self.parent.source.subscribe(self))
     }
     
-    func startNewWindowAndSendCurrentOne() {
+    func startNewWindowAndSendCurrentOne() async {
         self.windowID = self.windowID &+ 1
         let windowID = self.windowID
         
         let buffer = self.buffer
         self.buffer = []
-        self.forwardOn(.next(buffer))
+        await self.forwardOn(.next(buffer))
         
-        self.createTimer(windowID)
+        await self.createTimer(windowID)
     }
     
-    func on(_ event: Event<Element>) {
-        self.synchronizedOn(event)
+    func on(_ event: Event<Element>) async {
+        await self.synchronizedOn(event)
     }
 
-    func synchronized_on(_ event: Event<Element>) {
+    func synchronized_on(_ event: Event<Element>) async {
         switch event {
         case .next(let element):
             self.buffer.append(element)
             
             if self.buffer.count == self.parent.count {
-                self.startNewWindowAndSendCurrentOne()
+                await self.startNewWindowAndSendCurrentOne()
             }
             
         case .error(let error):
             self.buffer = []
-            self.forwardOn(.error(error))
-            self.dispose()
+            await self.forwardOn(.error(error))
+            await self.dispose()
+
         case .completed:
-            self.forwardOn(.next(self.buffer))
-            self.forwardOn(.completed)
-            self.dispose()
+            await self.forwardOn(.next(self.buffer))
+            await self.forwardOn(.completed)
+            await self.dispose()
         }
     }
     
-    func createTimer(_ windowID: Int) {
-        if self.timerD.isDisposed {
+    func createTimer(_ windowID: Int) async {
+        if await self.timerD.isDisposed() {
             return
         }
         
@@ -119,22 +122,22 @@ final private class BufferTimeCountSink<Element, Observer: ObserverType>
             return
         }
 
-        let nextTimer = SingleAssignmentDisposable()
+        let nextTimer = await SingleAssignmentDisposable()
         
-        self.timerD.disposable = nextTimer
+        await self.timerD.setDisposable(nextTimer)
 
-        let disposable = self.parent.scheduler.scheduleRelative(windowID, dueTime: self.parent.timeSpan) { previousWindowID in
-            self.lock.performLocked {
+        let disposable = await self.parent.scheduler.scheduleRelative(windowID, dueTime: self.parent.timeSpan) { previousWindowID in
+            await self.lock.performLocked {
                 if previousWindowID != self.windowID {
                     return
                 }
              
-                self.startNewWindowAndSendCurrentOne()
+                await self.startNewWindowAndSendCurrentOne()
             }
             
             return Disposables.create()
         }
 
-        nextTimer.setDisposable(disposable)
+        await nextTimer.setDisposable(disposable)
     }
 }

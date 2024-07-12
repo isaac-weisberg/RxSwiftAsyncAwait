@@ -25,10 +25,10 @@ public struct Infallible<Element>: InfallibleType {
         self.source = source
     }
 
-    public func asObservable() -> Observable<Element> { source }
+    public func asObservable() -> Observable<Element> { self.source }
 }
 
-extension InfallibleType {
+public extension InfallibleType {
     /**
      Subscribes an element handler, a completion handler and disposed handler to an observable sequence.
      
@@ -46,13 +46,13 @@ extension InfallibleType {
      gracefully completed, errored, or if the generation is canceled by disposing subscription)
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    public func subscribe<Object: AnyObject>(
+    func subscribe<Object: AnyObject>(
         with object: Object,
         onNext: ((Object, Element) -> Void)? = nil,
         onCompleted: ((Object) -> Void)? = nil,
         onDisposed: ((Object) -> Void)? = nil
-    ) -> Disposable {
-        self.asObservable().subscribe(
+    ) async -> Disposable {
+        await self.asObservable().subscribe(
             with: object,
             onNext: onNext,
             onCompleted: onCompleted,
@@ -61,23 +61,24 @@ extension InfallibleType {
     }
     
     /**
-     Subscribes an element handler, a completion handler and disposed handler to an observable sequence.
+      Subscribes an element handler, a completion handler and disposed handler to an observable sequence.
      
-     Error callback is not exposed because `Infallible` can't error out.
+      Error callback is not exposed because `Infallible` can't error out.
      
-     - parameter onNext: Action to invoke for each element in the observable sequence.
-     - parameter onCompleted: Action to invoke upon graceful termination of the observable sequence.
-     gracefully completed, errored, or if the generation is canceled by disposing subscription)
-     - parameter onDisposed: Action to invoke upon any type of termination of sequence (if the sequence has
-     gracefully completed, errored, or if the generation is canceled by disposing subscription)
-     - returns: Subscription object used to unsubscribe from the observable sequence.
-    */
-    public func subscribe(onNext: ((Element) -> Void)? = nil,
-                          onCompleted: (() -> Void)? = nil,
-                          onDisposed: (() -> Void)? = nil) -> Disposable {
-        self.asObservable().subscribe(onNext: onNext,
-                                      onCompleted: onCompleted,
-                                      onDisposed: onDisposed)
+      - parameter onNext: Action to invoke for each element in the observable sequence.
+      - parameter onCompleted: Action to invoke upon graceful termination of the observable sequence.
+      gracefully completed, errored, or if the generation is canceled by disposing subscription)
+      - parameter onDisposed: Action to invoke upon any type of termination of sequence (if the sequence has
+      gracefully completed, errored, or if the generation is canceled by disposing subscription)
+      - returns: Subscription object used to unsubscribe from the observable sequence.
+     */
+    func subscribe(onNext: ((Element) -> Void)? = nil,
+                   onCompleted: (() -> Void)? = nil,
+                   onDisposed: (() -> Void)? = nil) async -> Disposable
+    {
+        await self.asObservable().subscribe(onNext: onNext,
+                                            onCompleted: onCompleted,
+                                            onDisposed: onDisposed)
     }
 
     /**
@@ -86,7 +87,7 @@ extension InfallibleType {
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    public func subscribe(_ on: @escaping (InfallibleEvent<Element>) -> Void) -> Disposable {
+    func subscribe(_ on: @escaping (InfallibleEvent<Element>) -> Void) async -> Disposable {
         let eventHandler: ((Event<Element>) -> Void) = { event in
             switch event {
             case .next(let element):
@@ -97,6 +98,6 @@ extension InfallibleType {
                 rxFatalErrorInDebug("Infallible must never emit a error event. error: \(error)")
             }
         }
-        return self.asObservable().subscribe(eventHandler)
+        return await self.asObservable().subscribe(eventHandler)
     }
 }
