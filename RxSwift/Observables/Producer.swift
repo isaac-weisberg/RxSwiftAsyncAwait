@@ -6,17 +6,19 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-class Producer<Element>: Observable<Element> {
+protocol
+
+class ProducerLegacyyy<Element>: Observable<Element> {
     override init() {
         super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
         if !CurrentThreadScheduler.isScheduleRequired {
             // The returned disposable needs to release all references once it was disposed.
             let disposer = SinkDisposer()
             let sinkAndSubscription = self.run(observer, cancel: disposer)
-            disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
+            await disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
 
             return disposer
         }
@@ -24,7 +26,7 @@ class Producer<Element>: Observable<Element> {
             return CurrentThreadScheduler.instance.schedule(()) { _ in
                 let disposer = SinkDisposer()
                 let sinkAndSubscription = self.run(observer, cancel: disposer)
-                disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
+                await disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
 
                 return disposer
             }
@@ -36,45 +38,47 @@ class Producer<Element>: Observable<Element> {
     }
 }
 
-private final class SinkDisposer: Cancelable {
-    private enum DisposeState: Int32 {
-        case disposed = 1
-        case sinkAndSubscriptionSet = 2
+private final actor SinkDisposer: Cancelable {
+    private enum DisposeState {
+        case idle
+        case disposed
+        case sinkAndSubscriptionSet
     }
 
-    private let state = AtomicInt(0)
+    private var state = DisposeState.idle
     private var sink: Disposable?
     private var subscription: Disposable?
 
-    var isDisposed: Bool {
-        isFlagSet(self.state, DisposeState.disposed.rawValue)
+    func isDisposed() async -> Bool {
+        self.state == .disposed
     }
 
-    func setSinkAndSubscription(sink: Disposable, subscription: Disposable) {
+    func setSinkAndSubscription(sink: Disposable, subscription: Disposable) async {
         self.sink = sink
         self.subscription = subscription
 
-        let previousState = fetchOr(self.state, DisposeState.sinkAndSubscriptionSet.rawValue)
-        if (previousState & DisposeState.sinkAndSubscriptionSet.rawValue) != 0 {
+        let previousState = self.state
+        self.state = .sinkAndSubscriptionSet
+        if previousState == .sinkAndSubscriptionSet {
             rxFatalError("Sink and subscription were already set")
         }
 
-        if (previousState & DisposeState.disposed.rawValue) != 0 {
-            sink.dispose()
-            subscription.dispose()
+        if previousState == .disposed {
+            await sink.dispose()
+            await subscription.dispose()
             self.sink = nil
             self.subscription = nil
         }
     }
 
-    func dispose() {
-        let previousState = fetchOr(self.state, DisposeState.disposed.rawValue)
-
-        if (previousState & DisposeState.disposed.rawValue) != 0 {
+    func dispose() async {
+        let previousState = self.state
+        self.state = .disposed
+        if previousState == .disposed {
             return
         }
 
-        if (previousState & DisposeState.sinkAndSubscriptionSet.rawValue) != 0 {
+        if previousState == .sinkAndSubscriptionSet {
             guard let sink = self.sink else {
                 rxFatalError("Sink not set")
             }
@@ -82,8 +86,8 @@ private final class SinkDisposer: Cancelable {
                 rxFatalError("Subscription not set")
             }
 
-            sink.dispose()
-            subscription.dispose()
+            await sink.dispose()
+            await subscription.dispose()
 
             self.sink = nil
             self.subscription = nil

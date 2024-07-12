@@ -7,7 +7,11 @@
 //
 
 /// Base class for all disposables.
-public class DisposeBase {
+public protocol DisposeBase {
+    
+}
+
+public class DisposeBaseLegacyyy {
     init() {
 #if TRACE_RESOURCES
     _ = Resources.incrementTotal()

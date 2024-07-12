@@ -15,7 +15,7 @@ public protocol ImmediateSchedulerType {
     - parameter action: Action to be executed.
     - returns: The disposable object used to cancel the scheduled action (best effort).
     */
-    func schedule<StateType>(_ state: StateType, action: @escaping (StateType) -> Disposable) -> Disposable
+    func schedule<StateType>(_ state: StateType, action: @escaping (StateType) async -> Disposable) -> Disposable
 }
 
 extension ImmediateSchedulerType {

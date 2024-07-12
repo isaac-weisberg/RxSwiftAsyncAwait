@@ -7,21 +7,28 @@
 //
 
 /// Represents a disposable resource that only disposes its underlying disposable resource when all dependent disposable objects have been disposed.
-public final class RefCountDisposable : DisposeBase, Cancelable {
-    private var lock = SpinLock()
+public final actor RefCountDisposable: DisposeBase, Cancelable {
     private var disposable = nil as Disposable?
     private var primaryDisposed = false
     private var count = 0
 
     /// - returns: Was resource disposed.
-    public var isDisposed: Bool {
-        self.lock.performLocked { self.disposable == nil }
+    public func isDisposed() async -> Bool {
+        disposable == nil
     }
 
     /// Initializes a new instance of the `RefCountDisposable`.
     public init(disposable: Disposable) {
         self.disposable = disposable
-        super.init()
+        #if TRACE_RESOURCES
+            _ = Resources.incrementTotal()
+        #endif
+    }
+
+    deinit {
+        #if TRACE_RESOURCES
+            _ = Resources.decrementTotal()
+        #endif
     }
 
     /**
@@ -30,24 +37,22 @@ public final class RefCountDisposable : DisposeBase, Cancelable {
      When getter is called, a dependent disposable contributing to the reference count that manages the underlying disposable's lifetime is returned.
      */
     public func retain() -> Disposable {
-        self.lock.performLocked {
-            if self.disposable != nil {
-                do {
-                    _ = try incrementChecked(&self.count)
-                } catch {
-                    rxFatalError("RefCountDisposable increment failed")
-                }
-
-                return RefCountInnerDisposable(self)
-            } else {
-                return Disposables.create()
+        if disposable != nil {
+            do {
+                _ = try incrementChecked(&count)
+            } catch {
+                rxFatalError("RefCountDisposable increment failed")
             }
+
+            return RefCountInnerDisposable(self)
+        } else {
+            return Disposables.create()
         }
     }
 
     /// Disposes the underlying disposable only when all dependent disposables have been disposed.
-    public func dispose() {
-        let oldDisposable: Disposable? = self.lock.performLocked {
+    public func dispose() async {
+        let oldDisposable: Disposable? = {
             if let oldDisposable = self.disposable, !self.primaryDisposed {
                 self.primaryDisposed = true
 
@@ -58,15 +63,15 @@ public final class RefCountDisposable : DisposeBase, Cancelable {
             }
 
             return nil
-        }
+        }()
 
         if let disposable = oldDisposable {
-            disposable.dispose()
+            await disposable.dispose()
         }
     }
 
-    fileprivate func release() {
-        let oldDisposable: Disposable? = self.lock.performLocked {
+    fileprivate func release() async {
+        let oldDisposable: Disposable? = {
             if let oldDisposable = self.disposable {
                 do {
                     _ = try decrementChecked(&self.count)
@@ -85,28 +90,36 @@ public final class RefCountDisposable : DisposeBase, Cancelable {
             }
 
             return nil
-        }
+        }()
 
         if let disposable = oldDisposable {
-            disposable.dispose()
+            await disposable.dispose()
         }
     }
 }
 
-internal final class RefCountInnerDisposable: DisposeBase, Disposable
-{
+final actor RefCountInnerDisposable: DisposeBase, Disposable {
     private let parent: RefCountDisposable
-    private let isDisposed = AtomicInt(0)
+    private var isDisposed = false
 
     init(_ parent: RefCountDisposable) {
         self.parent = parent
-        super.init()
+
+        #if TRACE_RESOURCES
+            _ = Resources.incrementTotal()
+        #endif
     }
 
-    internal func dispose()
-    {
-        if fetchOr(self.isDisposed, 1) == 0 {
-            self.parent.release()
+    func dispose() async {
+        if !isDisposed {
+            isDisposed = true
+            await parent.release()
         }
+    }
+
+    deinit {
+        #if TRACE_RESOURCES
+            _ = Resources.decrementTotal()
+        #endif
     }
 }

@@ -7,66 +7,73 @@
 //
 
 /**
-Represents a disposable resource which only allows a single assignment of its underlying disposable resource.
+ Represents a disposable resource which only allows a single assignment of its underlying disposable resource.
 
-If an underlying disposable resource has already been set, future attempts to set the underlying disposable resource will throw an exception.
-*/
-public final class SingleAssignmentDisposable : DisposeBase, Cancelable {
-
-    private struct DisposeState: OptionSet {
-        let rawValue: Int32
-        
-        static let disposed = DisposeState(rawValue: 1 << 0)
-        static let disposableSet = DisposeState(rawValue: 1 << 1)
+ If an underlying disposable resource has already been set, future attempts to set the underlying disposable resource will throw an exception.
+ */
+public final actor SingleAssignmentDisposable: DisposeBase, Cancelable {
+    private enum DisposeState {
+        case uninit
+        case disposed
+        case disposableSet
     }
 
     // state
-    private let state = AtomicInt(0)
+    private var state = DisposeState.uninit
     private var disposable = nil as Disposable?
 
     /// - returns: A value that indicates whether the object is disposed.
-    public var isDisposed: Bool {
-        isFlagSet(self.state, DisposeState.disposed.rawValue)
+    public func isDisposed() async -> Bool {
+        self.state == .disposed
     }
 
     /// Initializes a new instance of the `SingleAssignmentDisposable`.
-    public override init() {
-        super.init()
+    public init() {
+        #if TRACE_RESOURCES
+            _ = Resources.incrementTotal()
+        #endif
+    }
+
+    deinit {
+        #if TRACE_RESOURCES
+            _ = Resources.decrementTotal()
+        #endif
     }
 
     /// Gets or sets the underlying disposable. After disposal, the result of getting this property is undefined.
     ///
     /// **Throws exception if the `SingleAssignmentDisposable` has already been assigned to.**
-    public func setDisposable(_ disposable: Disposable) {
+    public func setDisposable(_ disposable: Disposable) async {
         self.disposable = disposable
 
-        let previousState = fetchOr(self.state, DisposeState.disposableSet.rawValue)
+        let previousState = self.state
+        self.state = .disposableSet
 
-        if (previousState & DisposeState.disposableSet.rawValue) != 0 {
+        if previousState == .disposableSet {
             rxFatalError("oldState.disposable != nil")
         }
 
-        if (previousState & DisposeState.disposed.rawValue) != 0 {
-            disposable.dispose()
+        if previousState == .disposed {
+            await disposable.dispose()
             self.disposable = nil
         }
     }
 
     /// Disposes the underlying disposable.
-    public func dispose() {
-        let previousState = fetchOr(self.state, DisposeState.disposed.rawValue)
+    public func dispose() async {
+        let previousState = self.state
+        self.state = .disposed
 
-        if (previousState & DisposeState.disposed.rawValue) != 0 {
+        if previousState == .disposed {
             return
         }
 
-        if (previousState & DisposeState.disposableSet.rawValue) != 0 {
+        if previousState == .disposableSet {
             guard let disposable = self.disposable else {
                 rxFatalError("Disposable not set")
             }
-            disposable.dispose()
+            await disposable.dispose()
             self.disposable = nil
         }
     }
-
 }

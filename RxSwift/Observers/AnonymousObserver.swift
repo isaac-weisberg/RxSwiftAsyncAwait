@@ -6,11 +6,24 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-final class AnonymousObserver<Element>: ObserverBase<Element> {
-    typealias EventHandler = (Event<Element>) -> Void
+final actor AnonymousObserver<Element>: ObserverBase {
+    typealias EventHandler = (Event<Element>) async -> Void
+
+    private let eventHandler: EventHandler
+    private var isStopped = false
     
-    private let eventHandler : EventHandler
+    func setIsStopped() async {
+        isStopped = true
+    }
     
+    func isStopped() async -> Bool {
+        isStopped
+    }
+    
+    func dispose() async {
+        isStopped = true
+    }
+
     init(_ eventHandler: @escaping EventHandler) {
 #if TRACE_RESOURCES
         _ = Resources.incrementTotal()
@@ -18,10 +31,10 @@ final class AnonymousObserver<Element>: ObserverBase<Element> {
         self.eventHandler = eventHandler
     }
 
-    override func onCore(_ event: Event<Element>) {
-        self.eventHandler(event)
+    func onCore(_ event: Event<Element>) async {
+        await self.eventHandler(event)
     }
-    
+
 #if TRACE_RESOURCES
     deinit {
         _ = Resources.decrementTotal()

@@ -14,5 +14,5 @@ public protocol ObservableConvertibleType {
     /// Converts `self` to `Observable` sequence.
     ///
     /// - returns: Observable sequence that represents `self`.
-    func asObservable() -> Observable<Element>
+    func asObservable() async -> Observable<Element>
 }

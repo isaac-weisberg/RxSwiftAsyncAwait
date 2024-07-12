@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
+public extension ObservableType {
     // MARK: create
 
     /**
@@ -17,52 +17,80 @@ extension ObservableType {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    public static func create(_ subscribe: @escaping (AnyObserver<Element>) -> Disposable) -> Observable<Element> {
+    static func create(_ subscribe: @escaping (AnyObserver<Element>) async -> Disposable) -> Observable<Element> {
         AnonymousObservable(subscribe)
     }
 }
 
-final private class AnonymousObservableSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
-    typealias Element = Observer.Element 
+private final actor AnonymousObservableSink<Observer: ObserverType>: Sink, ObserverType {
+    typealias Element = Observer.Element
     typealias Parent = AnonymousObservable<Element>
 
+    private let superclass: SinkSuperclass<Observer>
+
     // state
-    private let isStopped = AtomicInt(0)
+    private var isStopped = false
 
     #if DEBUG
         private let synchronizationTracker = SynchronizationTracker()
     #endif
 
-    override init(observer: Observer, cancel: Cancelable) {
-        super.init(observer: observer, cancel: cancel)
+    init(observer: Observer, cancel: Cancelable) {
+        superclass = SinkSuperclass(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) {
+    func on(_ event: Event<Element>) async {
         #if DEBUG
-            self.synchronizationTracker.register(synchronizationErrorMessage: .default)
+            synchronizationTracker.register(synchronizationErrorMessage: .default)
             defer { self.synchronizationTracker.unregister() }
         #endif
         switch event {
         case .next:
-            if load(self.isStopped) == 1 {
+            if isStopped {
                 return
             }
-            self.forwardOn(event)
+            await forwardOn(event)
         case .error, .completed:
-            if fetchOr(self.isStopped, 1) == 0 {
-                self.forwardOn(event)
-                self.dispose()
+            let oldIsStopped = isStopped
+            isStopped = true
+            if !oldIsStopped {
+                await forwardOn(event)
+                await dispose()
             }
         }
     }
 
-    func run(_ parent: Parent) -> Disposable {
-        parent.subscribeHandler(AnyObserver(self))
+    func run(_ parent: Parent) async -> Disposable {
+        await parent.subscribeHandler(AnyObserver(self))
+    }
+
+    func forwardOn(_ event: Event<Observer.Element>) async {
+        await superclass.forwardOn(event)
+    }
+
+    nonisolated func forwarder() -> SinkForward<AnonymousObservableSink> {
+        SinkForward(forward: self)
+    }
+
+    func isDisposed() async -> Bool {
+        await superclass.isDisposed()
+    }
+
+    func dispose() async {
+        await superclass.dispose()
+    }
+
+    func observer() async -> Observer {
+        await superclass.observer()
+    }
+
+    func cancel() async -> any Cancelable {
+        await superclass.cancel()
     }
 }
 
-final private class AnonymousObservable<Element>: Producer<Element> {
-    typealias SubscribeHandler = (AnyObserver<Element>) -> Disposable
+private final class AnonymousObservable<Element>: Producer<Element> {
+    typealias SubscribeHandler = (AnyObserver<Element>) async -> Disposable
 
     let subscribeHandler: SubscribeHandler
 
@@ -70,9 +98,9 @@ final private class AnonymousObservable<Element>: Producer<Element> {
         self.subscribeHandler = subscribeHandler
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = AnonymousObservableSink(observer: observer, cancel: cancel)
-        let subscription = sink.run(self)
+        let subscription = await sink.run(self)
         return (sink: sink, subscription: subscription)
     }
 }

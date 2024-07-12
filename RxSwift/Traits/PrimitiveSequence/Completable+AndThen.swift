@@ -6,7 +6,7 @@
 //  Copyright © 2017 Krunoslav Zaher. All rights reserved.
 //
 
-extension PrimitiveSequenceType where Trait == CompletableTrait, Element == Never {
+public extension PrimitiveSequenceType where Trait == CompletableTrait, Element == Never {
     /**
      Concatenates the second observable sequence to `self` upon successful termination of `self`.
 
@@ -15,7 +15,7 @@ extension PrimitiveSequenceType where Trait == CompletableTrait, Element == Neve
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    public func andThen<Element>(_ second: Single<Element>) -> Single<Element> {
+    func andThen<Element>(_ second: Single<Element>) -> Single<Element> {
         let completable = self.primitiveSequence.asObservable()
         return Single(raw: ConcatCompletable(completable: completable, second: second.asObservable()))
     }
@@ -28,7 +28,7 @@ extension PrimitiveSequenceType where Trait == CompletableTrait, Element == Neve
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    public func andThen<Element>(_ second: Maybe<Element>) -> Maybe<Element> {
+    func andThen<Element>(_ second: Maybe<Element>) -> Maybe<Element> {
         let completable = self.primitiveSequence.asObservable()
         return Maybe(raw: ConcatCompletable(completable: completable, second: second.asObservable()))
     }
@@ -41,7 +41,7 @@ extension PrimitiveSequenceType where Trait == CompletableTrait, Element == Neve
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    public func andThen(_ second: Completable) -> Completable {
+    func andThen(_ second: Completable) -> Completable {
         let completable = self.primitiveSequence.asObservable()
         return Completable(raw: ConcatCompletable(completable: completable, second: second.asObservable()))
     }
@@ -54,13 +54,13 @@ extension PrimitiveSequenceType where Trait == CompletableTrait, Element == Neve
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    public func andThen<Element>(_ second: Observable<Element>) -> Observable<Element> {
+    func andThen<Element>(_ second: Observable<Element>) -> Observable<Element> {
         let completable = self.primitiveSequence.asObservable()
         return ConcatCompletable(completable: completable, second: second.asObservable())
     }
 }
 
-final private class ConcatCompletable<Element>: Producer<Element> {
+private final class ConcatCompletable<Element>: Producer<Element> {
     fileprivate let completable: Observable<Never>
     fileprivate let second: Observable<Element>
 
@@ -76,15 +76,16 @@ final private class ConcatCompletable<Element>: Producer<Element> {
     }
 }
 
-final private class ConcatCompletableSink<Observer: ObserverType>
-    : Sink<Observer>
-    , ObserverType {
+private final class ConcatCompletableSink<Observer: ObserverType>:
+    Sink<Observer>,
+    ObserverType
+{
     typealias Element = Never
     typealias Parent = ConcatCompletable<Observer.Element>
 
     private let parent: Parent
     private let subscription = SerialDisposable()
-    
+
     init(parent: Parent, observer: Observer, cancel: Cancelable) {
         self.parent = parent
         super.init(observer: observer, cancel: cancel)
@@ -103,27 +104,28 @@ final private class ConcatCompletableSink<Observer: ObserverType>
         }
     }
 
-    func run() -> Disposable {
+    func run() async -> Disposable {
         let subscription = SingleAssignmentDisposable()
         self.subscription.disposable = subscription
-        subscription.setDisposable(self.parent.completable.subscribe(self))
+        await subscription.setDisposable(self.parent.completable.subscribe(self))
         return self.subscription
     }
 }
 
-final private class ConcatCompletableSinkOther<Observer: ObserverType>
-    : ObserverType {
-    typealias Element = Observer.Element 
+private final class ConcatCompletableSinkOther<Observer: ObserverType>:
+    ObserverType
+{
+    typealias Element = Observer.Element
 
     typealias Parent = ConcatCompletableSink<Observer>
-    
+
     private let parent: Parent
 
     init(parent: Parent) {
         self.parent = parent
     }
 
-    func on(_ event: Event<Observer.Element>) {
+    func on(_ event: Event<Observer.Element>) async {
         self.parent.forwardOn(event)
         if event.isStopEvent {
             self.parent.dispose()
