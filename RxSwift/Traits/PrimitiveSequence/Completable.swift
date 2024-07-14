@@ -34,9 +34,9 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(subscribe: @escaping (@escaping CompletableObserver) -> Disposable) async -> PrimitiveSequence<Trait, Element> {
+    static func create(subscribe: @escaping (@escaping CompletableObserver) async -> Disposable) async -> PrimitiveSequence<Trait, Element> {
         let source = await Observable<Element>.create { observer in
-            subscribe { event in
+            await subscribe { event in
                 switch event {
                 case .error(let error):
                     await observer.on(.error(error))

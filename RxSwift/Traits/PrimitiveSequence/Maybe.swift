@@ -37,9 +37,9 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(subscribe: @escaping (@escaping MaybeObserver) -> Disposable) async -> PrimitiveSequence<Trait, Element> {
+    static func create(subscribe: @escaping (@escaping MaybeObserver) async -> Disposable) async -> PrimitiveSequence<Trait, Element> {
         let source = await Observable<Element>.create { observer in
-            subscribe { event in
+            await subscribe { event in
                 switch event {
                 case .success(let element):
                     await observer.on(.next(element))
@@ -323,7 +323,7 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-    func flatMap<Result>(_ selector: @escaping (Element) throws -> Maybe<Result>) async
+    func flatMap<Result>(_ selector: @escaping (Element) async throws -> Maybe<Result>) async
         -> Maybe<Result>
     {
         return await Maybe<Result>(raw: self.primitiveSequence.source.flatMap(selector))

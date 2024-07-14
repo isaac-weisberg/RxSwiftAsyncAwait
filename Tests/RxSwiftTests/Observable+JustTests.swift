@@ -14,11 +14,11 @@ class ObservableJustTest : RxTest {
 }
 
 extension ObservableJustTest {
-    func testJust_Immediate() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testJust_Immediate() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            return Observable.just(42)
+        let res = await scheduler.start {
+            return await Observable.just(42)
         }
 
         XCTAssertEqual(res.events, [
@@ -27,11 +27,11 @@ extension ObservableJustTest {
             ])
     }
 
-    func testJust_Basic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testJust_Basic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            return Observable.just(42, scheduler: scheduler)
+        let res = await scheduler.start {
+            return await Observable.just(42, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -40,48 +40,48 @@ extension ObservableJustTest {
             ])
     }
 
-    func testJust_Disposed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testJust_Disposed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start(disposed: 200) {
-            return Observable.just(42, scheduler: scheduler)
+        let res = await scheduler.start(disposed: 200) {
+            return await Observable.just(42, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
             ])
     }
 
-    func testJust_DisposeAfterNext() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testJust_DisposeAfterNext() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let d = SingleAssignmentDisposable()
+        let d = await SingleAssignmentDisposable()
 
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(100) {
-            let subscription = Observable.just(42, scheduler: scheduler).subscribe { e in
+        await scheduler.scheduleAt(100) {
+            let subscription = await Observable.just(42, scheduler: scheduler).subscribe { e in
                 res.on(e)
 
                 switch e {
                 case .next:
-                    d.dispose()
+                    await d.dispose()
                 default:
                     break
                 }
             }
 
-            d.setDisposable(subscription)
+            await d.setDisposable(subscription)
         }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(101, 42)
             ])
     }
 
-    func testJust_DefaultScheduler() {
-        let res = try! Observable.just(42, scheduler: MainScheduler.instance)
+    func testJust_DefaultScheduler() async {
+        let res = try! await Observable.just(42, scheduler: MainScheduler.instance)
             .toBlocking()
             .toArray()
 
@@ -90,21 +90,32 @@ extension ObservableJustTest {
             ])
     }
 
-    func testJust_CompilesInMap() {
-        _ = (1 as Int?).map(Observable.just)
+    func testJust_CompilesInMap() async {
+        _ = await (1 as Int?).map { await Observable.just($0)}
     }
 
     #if TRACE_RESOURCES
-        func testJustReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).subscribe()
+    func testJustReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).subscribe()
         }
         #endif
 
         #if TRACE_RESOURCES
-        func testJustSchdedulerReleasesResourcesOnComplete() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1, scheduler: testScheduler).subscribe()
-            testScheduler.start()
+    func testJustSchdedulerReleasesResourcesOnComplete() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1, scheduler: testScheduler).subscribe()
+        await testScheduler.start()
         }
     #endif
+}
+
+extension Optional {
+    func map<U>(_ transform: (Wrapped) async -> U ) async -> U? {
+        switch self {
+        case .some(let value):
+            return await transform(value)
+        case .none:
+            return nil
+        }
+    }
 }

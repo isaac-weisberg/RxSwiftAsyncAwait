@@ -6,16 +6,15 @@
 //  Copyright © 2019 Krunoslav Zaher. All rights reserved.
 //
 
-import RxSwift
 import RxRelay
+import RxSwift
 import RxTest
 import XCTest
 
-class ObservableRelayBindTest: RxTest {
-    
-}
+class ObservableRelayBindTest: RxTest {}
 
 // MARK: bind(to:) publish relay
+
 extension ObservableRelayBindTest {
     func testBindToPublishRelay() async {
         var events: [Recorded<Event<Int>>] = []
@@ -29,8 +28,8 @@ extension ObservableRelayBindTest {
         _ = await Observable.just(1).bind(to: relay)
 
         XCTAssertEqual(events, [
-            .next(1)
-            ])
+            .next(1),
+        ])
     }
 
     func testBindToPublishRelays() async {
@@ -51,12 +50,12 @@ extension ObservableRelayBindTest {
         _ = await Observable.just(1).bind(to: relay1, relay2)
 
         XCTAssertEqual(events1, [
-            .next(1)
-            ])
+            .next(1),
+        ])
 
         XCTAssertEqual(events2, [
-            .next(1)
-            ])
+            .next(1),
+        ])
     }
 
     func testBindToOptionalPublishRelay() async {
@@ -71,8 +70,8 @@ extension ObservableRelayBindTest {
         _ = await (Observable.just(1) as Observable<Int>).bind(to: relay)
 
         XCTAssertEqual(events, [
-            .next(1)
-            ])
+            .next(1),
+        ])
     }
 
     func testBindToOptionalPublishRelays() async {
@@ -93,12 +92,12 @@ extension ObservableRelayBindTest {
         _ = await (Observable.just(1) as Observable<Int>).bind(to: relay1, relay2)
 
         XCTAssertEqual(events1, [
-            .next(1)
-            ])
+            .next(1),
+        ])
 
         XCTAssertEqual(events2, [
-            .next(1)
-            ])
+            .next(1),
+        ])
     }
 
     func testBindToPublishRelayNoAmbiguity() async {
@@ -113,19 +112,21 @@ extension ObservableRelayBindTest {
         _ = await Observable.just(1).bind(to: relay)
 
         XCTAssertEqual(events, [
-            .next(1)
-            ])
+            .next(1),
+        ])
     }
 }
 
 // MARK: bind(to:) behavior relay
+
 extension ObservableRelayBindTest {
     func testBindToBehaviorRelay() async {
         let relay = await BehaviorRelay<Int>(value: 0)
 
         _ = await Observable.just(1).bind(to: relay)
 
-        XCTAssertEqual(relay.value(), 1)
+        let value = await relay.value
+        XCTAssertEqual(value, 1)
     }
 
     func testBindToBehaviorRelays() async {
@@ -134,9 +135,9 @@ extension ObservableRelayBindTest {
 
         _ = await Observable.just(1).bind(to: relay1, relay2)
 
-        let value1 = await relay1.value()
+        let value1 = await relay1.value
         XCTAssertEqual(value1, 1)
-        let value2 = await relay2.value()
+        let value2 = await relay2.value
         XCTAssertEqual(value2, 1)
     }
 
@@ -145,7 +146,7 @@ extension ObservableRelayBindTest {
 
         _ = await (Observable.just(1) as Observable<Int>).bind(to: relay)
 
-        let value = await relay.value()
+        let value = await relay.value
         XCTAssertEqual(value, 1)
     }
 
@@ -155,9 +156,9 @@ extension ObservableRelayBindTest {
 
         _ = await (Observable.just(1) as Observable<Int>).bind(to: relay1, relay2)
 
-        let value1 = await relay1.value()
+        let value1 = await relay1.value
         XCTAssertEqual(value1, 1)
-        let value2 = await relay2.value()
+        let value2 = await relay2.value
         XCTAssertEqual(value2, 1)
     }
 
@@ -166,12 +167,13 @@ extension ObservableRelayBindTest {
 
         _ = await Observable.just(1).bind(to: relay)
 
-        let value = await relay.value()
+        let value = await relay.value
         XCTAssertEqual(value, 1)
     }
 }
 
 // MARK: bind(to:) replay relay
+
 extension ObservableRelayBindTest {
     func testBindToReplayRelay() async {
         var events: [Recorded<Event<Int>>] = []

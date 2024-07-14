@@ -14,22 +14,22 @@ class ObservableMaterializeTest : RxTest {
 }
 
 extension ObservableMaterializeTest {
-    func testMaterializeNever() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let res = scheduler.start {
-            return Observable<Int>.never().materialize()
+    func testMaterializeNever() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let res = await scheduler.start {
+            return await Observable<Int>.never().materialize()
         }
         XCTAssertEqual(res.events, [], materializedRecoredEventsComparison)
     }
     
-    func testMaterializeEmpty() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let xs = scheduler.createHotObservable([
+    func testMaterializeEmpty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let xs = await scheduler.createHotObservable([
             .completed(201, Int.self),
             .completed(202, Int.self),
             ])
-        let res = scheduler.start {
-            return xs.materialize()
+        let res = await scheduler.start {
+            return await xs.materialize()
         }
         let expectedEvents = Recorded.events(
             .next(201, Event<Int>.completed),
@@ -40,16 +40,16 @@ extension ObservableMaterializeTest {
         XCTAssertEqual(res.events, expectedEvents, materializedRecoredEventsComparison)
     }
     
-    func testMaterializeEmits() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let xs = scheduler.createHotObservable([
+    func testMaterializeEmits() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .completed(250),
             .completed(251),
             ])
-        let res = scheduler.start {
-            return xs.materialize()
+        let res = await scheduler.start {
+            return await xs.materialize()
         }
         let expectedEvents = Recorded.events(
             .next(210, Event.next(2)),
@@ -61,15 +61,15 @@ extension ObservableMaterializeTest {
         XCTAssertEqual(res.events, expectedEvents, materializedRecoredEventsComparison)
     }
     
-    func testMaterializeThrow() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let xs = scheduler.createHotObservable([
+    func testMaterializeThrow() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .error(250, testError),
             .error(251, testError),
             ])
-        let res = scheduler.start {
-            return xs.materialize()
+        let res = await scheduler.start {
+            return await xs.materialize()
         }
         let expectedEvents = Recorded.events(
             .next(250, Event<Int>.error(testError)),
@@ -81,16 +81,16 @@ extension ObservableMaterializeTest {
     }
     
     #if TRACE_RESOURCES
-        func testMaterializeReleasesResourcesOnComplete1() {
-            _ = Observable<Int>.just(1).materialize().subscribe()
+    func testMaterializeReleasesResourcesOnComplete1() async {
+        _ = await Observable<Int>.just(1).materialize().subscribe()
         }
         
-        func testMaterializeReleasesResourcesOnComplete2() {
-            _ = Observable<Int>.empty().materialize().subscribe()
+    func testMaterializeReleasesResourcesOnComplete2() async {
+        _ = await Observable<Int>.empty().materialize().subscribe()
         }
         
-        func testMaterializeReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).materialize().subscribe()
+    func testMaterializeReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).materialize().subscribe()
         }
     #endif
 }

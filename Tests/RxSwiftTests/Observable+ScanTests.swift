@@ -14,17 +14,17 @@ class ObservableScanTest : RxTest {
 }
 
 extension ObservableScanTest {
-    func testScan_Seed_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Seed_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(0, 0)
             ])
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(seed) { $0 + $1 }
+        let res = await scheduler.start {
+            await xs.scan(seed) { $0 + $1 }
         }
 
         XCTAssertEqual(res.events, [
@@ -35,17 +35,17 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Into_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Into_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(0, 0)
             ])
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(into: seed) { $0 += $1 }
+        let res = await scheduler.start {
+            await xs.scan(into: seed) { $0 += $1 }
         }
 
         XCTAssertEqual(res.events, [
@@ -56,18 +56,18 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Seed_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Seed_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(250)
             ])
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(seed) { $0 + $1 }
+        let res = await scheduler.start {
+            await xs.scan(seed) { $0 + $1 }
         }
 
         XCTAssertEqual(res.events, [
@@ -79,18 +79,18 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Into_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Into_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(250)
             ])
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(into: seed) { $0 += $1 }
+        let res = await scheduler.start {
+            await xs.scan(into: seed) { $0 += $1 }
         }
 
         XCTAssertEqual(res.events, [
@@ -102,10 +102,10 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Seed_Return() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Seed_Return() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .completed(250)
@@ -113,8 +113,8 @@ extension ObservableScanTest {
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(seed) { $0 + $1 }
+        let res = await scheduler.start {
+            await xs.scan(seed) { $0 + $1 }
         }
 
         XCTAssertEqual(res.events, [
@@ -127,10 +127,10 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Into_Accumulate() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Into_Accumulate() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .completed(250)
@@ -138,8 +138,8 @@ extension ObservableScanTest {
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(into: seed) { $0 += $1 }
+        let res = await scheduler.start {
+            await xs.scan(into: seed) { $0 += $1 }
         }
 
         XCTAssertEqual(res.events, [
@@ -152,18 +152,18 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Seed_Throw() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Seed_Throw() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .error(250, testError)
             ])
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(seed) { $0 + $1 }
+        let res = await scheduler.start {
+            await xs.scan(seed) { $0 + $1 }
         }
 
         XCTAssertEqual(res.events, [
@@ -175,18 +175,18 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Into_Throw() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Into_Throw() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .error(250, testError)
             ])
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(into: seed) { $0 += $1 }
+        let res = await scheduler.start {
+            await xs.scan(into: seed) { $0 += $1 }
         }
 
         XCTAssertEqual(res.events, [
@@ -198,10 +198,10 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Seed_SomeData() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Seed_SomeData() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -212,8 +212,8 @@ extension ObservableScanTest {
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(seed) { $0 + $1 }
+        let res = await scheduler.start {
+            await xs.scan(seed) { $0 + $1 }
         }
 
         let messages = Recorded.events(
@@ -231,10 +231,10 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Into_SomeData() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Into_SomeData() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -245,8 +245,8 @@ extension ObservableScanTest {
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(into: seed) { $0 += $1 }
+        let res = await scheduler.start {
+            await xs.scan(into: seed) { $0 += $1 }
         }
 
         let messages = Recorded.events(
@@ -264,10 +264,10 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Seed_AccumulatorThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Seed_AccumulatorThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -278,8 +278,8 @@ extension ObservableScanTest {
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(seed) { (a, e) throws -> Int in
+        let res = await scheduler.start {
+            await xs.scan(seed) { (a, e) throws -> Int in
                 if e == 4 {
                     throw testError
                 } else {
@@ -299,10 +299,10 @@ extension ObservableScanTest {
             ])
     }
 
-    func testScan_Into_AccumulatorThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testScan_Into_AccumulatorThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -313,8 +313,8 @@ extension ObservableScanTest {
 
         let seed = 42
 
-        let res = scheduler.start {
-            xs.scan(into: seed) { a, e in
+        let res = await scheduler.start {
+            await xs.scan(into: seed) { a, e in
                 if e == 4 {
                     throw testError
                 } else {
@@ -336,16 +336,16 @@ extension ObservableScanTest {
 
 
     #if TRACE_RESOURCES
-        func testScanReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).scan(0, accumulator: +).subscribe()
+    func testScanReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).scan(0, accumulator: +).subscribe()
         }
 
-        func testScan1ReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).scan(0, accumulator: +).subscribe()
+    func testScan1ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).scan(0, accumulator: +).subscribe()
         }
 
-        func testScan2ReleasesResourcesOnError() {
-            _ = Observable<Int>.just(1).scan(0, accumulator: { _, _ in throw testError }).subscribe()
+    func testScan2ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.just(1).scan(0, accumulator: { _, _ in throw testError }).subscribe()
         }
     #endif
 }

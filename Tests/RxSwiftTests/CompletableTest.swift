@@ -16,102 +16,102 @@ class CompletableTest : RxTest {
 
 // completable
 extension CompletableTest {
-    func testCompletable_Subscription_completed() {
-        let xs = Completable.empty()
+    func testCompletable_Subscription_completed() async {
+        let xs = await Completable.empty()
 
         var events: [CompletableEvent] = []
 
-        _ = xs.subscribe { event in
+        _ = await xs.subscribe { event in
             events.append(event)
         }
 
         XCTAssertEqual(events, [.completed])
     }
 
-    func testCompletable_Subscription_error() {
-        let xs = Completable.error(testError)
+    func testCompletable_Subscription_error() async {
+        let xs = await Completable.error(testError)
 
         var events: [CompletableEvent] = []
 
-        _ = xs.subscribe { event in
+        _ = await xs.subscribe { event in
             events.append(event)
         }
 
         XCTAssertEqual(events, [.error(testError)])
     }
 
-    func testCompletable_Subscription_onDisposed() {
+    func testCompletable_Subscription_onDisposed() async {
         // Given
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
         let res = scheduler.createObserver(Void.self)
-        var observer: ((CompletableEvent) -> Void)!
+        var observer: ((CompletableEvent) async -> Void)!
         var subscription: Disposable!
         var onDisposesCalled = 0
         // When
-        scheduler.scheduleAt(201) {
-            subscription = Completable.create {
+        await scheduler.scheduleAt(201) {
+            subscription = await Completable.create {
                 observer = $0
                 return Disposables.create()
             }
             .subscribe(onDisposed: { onDisposesCalled += 1 })
         }
-        scheduler.scheduleAt(202) {
-            subscription.dispose()
+        await scheduler.scheduleAt(202) {
+            await subscription.dispose()
         }
-        scheduler.scheduleAt(203) {
-            observer(.error(testError))
+        await scheduler.scheduleAt(203) {
+            await observer(.error(testError))
         }
-        scheduler.start()
+        await scheduler.start()
         // Then
         XCTAssertTrue(res.events.isEmpty)
         XCTAssertEqual(onDisposesCalled, 1)
     }
 
-    func testCompletable_Subscription_onDisposed_completed() {
+    func testCompletable_Subscription_onDisposed_completed() async {
         // Given
-        let maybe = Completable.empty()
+        let maybe = await Completable.empty()
         var onDisposedCalled = 0
         // When
-        _ = maybe.subscribe(onDisposed: {
+        _ = await maybe.subscribe(onDisposed: {
             onDisposedCalled += 1
         })
         // Then
         XCTAssertEqual(onDisposedCalled, 1)
     }
 
-    func testCompletable_Subscription_onDisposed_error() {
+    func testCompletable_Subscription_onDisposed_error() async {
         // Given
-        let single = Completable.error(testError)
+        let single = await Completable.error(testError)
         var onDisposedCalled = 0
         // When
-        _ = single.subscribe(onDisposed: {
+        _ = await single.subscribe(onDisposed: {
             onDisposedCalled += 1
         })
         // Then
         XCTAssertEqual(onDisposedCalled, 1)
     }
 
-    func testCompletable_create_completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCompletable_create_completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        var observer: ((CompletableEvent) -> Void)! = nil
+        var observer: ((CompletableEvent) async -> Void)! = nil
 
         var disposedTime: Int?
 
-        scheduler.scheduleAt(201, action: {
-            observer(.completed)
+        await scheduler.scheduleAt(201, action: {
+            await observer(.completed)
         })
-        scheduler.scheduleAt(203, action: {
-            observer(.error(testError))
+        await scheduler.scheduleAt(203, action: {
+            await observer(.error(testError))
         })
-        scheduler.scheduleAt(204, action: {
-            observer(.completed)
+        await scheduler.scheduleAt(204, action: {
+            await observer(.completed)
         })
 
-        let res = scheduler.start {
-            Completable.create { _observer in
+        let res = await scheduler.start {
+            await Completable.create { _observer in
                 observer = _observer
-                return Disposables.create {
+                return await Disposables.create {
                     disposedTime = scheduler.clock
                 }
                 }
@@ -124,27 +124,27 @@ extension CompletableTest {
         XCTAssertEqual(disposedTime, 201)
     }
 
-    func testCompletable_create_error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCompletable_create_error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        var observer: ((CompletableEvent) -> Void)! = nil
+        var observer: ((CompletableEvent) async -> Void)! = nil
 
         var disposedTime: Int?
 
-        scheduler.scheduleAt(201, action: {
-            observer(.error(testError))
+        await scheduler.scheduleAt(201, action: {
+            await observer(.error(testError))
         })
-        scheduler.scheduleAt(202, action: {
-            observer(.completed)
+        await scheduler.scheduleAt(202, action: {
+            await observer(.completed)
         })
-        scheduler.scheduleAt(203, action: {
-            observer(.error(testError))
+        await scheduler.scheduleAt(203, action: {
+            await observer(.error(testError))
         })
 
-        let res = scheduler.start {
-            Completable.create { _observer in
+        let res = await scheduler.start {
+            await Completable.create { _observer in
                 observer = _observer
-                return Disposables.create {
+                return await Disposables.create {
                     disposedTime = scheduler.clock
                 }
                 }
@@ -157,8 +157,8 @@ extension CompletableTest {
         XCTAssertEqual(disposedTime, 201)
     }
 
-    func testCompletable_create_disposing() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCompletable_create_disposing() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var observer: ((CompletableEvent) -> Void)! = nil
         var disposedTime: Int?
@@ -175,17 +175,17 @@ extension CompletableTest {
                 .asObservable()
                 .subscribe(res)
         })
-        scheduler.scheduleAt(202, action: {
-            subscription.dispose()
+        await scheduler.scheduleAt(202, action: {
+            await subscription.dispose()
         })
-        scheduler.scheduleAt(203, action: {
+        await scheduler.scheduleAt(203, action: {
             observer(.completed)
         })
-        scheduler.scheduleAt(204, action: {
+        await scheduler.scheduleAt(204, action: {
             observer(.error(testError))
         })
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             ])
@@ -195,9 +195,9 @@ extension CompletableTest {
 }
 
 extension CompletableTest {
-    func test_error_fails() {
+    func test_error_fails() async {
         do {
-            _ = try Completable.error(testError).toBlocking().first()
+            _ = try await Completable.error(testError).toBlocking().first()
             XCTFail()
         }
         catch let e {
@@ -205,26 +205,26 @@ extension CompletableTest {
         }
     }
 
-    func test_never_producesElement() {
+    func test_never_producesElement() async {
         var event: CompletableEvent?
-        let subscription = Completable.never().subscribe { _event in
+        let subscription = await Completable.never().subscribe { _event in
             event = _event
         }
 
         XCTAssertNil(event)
-        subscription.dispose()
+        await subscription.dispose()
     }
 
-    func test_deferred() {
-        let result = try! (Completable.deferred { Completable.empty() } as Completable).toBlocking().toArray()
+    func test_deferred() async {
+        let result = try! await (Completable.deferred { await Completable.empty() } as Completable).toBlocking().toArray()
         XCTAssertEqual(result, [])
     }
 
-    func test_delaySubscription() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_delaySubscription() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.empty().delaySubscription(.seconds(2), scheduler: scheduler)
+        let res = await scheduler.start {
+            await Completable.empty().delaySubscription(.seconds(2), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -232,11 +232,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_delay() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_delay() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.empty().delay(.seconds(2), scheduler: scheduler)
+        let res = await scheduler.start {
+            await Completable.empty().delay(.seconds(2), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -244,11 +244,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_observeOn() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_observeOn() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.empty().observe(on:scheduler)
+        let res = await scheduler.start {
+            await Completable.empty().observe(on:scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -256,11 +256,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_subscribeOn() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_subscribeOn() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.empty().subscribe(on: scheduler)
+        let res = await scheduler.start {
+            await Completable.empty().subscribe(on: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -268,11 +268,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_catchError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_catchError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.error(testError).catch { _ in Completable.empty() }
+        let res = await scheduler.start {
+            await Completable.error(testError).catch { _ in await Completable.empty() }
         }
 
         XCTAssertEqual(res.events, [
@@ -280,21 +280,21 @@ extension CompletableTest {
             ])
     }
 
-    func test_retry() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_retry() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var isFirst = true
-        let res = scheduler.start {
-            Completable.error(testError)
+        let res = await scheduler.start {
+            await Completable.error(testError)
                 .catch { e in
                     defer {
                         isFirst = false
                     }
                     if isFirst {
-                        return Completable.error(e)
+                        return await Completable.error(e)
                     }
 
-                    return Completable.empty()
+                    return await Completable.empty()
                 }
                 .retry(2)
         }
@@ -304,21 +304,21 @@ extension CompletableTest {
             ])
     }
 
-    func test_retryWhen1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_retryWhen1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var isFirst = true
-        let res = scheduler.start {
-            Completable.error(testError)
+        let res = await scheduler.start {
+            await Completable.error(testError)
                 .catch { e in
                     defer {
                         isFirst = false
                     }
                     if isFirst {
-                        return Completable.error(e)
+                        return await Completable.error(e)
                     }
 
-                    return Completable.empty()
+                    return await Completable.empty()
                 }
                 .retry { (e: Observable<Error>) in
                     return e
@@ -330,21 +330,21 @@ extension CompletableTest {
             ])
     }
 
-    func test_retryWhen2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_retryWhen2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var isFirst = true
-        let res = scheduler.start {
-            Completable.error(testError)
+        let res = await scheduler.start {
+            await Completable.error(testError)
                 .catch { e in
                     defer {
                         isFirst = false
                     }
                     if isFirst {
-                        return Completable.error(e)
+                        return await Completable.error(e)
                     }
 
-                    return Completable.empty()
+                    return await Completable.empty()
                 }
                 .retry { e in
                     return e
@@ -356,11 +356,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_debug() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_debug() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.empty().debug()
+        let res = await scheduler.start {
+            await Completable.empty().debug()
         }
 
         XCTAssertEqual(res.events, [
@@ -368,8 +368,8 @@ extension CompletableTest {
             ])
     }
 
-    func test_using() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_using() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var disposeInvoked = 0
         var createInvoked = 0
@@ -378,18 +378,18 @@ extension CompletableTest {
         var xs: TestableObservable<Never>!
         var _d: MockDisposable!
 
-        let res = scheduler.start {
-            Completable.using({ () -> MockDisposable in
+        let res = await scheduler.start {
+            await Completable.using({ () -> MockDisposable in
                 disposeInvoked += 1
                 disposable = MockDisposable(scheduler: scheduler)
                 return disposable
             }, primitiveSequenceFactory: { (d: MockDisposable) -> Completable in
                 _d = d
                 createInvoked += 1
-                xs = scheduler.createColdObservable([
+                xs = await scheduler.createColdObservable([
                     .completed(100)
                     ])
-                return xs.asObservable().asCompletable()
+                return await xs.asObservable().asCompletable()
             })
         }
 
@@ -412,15 +412,15 @@ extension CompletableTest {
             ])
     }
 
-    func test_timeout() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_timeout() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .completed(20)
             ]).asCompletable()
 
-        let res = scheduler.start {
-            xs.timeout(.seconds(5), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(5), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -428,19 +428,19 @@ extension CompletableTest {
             ])
     }
 
-    func test_timeout_other() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_timeout_other() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .completed(20)
             ]).asCompletable()
 
-        let xs2 = scheduler.createColdObservable([
+        let xs2 = await scheduler.createColdObservable([
             .completed(20)
             ]).asCompletable()
 
-        let res = scheduler.start {
-            xs.timeout(.seconds(5), other: xs2, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(5), other: xs2, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -448,15 +448,15 @@ extension CompletableTest {
             ])
     }
 
-    func test_timeout_succeeds() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_timeout_succeeds() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .completed(20)
             ]).asCompletable()
 
-        let res = scheduler.start {
-            xs.timeout(.seconds(30), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(30), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -464,19 +464,19 @@ extension CompletableTest {
             ])
     }
 
-    func test_timeout_other_succeeds() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_timeout_other_succeeds() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .completed(20)
             ]).asCompletable()
 
-        let xs2 = scheduler.createColdObservable([
+        let xs2 = await scheduler.createColdObservable([
             .completed(20)
             ]).asCompletable()
 
-        let res = scheduler.start {
-            xs.timeout(.seconds(30), other: xs2, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(30), other: xs2, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -486,11 +486,11 @@ extension CompletableTest {
 }
 
 extension CompletableTest {
-    func test_do() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_do() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.empty().do(onError: { _ in () }, onSubscribe: { () in () }, onSubscribed: { () in () }, onDispose: { () in () })
+        let res = await scheduler.start {
+            await Completable.empty().do(onError: { _ in () }, onSubscribe: { () in () }, onSubscribed: { () in () }, onDispose: { () in () })
         }
 
         XCTAssertEqual(res.events, [
@@ -498,11 +498,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_concat() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_concat() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.empty().concat(Completable.empty())
+        let res = await scheduler.start {
+            await Completable.empty().concat(Completable.empty())
         }
 
         XCTAssertEqual(res.events, [
@@ -510,11 +510,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_concat_sequence() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_concat_sequence() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.concat(AnySequence([Completable.empty()]))
+        let res = await scheduler.start {
+            await Completable.concat(AnySequence([Completable.empty()]))
         }
 
         XCTAssertEqual(res.events, [
@@ -522,11 +522,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_concat_collection() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_concat_collection() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.concat([Completable.empty()])
+        let res = await scheduler.start {
+            await Completable.concat([Completable.empty()])
         }
 
         XCTAssertEqual(res.events, [
@@ -534,11 +534,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_concat_variadic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_concat_variadic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.concat(Completable.empty(), Completable.empty())
+        let res = await scheduler.start {
+            await Completable.concat(Completable.empty(), Completable.empty())
         }
 
         XCTAssertEqual(res.events, [
@@ -546,11 +546,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_zip_collection() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_zip_collection() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.zip(AnyCollection([Completable.empty(), Completable.empty()]))
+        let res = await scheduler.start {
+            await Completable.zip(AnyCollection([Completable.empty(), Completable.empty()]))
         }
 
         XCTAssertEqual(res.events, [
@@ -558,11 +558,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_zip_array() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_zip_array() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.zip([Completable.empty(), Completable.empty()])
+        let res = await scheduler.start {
+            await Completable.zip([Completable.empty(), Completable.empty()])
         }
 
         XCTAssertEqual(res.events, [
@@ -570,11 +570,11 @@ extension CompletableTest {
             ])
     }
 
-    func test_zip_variadic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_zip_variadic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Completable.zip(Completable.empty(), Completable.empty())
+        let res = await scheduler.start {
+            await Completable.zip(Completable.empty(), Completable.empty())
         }
 
         XCTAssertEqual(res.events, [
@@ -584,24 +584,24 @@ extension CompletableTest {
 }
 
 extension CompletableTest {
-    func testDefaultErrorHandler() {
+    func testDefaultErrorHandler() async {
         var loggedErrors = [TestError]()
 
-        _ = Completable.error(testError).subscribe()
+        _ = await Completable.error(testError).subscribe()
         XCTAssertEqual(loggedErrors, [])
 
-        let originalErrorHandler = Hooks.defaultErrorHandler
+        let originalErrorHandler = await Hooks.getDefaultErrorHandler()
 
-        Hooks.defaultErrorHandler = { _, error in
+        await Hooks.setDefaultErrorHandler { _, error in
             loggedErrors.append(error as! TestError)
         }
 
-        _ = Completable.error(testError).subscribe()
+        _ = await Completable.error(testError).subscribe()
         XCTAssertEqual(loggedErrors, [testError])
 
-        Hooks.defaultErrorHandler = originalErrorHandler
+        await Hooks.setDefaultErrorHandler(originalErrorHandler) 
 
-        _ = Completable.error(testError).subscribe()
+        _ = await Completable.error(testError).subscribe()
         XCTAssertEqual(loggedErrors, [testError])
     }
 }

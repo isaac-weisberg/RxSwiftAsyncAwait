@@ -31,16 +31,16 @@ extension MainSchedulerTest {
 }
 
 extension MainSchedulerTest {
-    func testMainScheduler_basicScenario() {
+    func testMainScheduler_basicScenario() async {
 
         var messages = [Int]()
         var executedImmediately = false
-        _ = MainScheduler.instance.schedule(()) { s in
+        _ = await MainScheduler.instance.schedule(()) { s in
             executedImmediately = true
             messages.append(1)
-            _ = MainScheduler.instance.schedule(()) { _ in
+            _ = await MainScheduler.instance.schedule(()) { _ in
                 messages.append(3)
-                _ = MainScheduler.instance.schedule(()) {
+                _ = await MainScheduler.instance.schedule(()) {
                     messages.append(5)
                     return Disposables.create()
                 }
@@ -58,18 +58,18 @@ extension MainSchedulerTest {
         XCTAssertEqual(messages, [1, 2, 3, 4, 5])
     }
 
-    func testMainScheduler_disposing1() {
+    func testMainScheduler_disposing1() async {
 
         var messages = [Int]()
-        _ = MainScheduler.instance.schedule(()) { s in
+        _ = await MainScheduler.instance.schedule(()) { s in
             messages.append(1)
-            let disposable = MainScheduler.instance.schedule(()) { _ in
+            let disposable = await MainScheduler.instance.schedule(()) { _ in
                 messages.append(3)
-                let disposable = MainScheduler.instance.schedule(()) {
+                let disposable = await MainScheduler.instance.schedule(()) {
                     messages.append(5)
                     return Disposables.create()
                 }
-                disposable.dispose()
+                await disposable.dispose()
                 messages.append(4)
                 return disposable
             }
@@ -82,21 +82,21 @@ extension MainSchedulerTest {
         XCTAssertEqual(messages, [1, 2, 3, 4])
     }
 
-    func testMainScheduler_disposing2() {
+    func testMainScheduler_disposing2() async {
 
         var messages = [Int]()
-        _ = MainScheduler.instance.schedule(()) { s in
+        _ = await MainScheduler.instance.schedule(()) { s in
             messages.append(1)
-            let disposable = MainScheduler.instance.schedule(()) { _ in
+            let disposable = await MainScheduler.instance.schedule(()) { _ in
                 messages.append(3)
-                let disposable = MainScheduler.instance.schedule(()) {
+                let disposable = await MainScheduler.instance.schedule(()) {
                     messages.append(5)
                     return Disposables.create()
                 }
                 messages.append(4)
                 return disposable
             }
-            disposable.dispose()
+            await disposable.dispose()
             messages.append(2)
             return disposable
         }

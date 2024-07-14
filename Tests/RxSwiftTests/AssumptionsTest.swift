@@ -12,18 +12,18 @@ import Foundation
 
 final class AssumptionsTest : RxTest {
     
-    func testResourceLeaksDetectionIsTurnedOn() {
+    func testResourceLeaksDetectionIsTurnedOn() async {
 #if TRACE_RESOURCES
-        let startResourceCount = Resources.total
+        let startResourceCount = await Resources.total
     
-        var observable: Observable<Int>! = Observable.just(1)
+        var observable: Observable<Int>! = await Observable.just(1)
 
         XCTAssertTrue(observable != nil)
-        XCTAssertEqual(Resources.total, (startResourceCount + 1) as Int32)
+        await assertEqual(await Resources.total, (startResourceCount + 1) as Int32)
         
         observable = nil
 
-        XCTAssertEqual(Resources.total, startResourceCount)
+        await assertEqual(await Resources.total, startResourceCount)
 #elseif RELEASE
 
 #else

@@ -14,21 +14,21 @@ class ObservableSubscribeOnTest : RxTest {
 }
 
 extension ObservableSubscribeOnTest {
-    func testSubscribeOn_SchedulerSleep() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSubscribeOn_SchedulerSleep() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var scheduled = 0
         var disposed = 0
 
-        let xs: Observable<Int> = Observable.create { _ in
+        let xs: Observable<Int> = await Observable.create { _ in
             scheduled = scheduler.clock
-            return Disposables.create {
+            return await Disposables.create {
                 disposed = scheduler.clock
             }
         }
 
-        let res = scheduler.start {
-            xs.subscribe(on: scheduler)
+        let res = await scheduler.start {
+            await xs.subscribe(on: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -39,15 +39,15 @@ extension ObservableSubscribeOnTest {
         XCTAssertEqual(disposed, 1001)
     }
 
-    func testSubscribeOn_SchedulerCompleted() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSubscribeOn_SchedulerCompleted() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs: TestableObservable<Int> = scheduler.createHotObservable([
+        let xs: TestableObservable<Int> = await scheduler.createHotObservable([
             .completed(300)
             ])
 
-        let res = scheduler.start {
-            xs.subscribe(on: scheduler)
+        let res = await scheduler.start {
+            await xs.subscribe(on: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -59,15 +59,15 @@ extension ObservableSubscribeOnTest {
             ])
     }
 
-    func testSubscribeOn_SchedulerError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSubscribeOn_SchedulerError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs: TestableObservable<Int> = scheduler.createHotObservable([
+        let xs: TestableObservable<Int> = await scheduler.createHotObservable([
             .error(300, testError)
             ])
 
-        let res = scheduler.start {
-            xs.subscribe(on: scheduler)
+        let res = await scheduler.start {
+            await xs.subscribe(on: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -79,16 +79,16 @@ extension ObservableSubscribeOnTest {
             ])
     }
 
-    func testSubscribeOn_SchedulerDispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSubscribeOn_SchedulerDispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             ])
 
-        let res = scheduler.start {
-            xs.subscribe(on: scheduler)
+        let res = await scheduler.start {
+            await xs.subscribe(on: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -101,16 +101,16 @@ extension ObservableSubscribeOnTest {
     }
 
     #if TRACE_RESOURCES
-        func testSubscribeOnSerialReleasesResourcesOnComplete() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).subscribe(on: testScheduler).subscribe()
-            testScheduler.start()
+    func testSubscribeOnSerialReleasesResourcesOnComplete() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).subscribe(on: testScheduler).subscribe()
+        await testScheduler.start()
         }
         
-        func testSubscribeOnSerialReleasesResourcesOnError() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).subscribe(on: testScheduler).subscribe()
-            testScheduler.start()
+    func testSubscribeOnSerialReleasesResourcesOnError() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).subscribe(on: testScheduler).subscribe()
+        await testScheduler.start()
         }
     #endif
 }

@@ -13,8 +13,8 @@ import Foundation
 Scheduler that tests virtual scheduler
 */
 final class TestVirtualScheduler : VirtualTimeScheduler<TestVirtualSchedulerVirtualTimeConverter> {
-    init(initialClock: Int = 0) {
-        super.init(initialClock: initialClock, converter: TestVirtualSchedulerVirtualTimeConverter())
+    init(initialClock: Int = 0) async {
+        await super.init(initialClock: initialClock, converter: TestVirtualSchedulerVirtualTimeConverter())
     }
 }
 

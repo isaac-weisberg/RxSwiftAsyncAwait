@@ -30,22 +30,22 @@ let retryError: RetryWhenError = RetryWhenError()
 // retryWhen
 extension ObservableRetryWhenTest {
 
-    func testRetryWhen_Never() {
+    func testRetryWhen_Never() async {
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(250)
             ])
 
-        let empty = scheduler.createHotObservable([
+        let empty = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(210)
             ])
 
-        let res = scheduler.start(disposed: 300) {
-            xs.retry { _ in
+        let res = await scheduler.start(disposed: 300) {
+            await xs.retry { _ in
                 return empty
             }
         }
@@ -61,11 +61,11 @@ extension ObservableRetryWhenTest {
             ])
     }
 
-    func testRetryWhen_ObservableNever() {
+    func testRetryWhen_ObservableNever() async {
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -74,12 +74,12 @@ extension ObservableRetryWhenTest {
             .error(250, retryError)
             ])
 
-        let never = scheduler.createHotObservable([
+        let never = await scheduler.createHotObservable([
             .next(150, 1)
             ])
 
-        let res = scheduler.start {
-            xs.retry { _ in
+        let res = await scheduler.start {
+            await xs.retry { _ in
                 return never
             }
         }
@@ -98,11 +98,11 @@ extension ObservableRetryWhenTest {
             ])
     }
 
-    func testRetryWhen_ObservableNeverComplete() {
+    func testRetryWhen_ObservableNeverComplete() async {
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -111,12 +111,12 @@ extension ObservableRetryWhenTest {
             .completed(250)
             ])
 
-        let never = scheduler.createHotObservable([
+        let never = await scheduler.createHotObservable([
             .next(150, 1)
             ])
 
-        let res = scheduler.start {
-            xs.retry { _ in
+        let res = await scheduler.start {
+            await xs.retry { _ in
                 return never
             }
         }
@@ -136,24 +136,24 @@ extension ObservableRetryWhenTest {
             ])
     }
 
-    func testRetryWhen_ObservableEmpty() {
+    func testRetryWhen_ObservableEmpty() async {
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(100, 1),
             .next(150, 2),
             .next(200, 3),
             .completed(250)
             ])
 
-        let empty = scheduler.createHotObservable([
+        let empty = await scheduler.createHotObservable([
             .next(150, 0),
             .completed(0)
             ])
 
-        let res = scheduler.start {
-            xs.retry { _ in
+        let res = await scheduler.start {
+            await xs.retry { _ in
                 return empty
             }
         }
@@ -173,20 +173,20 @@ extension ObservableRetryWhenTest {
     }
 
 
-    func testRetryWhen_ObservableNextError() {
+    func testRetryWhen_ObservableNextError() async {
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 1),
             .next(20, 2),
             .error(30, retryError),
             .completed(40)
             ])
 
-        let res = scheduler.start(disposed: 300) {
-            xs.retry { (errors: Observable<RetryWhenError>) in
-                return errors.scan(0) { _a, _ in
+        let res = await scheduler.start(disposed: 300) {
+            await xs.retry { (errors: Observable<RetryWhenError>) in
+                return await errors.scan(0) { _a, _ in
                     var a = _a
                     a += 1
                     if a == 2 {
@@ -214,25 +214,25 @@ extension ObservableRetryWhenTest {
     }
 
 
-    func testRetryWhen_ObservableComplete() {
+    func testRetryWhen_ObservableComplete() async {
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 1),
             .next(20, 2),
             .error(30, retryError),
             .completed(40)
             ])
 
-        let empty = scheduler.createHotObservable([
+        let empty = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(230)
             ])
 
-        let res = scheduler.start {
-            xs.retry { _ in
-                return empty.asObservable()
+        let res = await scheduler.start {
+            await xs.retry { _ in
+                return await empty.asObservable()
             }
         }
 
@@ -249,20 +249,20 @@ extension ObservableRetryWhenTest {
             ])
     }
 
-    func testRetryWhen_ObservableNextComplete() {
+    func testRetryWhen_ObservableNextComplete() async {
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 1),
             .next(20, 2),
             .error(30, retryError),
             .completed(40)
             ])
 
-        let res = scheduler.start(disposed: 300) {
-            xs.retry { (errors: Observable<RetryWhenError>) in
-                return errors.scan(0) { a, _ in
+        let res = await scheduler.start(disposed: 300) {
+            await xs.retry { (errors: Observable<RetryWhenError>) in
+                return await errors.scan(0) { a, _ in
                     return a + 1
                 }.take(while: { (num: Int) -> Bool in
                     return num < 2
@@ -286,23 +286,23 @@ extension ObservableRetryWhenTest {
             ])
     }
 
-    func testRetryWhen_ObservableInfinite() {
+    func testRetryWhen_ObservableInfinite() async {
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 1),
             .next(20, 2),
             .error(30, retryError),
             .completed(40)
             ])
 
-        let never = scheduler.createHotObservable([
+        let never = await scheduler.createHotObservable([
             .next(150, 1)
             ])
 
-        let res = scheduler.start {
-            xs.retry { _ in
+        let res = await scheduler.start {
+            await xs.retry { _ in
                 return never
             }
         }
@@ -320,26 +320,26 @@ extension ObservableRetryWhenTest {
     }
 
 
-    func testRetryWhen_Incremental_BackOff() {
+    func testRetryWhen_Incremental_BackOff() async {
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
         // just fails
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(5, 1),
             .error(10, retryError)
             ])
 
         let maxAttempts = 4
 
-        let res = scheduler.start(disposed: 800) {
-            xs.retry { (errors: Observable<Swift.Error>) in
-                return errors.enumerated().flatMap { a, e -> Observable<Int64> in
+        let res = await scheduler.start(disposed: 800) {
+            await xs.retry { (errors: Observable<Swift.Error>) in
+                return await errors.enumerated().flatMap { a, e -> Observable<Int64> in
                     if a >= maxAttempts - 1 {
-                        return Observable.error(e)
+                        return await Observable.error(e)
                     }
 
-                    return Observable<Int64>.timer(.seconds((a + 1) * 50), scheduler: scheduler)
+                    return await Observable<Int64>.timer(.seconds((a + 1) * 50), scheduler: scheduler)
                 }
             }
         }
@@ -362,18 +362,18 @@ extension ObservableRetryWhenTest {
             ])
     }
 
-    func testRetryWhen_IgnoresDifferentErrorTypes() {
+    func testRetryWhen_IgnoresDifferentErrorTypes() async {
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
         // just fails
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(5, 1),
             .error(10, retryError)
             ])
 
-        let res = scheduler.start(disposed: 800) {
-            xs.retry { (errors: Observable<CustomErrorType>) in
+        let res = await scheduler.start(disposed: 800) {
+            await xs.retry { (errors: Observable<CustomErrorType>) in
                 errors
             }
         }
@@ -390,25 +390,25 @@ extension ObservableRetryWhenTest {
             ])
     }
 
-    func testRetryWhen_tailRecursiveOptimizationsTest() {
+    func testRetryWhen_tailRecursiveOptimizationsTest() async {
         var count = 1
-        let sequenceSendingImmediateError: Observable<Int> = Observable.create { observer in
-            observer.on(.next(0))
-            observer.on(.next(1))
-            observer.on(.next(2))
+        let sequenceSendingImmediateError: Observable<Int> = await Observable.create { observer in
+            await observer.on(.next(0))
+            await observer.on(.next(1))
+            await observer.on(.next(2))
             if count < 2 {
-                observer.on(.error(retryError))
+                await observer.on(.error(retryError))
                 count += 1
             }
-            observer.on(.next(3))
-            observer.on(.next(4))
-            observer.on(.next(5))
-            observer.on(.completed)
+            await observer.on(.next(3))
+            await observer.on(.next(4))
+            await observer.on(.next(5))
+            await observer.on(.completed)
 
             return Disposables.create()
         }
 
-        _ = sequenceSendingImmediateError
+        _ = await sequenceSendingImmediateError
             .retry { errors in
                 return errors
             }
@@ -417,18 +417,18 @@ extension ObservableRetryWhenTest {
     }
 
     #if TRACE_RESOURCES
-        func testRetryWhen1ReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).retry { e in e }.subscribe()
+    func testRetryWhen1ReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).retry { e in e }.subscribe()
         }
 
-        func testRetryWhen2ReleasesResourcesOnComplete() {
-            _ = Observable<Int>.error(testError).retry { e in e.take(1) }.subscribe()
+    func testRetryWhen2ReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.error(testError).retry { e in await e.take(1) }.subscribe()
         }
 
-        func testRetryWhen1ReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).retry { e in
-                return e.flatMapLatest { e in
-                    return Observable<Int>.error(e)
+    func testRetryWhen1ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).retry { e in
+            return await e.flatMapLatest { e in
+                return await Observable<Int>.error(e)
                 }
             }.subscribe()
         }

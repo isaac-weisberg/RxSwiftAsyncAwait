@@ -56,7 +56,7 @@ class PrimitiveHotObservable<Element> : ObservableType {
                     
                     await removeObserver.dispose()
                     count += 1
-                    assert(count == 1)
+                    await assert(count == 1)
                     
                     self._subscriptions[i] = UnsunscribedFromHotObservable
                 }

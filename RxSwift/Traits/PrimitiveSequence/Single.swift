@@ -259,7 +259,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter predicate: A function to test each source element for a condition.
      - returns: An observable sequence that contains elements from the input sequence that satisfy the condition.
      */
-    func filter(_ predicate: @escaping (Element) throws -> Bool) async
+    func filter(_ predicate: @escaping (Element) async throws -> Bool) async
         -> Maybe<Element>
     {
         return await Maybe(raw: self.primitiveSequence.source.filter(predicate))
@@ -274,7 +274,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: An observable sequence whose elements are the result of invoking the transform function on each element of source.
 
      */
-    func map<Result>(_ transform: @escaping (Element) throws -> Result) async
+    func map<Result>(_ transform: @escaping (Element) async throws -> Result) async
         -> Single<Result>
     {
         return await Single(raw: self.primitiveSequence.source.map(transform))
@@ -287,7 +287,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: An observable sequence whose elements are the result of filtering the transform function for each element of the source.
 
      */
-    func compactMap<Result>(_ transform: @escaping (Element) throws -> Result?) async
+    func compactMap<Result>(_ transform: @escaping (Element) async throws -> Result?) async
         -> Maybe<Result>
     {
         await Maybe(raw: self.primitiveSequence.source.compactMap(transform))
@@ -301,7 +301,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-    func flatMap<Result>(_ selector: @escaping (Element) throws -> Single<Result>) async
+    func flatMap<Result>(_ selector: @escaping (Element) async throws -> Single<Result>) async
         -> Single<Result>
     {
         return await Single<Result>(raw: self.primitiveSequence.source.flatMap(selector))
@@ -315,7 +315,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-    func flatMapMaybe<Result>(_ selector: @escaping (Element) throws -> Maybe<Result>) async
+    func flatMapMaybe<Result>(_ selector: @escaping (Element) async throws -> Maybe<Result>) async
         -> Maybe<Result>
     {
         return await Maybe<Result>(raw: self.primitiveSequence.source.flatMap(selector))
@@ -329,7 +329,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-    func flatMapCompletable(_ selector: @escaping (Element) throws -> Completable) async
+    func flatMapCompletable(_ selector: @escaping (Element) async throws -> Completable) async
         -> Completable
     {
         return await Completable(raw: self.primitiveSequence.source.flatMap(selector))

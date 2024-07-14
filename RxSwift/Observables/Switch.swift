@@ -19,7 +19,7 @@ public extension ObservableType {
      - returns: An observable sequence whose elements are the result of invoking the transform function on each element of source producing an
      Observable of Observable sequences and that at any point in time produces the elements of the most recent inner observable sequence that has been received.
      */
-    func flatMapLatest<Source: ObservableConvertibleType>(_ selector: @escaping (Element) throws -> Source) async
+    func flatMapLatest<Source: ObservableConvertibleType>(_ selector: @escaping (Element) async throws -> Source) async
         -> Observable<Source.Element>
     {
         return await FlatMapLatest(source: self.asObservable(), selector: selector)
@@ -90,7 +90,7 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
         return await Disposables.create(self.subscriptions, self.innerSubscription)
     }
 
-    func performMap(_ element: SourceType) throws -> Source {
+    func performMap(_ element: SourceType) async throws -> Source {
         rxAbstractMethod()
     }
 
@@ -205,13 +205,13 @@ private final class SwitchIdentitySink<Source: ObservableConvertibleType, Observ
         await super.init(observer: observer, cancel: cancel)
     }
 
-    override func performMap(_ element: Source) throws -> Source {
+    override func performMap(_ element: Source) async throws -> Source {
         element
     }
 }
 
 private final class MapSwitchSink<SourceType, Source: ObservableConvertibleType, Observer: ObserverType>: SwitchSink<SourceType, Source, Observer> where Observer.Element == Source.Element {
-    typealias Selector = (SourceType) throws -> Source
+    typealias Selector = (SourceType) async throws -> Source
 
     private let selector: Selector
 
@@ -220,8 +220,8 @@ private final class MapSwitchSink<SourceType, Source: ObservableConvertibleType,
         await super.init(observer: observer, cancel: cancel)
     }
 
-    override func performMap(_ element: SourceType) throws -> Source {
-        try self.selector(element)
+    override func performMap(_ element: SourceType) async throws -> Source {
+        try await self.selector(element)
     }
 }
 
@@ -243,7 +243,7 @@ private final class Switch<Source: ObservableConvertibleType>: Producer<Source.E
 }
 
 private final class FlatMapLatest<SourceType, Source: ObservableConvertibleType>: Producer<Source.Element> {
-    typealias Selector = (SourceType) throws -> Source
+    typealias Selector = (SourceType) async throws -> Source
 
     private let source: Observable<SourceType>
     private let selector: Selector

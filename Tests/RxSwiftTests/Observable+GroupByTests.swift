@@ -14,10 +14,10 @@ class ObservableGroupByTest : RxTest {
 }
 
 extension ObservableGroupByTest {
-    func testGroupBy_TwoGroup() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_TwoGroup() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(205, 1),
             .next(210, 2),
             .next(240, 3),
@@ -30,14 +30,14 @@ extension ObservableGroupByTest {
             .completed(600)
             ])
         
-        let res = scheduler.start { () -> Observable<String> in
-            let group: Observable<GroupedObservable<Int, Int>> = xs.groupBy { x in x % 2 }
-            let mappedWithIndex = group.enumerated().map { (i: Int, go: GroupedObservable<Int, Int>) -> Observable<String> in
-                return go.map { (e: Int) -> String in
+        let res = await scheduler.start { () -> Observable<String> in
+            let group: Observable<GroupedObservable<Int, Int>> = await xs.groupBy { x in x % 2 }
+            let mappedWithIndex = await group.enumerated().map { (i: Int, go: GroupedObservable<Int, Int>) -> Observable<String> in
+                return await go.map { (e: Int) -> String in
                     return "\(i) \(e)"
                 }
             }
-            let result = mappedWithIndex.merge()
+            let result = await mappedWithIndex.merge()
             return result
         }
         
@@ -59,12 +59,12 @@ extension ObservableGroupByTest {
             ])
     }
     
-    func testGroupBy_OuterComplete() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_OuterComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var keyInvoked = 0
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(220, "  foo"),
             .next(240, " FoO "),
             .next(270, "baR  "),
@@ -83,14 +83,14 @@ extension ObservableGroupByTest {
             .error(650, testError)
             ])
         
-        let res = scheduler.start { () -> Observable<String> in
-            let group: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        let res = await scheduler.start { () -> Observable<String> in
+            let group: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 keyInvoked += 1
                 if x == "error" { throw testError }
 
                 return x.lowercased().trimWhitespace()
             }
-            return group.map { (go: GroupedObservable<String, String>) -> String in
+            return await group.map { (go: GroupedObservable<String, String>) -> String in
                 return go.key
             }
         }
@@ -110,12 +110,12 @@ extension ObservableGroupByTest {
         XCTAssertEqual(keyInvoked, 12)
     }
     
-    func testGroupBy_OuterError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_OuterError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var keyInvoked = 0
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -136,14 +136,14 @@ extension ObservableGroupByTest {
             .error(650, testError)
             ])
         
-        let res = scheduler.start { () -> Observable<String> in
-            let group: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        let res = await scheduler.start { () -> Observable<String> in
+            let group: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 keyInvoked += 1
                 if x == "error" { throw testError }
 
                 return x.lowercased().trimWhitespace()
             }
-            return group.map { (go: GroupedObservable<String, String>) -> String in
+            return await group.map { (go: GroupedObservable<String, String>) -> String in
                 return go.key
             }
         }
@@ -164,12 +164,12 @@ extension ObservableGroupByTest {
     }
 
     
-    func testGroupBy_OuterDispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_OuterDispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var keyInvoked = 0
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -191,14 +191,14 @@ extension ObservableGroupByTest {
             .error(650, testError)
             ])
         
-        let res = scheduler.start(disposed: 355) { () -> Observable<String> in
-            let group: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        let res = await scheduler.start(disposed: 355) { () -> Observable<String> in
+            let group: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 keyInvoked += 1
                 if x == "error" { throw testError }
 
                 return x.lowercased().trimWhitespace()
             }
-            return group.map { (go: GroupedObservable<String, String>) -> String in
+            return await group.map { (go: GroupedObservable<String, String>) -> String in
                 return go.key
             }
         }
@@ -216,12 +216,12 @@ extension ObservableGroupByTest {
         XCTAssertEqual(keyInvoked, 5)
     }
     
-    func testGroupBy_OuterKeySelectorThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_OuterKeySelectorThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var keyInvoked = 0
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -243,8 +243,8 @@ extension ObservableGroupByTest {
             .error(650, testError)
             ])
         
-        let res = scheduler.start { () -> Observable<String> in
-            let group: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        let res = await scheduler.start { () -> Observable<String> in
+            let group: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 keyInvoked += 1
                 if x == "error" { throw testError }
 
@@ -253,7 +253,7 @@ extension ObservableGroupByTest {
                 }
                 return x.lowercased().trimWhitespace()
             }
-            return group.map { (go: GroupedObservable<String, String>) -> String in
+            return await group.map { (go: GroupedObservable<String, String>) -> String in
                 return go.key
             }
         }
@@ -273,10 +273,10 @@ extension ObservableGroupByTest {
         XCTAssertEqual(keyInvoked, 10)
     }
     
-    func testGroupBy_InnerComplete() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_InnerComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -303,31 +303,31 @@ extension ObservableGroupByTest {
         var innerSubscriptions = Dictionary<String, Disposable>()
         var results = Dictionary<String, TestableObserver<String>>()
 
-        scheduler.scheduleAt(Defaults.subscribed) {
-            let outer: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            let outer: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 if x == "error" { throw testError }
                 return x.lowercased().trimWhitespace()
             }
-            outerSubscription = outer.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
+            outerSubscription = await outer.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
                 let result: TestableObserver<String> = scheduler.createObserver(String.self)
                 inners[group.key] = group
                 results[group.key] = result
                 
-                innerSubscriptions[group.key] = scheduler.scheduleRelative((), dueTime: .seconds(100), action: { _ in
-                    group.subscribe(result)
+                innerSubscriptions[group.key] = await scheduler.scheduleRelative((), dueTime: .seconds(100), action: { _ in
+                    await group.subscribe(result)
                 })
             })
         }
         
-        scheduler.scheduleAt(Defaults.disposed) {
-            outerSubscription?.dispose()
+        await scheduler.scheduleAt(Defaults.disposed) {
+            await outerSubscription?.dispose()
             for (_, disposable) in innerSubscriptions {
-                disposable.dispose()
+                await disposable.dispose()
             }
             
         }
         
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(inners.count, 4)
         
@@ -354,10 +354,10 @@ extension ObservableGroupByTest {
             ])
     }
     
-    func testGroupBy_InnerCompleteAll() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_InnerCompleteAll() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -384,27 +384,27 @@ extension ObservableGroupByTest {
         var innerSubscriptions = Dictionary<String, Disposable>()
         var results = Dictionary<String, TestableObserver<String>>()
         
-        scheduler.scheduleAt(Defaults.subscribed) {
-            let outer: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            let outer: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 if x == "error" { throw testError }
                 return x.lowercased().trimWhitespace()
             }
-            outerSubscription = outer.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
+            outerSubscription = await outer.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
                 let result: TestableObserver<String> = scheduler.createObserver(String.self)
                 inners[group.key] = group
                 results[group.key] = result
-                innerSubscriptions[group.key] = group.subscribe(result)
+                innerSubscriptions[group.key] = await group.subscribe(result)
             })
         }
         
-        scheduler.scheduleAt(Defaults.disposed) {
-            outerSubscription?.dispose()
+        await scheduler.scheduleAt(Defaults.disposed) {
+            await outerSubscription?.dispose()
             for (_, disposable) in innerSubscriptions {
-                disposable.dispose()
+                await disposable.dispose()
             }
         }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(inners.count, 4)
         
@@ -436,10 +436,10 @@ extension ObservableGroupByTest {
             Subscription(200, 570)])
     }
 
-    func testGroupBy_InnerError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_InnerError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -466,30 +466,30 @@ extension ObservableGroupByTest {
         var innerSubscriptions = Dictionary<String, Disposable>()
         var results = Dictionary<String, TestableObserver<String>>()
         
-        scheduler.scheduleAt(Defaults.subscribed) {
-            let outer: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            let outer: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 if x == "error" { throw testError }
                 return x.lowercased().trimWhitespace()
             }
-            outerSubscription = outer.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
+            outerSubscription = await outer.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
                 let result: TestableObserver<String> = scheduler.createObserver(String.self)
                 inners[group.key] = group
                 results[group.key] = result
                 
-                innerSubscriptions[group.key] = scheduler.scheduleRelative((), dueTime: .seconds(100), action: { _ in
-                     group.subscribe(result)
+                innerSubscriptions[group.key] = await scheduler.scheduleRelative((), dueTime: .seconds(100), action: { _ in
+                    await group.subscribe(result)
                 })
             })
         }
         
-        scheduler.scheduleAt(Defaults.disposed) {
-            outerSubscription?.dispose()
+        await scheduler.scheduleAt(Defaults.disposed) {
+            await outerSubscription?.dispose()
             for (_, disposable) in innerSubscriptions {
-                disposable.dispose()
+                await disposable.dispose()
             }
         }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(inners.count, 4)
         
@@ -516,10 +516,10 @@ extension ObservableGroupByTest {
             ])
     }
 
-    func testGroupBy_InnerDispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_InnerDispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -546,27 +546,27 @@ extension ObservableGroupByTest {
         var innerSubscriptions = Dictionary<String, Disposable>()
         var results = Dictionary<String, TestableObserver<String>>()
         
-        scheduler.scheduleAt(Defaults.subscribed) {
-            let outer: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            let outer: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 if x == "error" { throw testError }
                 return x.lowercased().trimWhitespace()
             }
-            outerSubscription = outer.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
+            outerSubscription = await outer.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
                 let result: TestableObserver<String> = scheduler.createObserver(String.self)
                 inners[group.key] = group
                 results[group.key] = result
-                innerSubscriptions[group.key] = group.subscribe(result)
+                innerSubscriptions[group.key] = await group.subscribe(result)
             })
         }
         
-        scheduler.scheduleAt(400) {
-            outerSubscription?.dispose()
+        await scheduler.scheduleAt(400) {
+            await outerSubscription?.dispose()
             for (_, disposable) in innerSubscriptions {
-                disposable.dispose()
+                await disposable.dispose()
             }
         }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(inners.count, 4)
         
@@ -590,12 +590,12 @@ extension ObservableGroupByTest {
             ])
     }
     
-    func testGroupBy_InnerKeyThrow() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_InnerKeyThrow() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var keyInvoked = 0
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -623,8 +623,8 @@ extension ObservableGroupByTest {
         var innerSubscriptions = Dictionary<String, Disposable>()
         var results = Dictionary<String, TestableObserver<String>>()
         
-        scheduler.scheduleAt(Defaults.created) {
-            outer = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.created) {
+            outer = await xs.groupBy { x in
                 keyInvoked += 1
                 if x == "error" { throw testError }
                 if keyInvoked == 6 {
@@ -634,24 +634,24 @@ extension ObservableGroupByTest {
             }
         }
         
-        scheduler.scheduleAt(Defaults.subscribed) {
-            outerSubscription = outer!.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            outerSubscription = await outer!.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
                 let result: TestableObserver<String> = scheduler.createObserver(String.self)
                 inners[group.key] = group
                 results[group.key] = result
                 
-                innerSubscriptions[group.key] = group.subscribe(result)
+                innerSubscriptions[group.key] = await group.subscribe(result)
             })
         }
         
-        scheduler.scheduleAt(Defaults.disposed) {
-            outerSubscription?.dispose()
+        await scheduler.scheduleAt(Defaults.disposed) {
+            await outerSubscription?.dispose()
             for (_, disposable) in innerSubscriptions {
-                disposable.dispose()
+                await disposable.dispose()
             }
         }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(inners.count, 3)
         
@@ -674,10 +674,10 @@ extension ObservableGroupByTest {
             ])
     }
     
-    func testGroupBy_OuterIndependence() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_OuterIndependence() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -706,45 +706,45 @@ extension ObservableGroupByTest {
         var results = Dictionary<String, TestableObserver<String>>()
         let outerResults: TestableObserver<String> = scheduler.createObserver(String.self)
         
-        scheduler.scheduleAt(Defaults.created) {
-            outer = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.created) {
+            outer = await xs.groupBy { x in
                 if x == "error" { throw testError }
                 return x.lowercased().trimWhitespace()
             }
         }
         
-        scheduler.scheduleAt(Defaults.subscribed) {
-            outerSubscription = outer!
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            outerSubscription = await outer!
                 .subscribe(
                     onNext: { (group: GroupedObservable<String, String>) -> Void in
-                        outerResults.onNext(group.key)
+                        await outerResults.onNext(group.key)
                         
                         let result: TestableObserver<String> = scheduler.createObserver(String.self)
                         inners[group.key] = group
                         results[group.key] = result
-                        innerSubscriptions[group.key] = group.subscribe(result)
+                        innerSubscriptions[group.key] = await group.subscribe(result)
                     },
                     onError: { e -> Void in
-                        outerResults.onError(e)
+                        await outerResults.onError(e)
                     },
                     onCompleted: {
-                        outerResults.onCompleted()
+                        await outerResults.onCompleted()
                     },
                     onDisposed: nil)
         }
         
-        scheduler.scheduleAt(Defaults.disposed) {
-            outerSubscription?.dispose()
+        await scheduler.scheduleAt(Defaults.disposed) {
+            await outerSubscription?.dispose()
             for (_, disposable) in innerSubscriptions {
-                disposable.dispose()
+                await disposable.dispose()
             }
         }
 
-        scheduler.scheduleAt(320) {
-            outerSubscription?.dispose()
+        await scheduler.scheduleAt(320) {
+            await outerSubscription?.dispose()
         }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(inners.keys.count, 2)
         
@@ -771,10 +771,10 @@ extension ObservableGroupByTest {
             ])
     }
     
-    func testGroupBy_InnerIndependence() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_InnerIndependence() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -802,42 +802,42 @@ extension ObservableGroupByTest {
         var results = Dictionary<String, TestableObserver<String>>()
         let outerResults: TestableObserver<String> = scheduler.createObserver(String.self)
         
-        scheduler.scheduleAt(Defaults.subscribed) {
-            let outer: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            let outer: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 if x == "error" { throw testError }
                 return x.lowercased().trimWhitespace()
             }
-            outerSubscription = outer
+            outerSubscription = await outer
                 .subscribe(
                     onNext: { (group: GroupedObservable<String, String>) -> Void in
-                        outerResults.onNext(group.key)
+                        await outerResults.onNext(group.key)
                         
                         let result: TestableObserver<String> = scheduler.createObserver(String.self)
                         inners[group.key] = group
                         results[group.key] = result
-                        innerSubscriptions[group.key] = group.subscribe(result)
+                        innerSubscriptions[group.key] = await group.subscribe(result)
                     },
                     onError: { e -> Void in
-                        outerResults.onError(e)
+                        await outerResults.onError(e)
                     },
                     onCompleted: {
-                        outerResults.onCompleted()
+                        await outerResults.onCompleted()
                     },
                     onDisposed: nil)
         }
         
-        scheduler.scheduleAt(Defaults.disposed) {
-            outerSubscription?.dispose()
+        await scheduler.scheduleAt(Defaults.disposed) {
+            await outerSubscription?.dispose()
             for (_, disposable) in innerSubscriptions {
-                disposable.dispose()
+                await disposable.dispose()
             }
         }
         
-        scheduler.scheduleAt(320) {
-            innerSubscriptions["foo"]!.dispose()
+        await scheduler.scheduleAt(320) {
+            await innerSubscriptions["foo"]!.dispose()
         }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(inners.keys.count, 4)
         
@@ -866,10 +866,10 @@ extension ObservableGroupByTest {
             Subscription(200, 570)])
     }
 
-    func testGroupBy_InnerMultipleIndependence() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_InnerMultipleIndependence() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, "abc"),
             .next(110, "zoo"),
             .next(130, "oof"),
@@ -897,54 +897,54 @@ extension ObservableGroupByTest {
         var results = Dictionary<String, TestableObserver<String>>()
         let outerResults: TestableObserver<String> = scheduler.createObserver(String.self)
         
-        scheduler.scheduleAt(Defaults.subscribed) {
-            let outer: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            let outer: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 if x == "error" { throw testError }
                 return x.lowercased().trimWhitespace()
             }
-            outerSubscription = outer
+            outerSubscription = await outer
                 .subscribe(
                     onNext: { (group: GroupedObservable<String, String>) -> Void in
-                        outerResults.onNext(group.key)
+                        await outerResults.onNext(group.key)
                         
                         let result: TestableObserver<String> = scheduler.createObserver(String.self)
                         inners[group.key] = group
                         results[group.key] = result
-                        innerSubscriptions[group.key] = group.subscribe(result)
+                        innerSubscriptions[group.key] = await group.subscribe(result)
                     },
                     onError: { e -> Void in
-                        outerResults.onError(e)
+                        await outerResults.onError(e)
                     },
                     onCompleted: {
-                        outerResults.onCompleted()
+                        await outerResults.onCompleted()
                     },
                     onDisposed: nil)
         }
         
-        scheduler.scheduleAt(Defaults.disposed) {
-            outerSubscription?.dispose()
+        await scheduler.scheduleAt(Defaults.disposed) {
+            await outerSubscription?.dispose()
             for (_, disposable) in innerSubscriptions {
-                disposable.dispose()
+                await disposable.dispose()
             }
         }
         
-        scheduler.scheduleAt(320) {
-            innerSubscriptions["foo"]!.dispose()
+        await scheduler.scheduleAt(320) {
+            await innerSubscriptions["foo"]!.dispose()
         }
         
-        scheduler.scheduleAt(280) {
-            innerSubscriptions["bar"]!.dispose()
+        await scheduler.scheduleAt(280) {
+            await innerSubscriptions["bar"]!.dispose()
         }
 
-        scheduler.scheduleAt(355) {
-            innerSubscriptions["baz"]!.dispose()
+        await scheduler.scheduleAt(355) {
+            await innerSubscriptions["baz"]!.dispose()
         }
 
-        scheduler.scheduleAt(400) { () -> Void in
-            innerSubscriptions["qux"]!.dispose()
+        await scheduler.scheduleAt(400) { () -> Void in
+            await innerSubscriptions["qux"]!.dispose()
         }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(inners.keys.count, 4)
         
@@ -966,10 +966,10 @@ extension ObservableGroupByTest {
             Subscription(200, 570)])
     }
 
-    func testGroupBy_InnerEscapeComplete() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_InnerEscapeComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(220, "  foo"),
             .next(240, " FoO "),
             .next(310, "foO "),
@@ -984,28 +984,28 @@ extension ObservableGroupByTest {
         var inner: GroupedObservable<String, String>?
         var innerSubscription: Disposable?
         
-        scheduler.scheduleAt(Defaults.created) {
-            outer = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.created) {
+            outer = await xs.groupBy { x in
                 return x.lowercased().trimWhitespace()
             }
         }
         
-        scheduler.scheduleAt(Defaults.subscribed) {
-            outerSubscription = outer!.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            outerSubscription = await outer!.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
                 inner = group
             })
         }
         
-        scheduler.scheduleAt(600) {
-            innerSubscription = inner?.subscribe(results)
+        await scheduler.scheduleAt(600) {
+            innerSubscription = await inner?.subscribe(results)
         }
         
-        scheduler.scheduleAt(Defaults.disposed) {
-            outerSubscription?.dispose()
-            innerSubscription?.dispose()
+        await scheduler.scheduleAt(Defaults.disposed) {
+            await outerSubscription?.dispose()
+            await innerSubscription?.dispose()
         }
         
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(results.events, [
             .completed(600)])
@@ -1014,10 +1014,10 @@ extension ObservableGroupByTest {
             Subscription(200, 570)])
     }
 
-    func testGroupBy_InnerEscapeError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_InnerEscapeError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(220, "  foo"),
             .next(240, " FoO "),
             .next(310, "foO "),
@@ -1032,28 +1032,28 @@ extension ObservableGroupByTest {
         var inner: GroupedObservable<String, String>?
         var innerSubscription: Disposable?
         
-        scheduler.scheduleAt(Defaults.created) {
-            outer = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.created) {
+            outer = await xs.groupBy { x in
                 return x.lowercased().trimWhitespace()
             }
         }
         
-        scheduler.scheduleAt(Defaults.subscribed) {
-            outerSubscription = outer!.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            outerSubscription = await outer!.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
                 inner = group
             })
         }
         
-        scheduler.scheduleAt(600) {
-            innerSubscription = inner?.subscribe(results)
+        await scheduler.scheduleAt(600) {
+            innerSubscription = await inner?.subscribe(results)
         }
         
-        scheduler.scheduleAt(Defaults.disposed) { () -> Void in
-            outerSubscription?.dispose()
-            innerSubscription?.dispose()
+        await scheduler.scheduleAt(Defaults.disposed) { () -> Void in
+            await outerSubscription?.dispose()
+            await innerSubscription?.dispose()
         }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(results.events, [
             .error(600, testError)])
@@ -1062,10 +1062,10 @@ extension ObservableGroupByTest {
             Subscription(200, 570)])
     }
 
-    func testGroupBy_InnerEscapeDispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGroupBy_InnerEscapeDispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(220, "  foo"),
             .next(240, " FoO "),
             .next(310, "foO "),
@@ -1079,28 +1079,28 @@ extension ObservableGroupByTest {
         var inner: GroupedObservable<String, String>?
         var innerSubscription: Disposable?
         
-        scheduler.scheduleAt(Defaults.subscribed) {
-            let outer: Observable<GroupedObservable<String, String>> = xs.groupBy { x in
+        await scheduler.scheduleAt(Defaults.subscribed) {
+            let outer: Observable<GroupedObservable<String, String>> = await xs.groupBy { x in
                 return x.lowercased().trimWhitespace()
             }
-            outerSubscription = outer.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
+            outerSubscription = await outer.subscribe(onNext: { (group: GroupedObservable<String, String>) -> Void in
                 inner = group
             })
         }
         
-        scheduler.scheduleAt(400) {
-            outerSubscription?.dispose()
+        await scheduler.scheduleAt(400) {
+            await outerSubscription?.dispose()
         }
 
-        scheduler.scheduleAt(600) {
-            innerSubscription = inner?.subscribe(results)
+        await scheduler.scheduleAt(600) {
+            innerSubscription = await inner?.subscribe(results)
         }
 
-        scheduler.scheduleAt(Defaults.disposed) {
-            innerSubscription?.dispose()
+        await scheduler.scheduleAt(Defaults.disposed) {
+            await innerSubscription?.dispose()
         }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(results.events, [])
         
@@ -1109,16 +1109,16 @@ extension ObservableGroupByTest {
     }
 
     #if TRACE_RESOURCES
-        func testGroupByReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).groupBy { $0 }.subscribe()
+    func testGroupByReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).groupBy { $0 }.subscribe()
         }
 
-        func testGroupByReleasesResourcesOnError1() {
-            _ = Observable<Int>.error(testError).groupBy { $0 }.subscribe()
+    func testGroupByReleasesResourcesOnError1() async {
+        _ = await Observable<Int>.error(testError).groupBy { $0 }.subscribe()
         }
 
-        func testGroupByReleasesResourcesOnError2() {
-            _ = Observable<Int>.error(testError).groupBy { _ -> Int in throw testError }.subscribe()
+    func testGroupByReleasesResourcesOnError2() async {
+        _ = await Observable<Int>.error(testError).groupBy { _ -> Int in throw testError }.subscribe()
         }
     #endif
 }

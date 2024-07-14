@@ -16,16 +16,16 @@ class ObservableToArrayTest : RxTest {
 
 extension ObservableToArrayTest {
 
-    func test_ToArrayWithSingleItem_Return() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ToArrayWithSingleItem_Return() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs: TestableObservable<Int> = scheduler.createColdObservable([
+        let xs: TestableObservable<Int> = await scheduler.createColdObservable([
             .next(10, 1),
             .completed(20)
             ])
 
-        let res = scheduler.start {
-            return xs.toArray().map { EquatableArray($0) }
+        let res = await scheduler.start {
+            return await xs.toArray().map { EquatableArray($0) }
         }
 
         let correctMessages = Recorded.events(
@@ -41,10 +41,10 @@ extension ObservableToArrayTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func test_ToArrayWithMultipleItems_Return() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ToArrayWithMultipleItems_Return() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs: TestableObservable<Int> = scheduler.createColdObservable([
+        let xs: TestableObservable<Int> = await scheduler.createColdObservable([
             .next(10, 1),
             .next(20, 2),
             .next(30, 3),
@@ -52,8 +52,8 @@ extension ObservableToArrayTest {
             .completed(50)
             ])
 
-        let res = scheduler.start {
-            return xs.toArray().map { EquatableArray($0) }
+        let res = await scheduler.start {
+            return await xs.toArray().map { EquatableArray($0) }
         }
 
         let correctMessages = Recorded.events(
@@ -69,15 +69,15 @@ extension ObservableToArrayTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func test_ToArrayWithNoItems_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ToArrayWithNoItems_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs: TestableObservable<Int> = scheduler.createColdObservable([
+        let xs: TestableObservable<Int> = await scheduler.createColdObservable([
             .completed(50)
             ])
 
-        let res = scheduler.start {
-            return xs.toArray().map { EquatableArray($0) }
+        let res = await scheduler.start {
+            return await xs.toArray().map { EquatableArray($0) }
         }
 
         let correctMessages = Recorded.events(
@@ -93,15 +93,15 @@ extension ObservableToArrayTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func test_ToArrayWithSingleItem_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ToArrayWithSingleItem_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1)
             ])
 
-        let res = scheduler.start {
-            return xs.toArray().map { EquatableArray($0) }
+        let res = await scheduler.start {
+            return await xs.toArray().map { EquatableArray($0) }
         }
 
         let correctMessages: [Recorded<Event<EquatableArray<Int>>>] = [
@@ -115,15 +115,15 @@ extension ObservableToArrayTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func test_ToArrayWithImmediateError_Throw() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ToArrayWithImmediateError_Throw() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs: TestableObservable<Int> = scheduler.createColdObservable([
+        let xs: TestableObservable<Int> = await scheduler.createColdObservable([
             .error(10, testError)
             ])
 
-        let res = scheduler.start {
-            return xs.toArray().map { EquatableArray($0) }
+        let res = await scheduler.start {
+            return await xs.toArray().map { EquatableArray($0) }
         }
 
         let correctMessages = [
@@ -138,10 +138,10 @@ extension ObservableToArrayTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func test_ToArrayWithMultipleItems_Throw() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ToArrayWithMultipleItems_Throw() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs: TestableObservable<Int> = scheduler.createColdObservable([
+        let xs: TestableObservable<Int> = await scheduler.createColdObservable([
             .next(10, 1),
             .next(20, 2),
             .next(30, 3),
@@ -149,8 +149,8 @@ extension ObservableToArrayTest {
             .error(50, testError)
             ])
 
-        let res = scheduler.start {
-            return xs.toArray().map { EquatableArray($0) }
+        let res = await scheduler.start {
+            return await xs.toArray().map { EquatableArray($0) }
         }
 
         let correctMessages = [
@@ -166,12 +166,12 @@ extension ObservableToArrayTest {
     }
 
     #if TRACE_RESOURCES
-        func testToArrayReleasesResourcesOnComplete() {
-        _ = Observable<Int>.just(1).toArray().subscribe()
+    func testToArrayReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).toArray().subscribe()
         }
 
-        func testToArrayReleasesResourcesOnError() {
-        _ = Observable<Int>.just(1).toArray().subscribe()
+    func testToArrayReleasesResourcesOnError() async {
+        _ = await Observable<Int>.just(1).toArray().subscribe()
         }
     #endif
 

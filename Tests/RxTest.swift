@@ -90,17 +90,17 @@ extension RxTest {
         _ = await Hooks.getDefaultErrorHandler() // lazy load resource so resource count matches
         _ = await Hooks.getCustomCaptureSubscriptionCallstack() // lazy load resource so resource count matches
         #if TRACE_RESOURCES
-            self.startResourceCount = Resources.total
+        self.startResourceCount = await Resources.total
             //registerMallocHooks()
             (startNumberOfAllocatedBytes, startNumberOfAllocations) = getMemoryInfo()
         #endif
     }
 
-    func tearDownActions() {
+    func tearDownActions() async {
         #if TRACE_RESOURCES
             // give 5 sec to clean up resources
             for _ in 0..<30 {
-                if self.startResourceCount < Resources.total {
+                if await self.startResourceCount < Resources.total {
                     // main schedulers need to finish work
                     print("Waiting for resource cleanup ...")
                     let mode = RunLoop.Mode.default
@@ -112,7 +112,7 @@ extension RxTest {
                 }
             }
 
-            XCTAssertEqual(self.startResourceCount, Resources.total)
+        await assertEqual(self.startResourceCount, await Resources.total)
             let (endNumberOfAllocatedBytes, endNumberOfAllocations) = getMemoryInfo()
 
             let (newBytes, newAllocations) = (endNumberOfAllocatedBytes - startNumberOfAllocatedBytes, endNumberOfAllocations - startNumberOfAllocations)

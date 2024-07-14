@@ -16,7 +16,7 @@ public extension ObservableType {
      - parameter observableFactory: Factory function to obtain an observable sequence that depends on the obtained resource.
      - returns: An observable sequence whose lifetime controls the lifetime of the dependent resource object.
      */
-    static func using<Resource: Disposable>(_ resourceFactory: @escaping () throws -> Resource, observableFactory: @escaping (Resource) throws -> Observable<Element>) async -> Observable<Element> {
+    static func using<Resource: Disposable>(_ resourceFactory: @escaping () async throws -> Resource, observableFactory: @escaping (Resource) async throws -> Observable<Element>) async -> Observable<Element> {
         await Using(resourceFactory: resourceFactory, observableFactory: observableFactory)
     }
 }
@@ -36,9 +36,9 @@ private final class UsingSink<ResourceType: Disposable, Observer: ObserverType>:
         var disposable = Disposables.create()
         
         do {
-            let resource = try self.parent.resourceFactory()
+            let resource = try await self.parent.resourceFactory()
             disposable = resource
-            let source = try self.parent.observableFactory(resource)
+            let source = try await self.parent.observableFactory(resource)
             
             return await Disposables.create(
                 source.subscribe(self),
@@ -69,8 +69,8 @@ private final class UsingSink<ResourceType: Disposable, Observer: ObserverType>:
 private final class Using<SourceType, ResourceType: Disposable>: Producer<SourceType> {
     typealias Element = SourceType
     
-    typealias ResourceFactory = () throws -> ResourceType
-    typealias ObservableFactory = (ResourceType) throws -> Observable<SourceType>
+    typealias ResourceFactory = () async throws -> ResourceType
+    typealias ObservableFactory = (ResourceType) async throws -> Observable<SourceType>
     
     fileprivate let resourceFactory: ResourceFactory
     fileprivate let observableFactory: ObservableFactory

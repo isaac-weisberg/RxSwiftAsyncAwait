@@ -14,31 +14,31 @@ class ObserverTests: RxTest { }
 
 extension ObserverTests {
 
-    func testConvenienceOn_Next() {
+    func testConvenienceOn_Next() async {
         var observer: AnyObserver<Int>!
-        let a: Observable<Int> = Observable.create { o in
+        let a: Observable<Int> = await Observable.create { o in
             observer = o
             return Disposables.create()
         }
 
         var elements = [Int]()
 
-        let subscription = a.subscribe(onNext: { n in
+        let subscription = await a.subscribe(onNext: { n in
             elements.append(n)
         })
 
         XCTAssertEqual(elements, [])
 
-        observer.onNext(0)
+        await observer.onNext(0)
 
         XCTAssertEqual(elements, [0])
 
-        subscription.dispose()
+        await subscription.dispose()
     }
 
-    func testConvenienceOn_Error() {
+    func testConvenienceOn_Error() async {
         var observer: AnyObserver<Int>!
-        let a: Observable<Int> = Observable.create { o in
+        let a: Observable<Int> = await Observable.create { o in
             observer = o
             return Disposables.create()
         }
@@ -46,7 +46,7 @@ extension ObserverTests {
         var elements = [Int]()
         var errorNotification: Swift.Error!
 
-        _ = a.subscribe(
+        _ = await a.subscribe(
             onNext: { n in elements.append(n) },
             onError: { e in
                 errorNotification = e
@@ -55,76 +55,76 @@ extension ObserverTests {
 
         XCTAssertEqual(elements, [])
 
-        observer.onNext(0)
+        await observer.onNext(0)
         XCTAssertEqual(elements, [0])
 
-        observer.onError(testError)
+        await observer.onError(testError)
 
-        observer.onNext(1)
+        await observer.onNext(1)
         XCTAssertEqual(elements, [0])
         XCTAssertErrorEqual(errorNotification, testError)
     }
 
-    func testConvenienceOn_Complete() {
+    func testConvenienceOn_Complete() async {
         var observer: AnyObserver<Int>!
-        let a: Observable<Int> = Observable.create { o in
+        let a: Observable<Int> = await Observable.create { o in
             observer = o
             return Disposables.create()
         }
 
         var elements = [Int]()
 
-        _ = a.subscribe(onNext: { n in
+        _ = await a.subscribe(onNext: { n in
             elements.append(n)
         })
 
         XCTAssertEqual(elements, [])
 
-        observer.onNext(0)
+        await observer.onNext(0)
         XCTAssertEqual(elements, [0])
 
-        observer.onCompleted()
+        await observer.onCompleted()
 
-        observer.onNext(1)
+        await observer.onNext(1)
         XCTAssertEqual(elements, [0])
     }
 }
 
 extension ObserverTests {
-    func testMapElement() {
+    func testMapElement() async {
         let observer = PrimitiveMockObserver<Int>()
 
-        observer.mapObserver { (x: Int) -> Int in
+        await observer.mapObserver { (x: Int) -> Int in
             return x / 2
         }.on(.next(2))
 
         XCTAssertEqual(observer.events, [.next(1)])
     }
 
-    func testMapElementCompleted() {
+    func testMapElementCompleted() async {
         let observer = PrimitiveMockObserver<Int>()
 
-        observer.mapObserver { (x: Int) -> Int in
+        await observer.mapObserver { (x: Int) -> Int in
             return x / 2
         }.on(.completed)
 
         XCTAssertEqual(observer.events, [.completed()])
     }
 
-    func testMapElementError() {
+    func testMapElementError() async {
         let observer = PrimitiveMockObserver<Int>()
 
-        observer.mapObserver { (x: Int) -> Int in
+        await observer.mapObserver { (x: Int) -> Int in
             return x / 2
         }.on(.error(testError))
 
         XCTAssertEqual(observer.events, [.error(testError)])
     }
 
-    func testMapElementThrow() {
+    func testMapElementThrow() async {
         let observer = PrimitiveMockObserver<Int>()
 
-        observer.mapObserver { _ -> Int in
+        await observer.mapObserver { _ -> Int in
             throw testError
         }.on(.next(2))
 

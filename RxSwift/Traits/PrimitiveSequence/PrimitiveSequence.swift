@@ -206,10 +206,10 @@ public extension PrimitiveSequence
      - parameter handler: Error handler function, producing another observable sequence.
      - returns: An observable sequence containing the source sequence's elements, followed by the elements produced by the handler's resulting observable sequence in case an error occurred.
      */
-    func `catch`(_ handler: @escaping (Swift.Error) throws -> PrimitiveSequence<Trait, Element>) async
+    func `catch`(_ handler: @escaping (Swift.Error) async throws -> PrimitiveSequence<Trait, Element>) async
         -> PrimitiveSequence<Trait, Element>
     {
-        await PrimitiveSequence(raw: self.source.catch { try handler($0).asObservable() })
+        await PrimitiveSequence(raw: self.source.catch { try await handler($0).asObservable() })
     }
 
     /**
@@ -312,11 +312,11 @@ public extension PrimitiveSequence
      - parameter primitiveSequenceFactory: Factory function to obtain an observable sequence that depends on the obtained resource.
      - returns: An observable sequence whose lifetime controls the lifetime of the dependent resource object.
      */
-    static func using<Resource: Disposable>(_ resourceFactory: @escaping () throws -> Resource, primitiveSequenceFactory: @escaping (Resource) throws -> PrimitiveSequence<Trait, Element>) async
+    static func using<Resource: Disposable>(_ resourceFactory: @escaping () async throws -> Resource, primitiveSequenceFactory: @escaping (Resource) async throws -> PrimitiveSequence<Trait, Element>) async
         -> PrimitiveSequence<Trait, Element>
     {
         await PrimitiveSequence(raw: Observable.using(resourceFactory, observableFactory: { (resource: Resource) throws -> Observable<Element> in
-            try primitiveSequenceFactory(resource).asObservable()
+            try await primitiveSequenceFactory(resource).asObservable()
         }))
     }
 

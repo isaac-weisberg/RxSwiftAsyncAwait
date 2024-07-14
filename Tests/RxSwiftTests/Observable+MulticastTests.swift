@@ -14,10 +14,10 @@ class ObservableMulticastTest : RxTest {
 }
 
 extension ObservableMulticastTest {
-    func testMulticastWhileConnected_connectControlsSourceSubscription() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticastWhileConnected_connectControlsSourceSubscription() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 7),
             .next(220, 3),
             .next(280, 4),
@@ -48,22 +48,22 @@ extension ObservableMulticastTest {
         var lastConnection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.multicast(makeSubject: { ReplaySubject.create(bufferSize: 3) }) }
-        scheduler.scheduleAt(405, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.multicast(makeSubject: { await ReplaySubject.create(bufferSize: 3) }) }
+        await scheduler.scheduleAt(405, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(300) { connection = ys.connect() }
-        scheduler.scheduleAt(400) { connection.dispose() }
+        await scheduler.scheduleAt(300) { connection = await ys.connect() }
+        await scheduler.scheduleAt(400) { await connection.dispose() }
 
-        scheduler.scheduleAt(420) { connection = ys.connect() }
-        scheduler.scheduleAt(440) { innerConnection = ys.connect() }
-        scheduler.scheduleAt(530) { innerConnection.dispose() }
-        scheduler.scheduleAt(575) { lastConnection = ys.connect() }
-        scheduler.scheduleAt(590) { connection.dispose() }
+        await scheduler.scheduleAt(420) { connection = await ys.connect() }
+        await scheduler.scheduleAt(440) { innerConnection = await ys.connect() }
+        await scheduler.scheduleAt(530) { await innerConnection.dispose() }
+        await scheduler.scheduleAt(575) { lastConnection = await ys.connect() }
+        await scheduler.scheduleAt(590) { await connection.dispose() }
 
-        scheduler.scheduleAt(621) { lastConnection.dispose() }
+        await scheduler.scheduleAt(621) { await lastConnection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(430, 2),
@@ -78,10 +78,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticastWhileConnected_connectFirstThenSubscribe() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticastWhileConnected_connectFirstThenSubscribe() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 7),
             .next(220, 3),
             .next(280, 4),
@@ -112,22 +112,22 @@ extension ObservableMulticastTest {
         var lastConnection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.multicast(makeSubject: { ReplaySubject.create(bufferSize: 1) }) }
-        scheduler.scheduleAt(470, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.multicast(makeSubject: { await ReplaySubject.create(bufferSize: 1) }) }
+        await scheduler.scheduleAt(470, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(300) { connection = ys.connect() }
-        scheduler.scheduleAt(400) { connection.dispose() }
+        await scheduler.scheduleAt(300) { connection = await ys.connect() }
+        await scheduler.scheduleAt(400) { await connection.dispose() }
 
-        scheduler.scheduleAt(420) { connection = ys.connect() }
-        scheduler.scheduleAt(440) { innerConnection = ys.connect() }
-        scheduler.scheduleAt(530) { innerConnection.dispose() }
-        scheduler.scheduleAt(575) { lastConnection = ys.connect() }
-        scheduler.scheduleAt(590) { connection.dispose() }
+        await scheduler.scheduleAt(420) { connection = await ys.connect() }
+        await scheduler.scheduleAt(440) { innerConnection = await ys.connect() }
+        await scheduler.scheduleAt(530) { await innerConnection.dispose() }
+        await scheduler.scheduleAt(575) { lastConnection = await ys.connect() }
+        await scheduler.scheduleAt(590) { await connection.dispose() }
 
-        scheduler.scheduleAt(621) { lastConnection.dispose() }
+        await scheduler.scheduleAt(621) { await lastConnection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(470, 9),
@@ -141,10 +141,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticastWhileConnected_completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticastWhileConnected_completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 7),
             .next(220, 3),
             .next(280, 4),
@@ -176,27 +176,27 @@ extension ObservableMulticastTest {
         var lastConnection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.multicast(makeSubject: { ReplaySubject.create(bufferSize: 1) }) }
-        scheduler.scheduleAt(405, action: {
-            subscription = ys.do(onCompleted: {
-                subscription = ys.subscribe(res)
-                _ = ys.connect()
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.multicast(makeSubject: { await ReplaySubject.create(bufferSize: 1) }) }
+        await scheduler.scheduleAt(405, action: {
+            subscription = await ys.do(onCompleted: {
+                subscription = await ys.subscribe(res)
+                _ = await ys.connect()
             }).subscribe(res)
         })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(300) { connection = ys.connect() }
-        scheduler.scheduleAt(400) { connection.dispose() }
+        await scheduler.scheduleAt(300) { connection = await ys.connect() }
+        await scheduler.scheduleAt(400) { await connection.dispose() }
 
-        scheduler.scheduleAt(420) { connection = ys.connect() }
-        scheduler.scheduleAt(440) { innerConnection = ys.connect() }
-        scheduler.scheduleAt(530) { innerConnection.dispose() }
-        scheduler.scheduleAt(575) { lastConnection = ys.connect() }
-        scheduler.scheduleAt(590) { connection.dispose() }
+        await scheduler.scheduleAt(420) { connection = await ys.connect() }
+        await scheduler.scheduleAt(440) { innerConnection = await ys.connect() }
+        await scheduler.scheduleAt(530) { await innerConnection.dispose() }
+        await scheduler.scheduleAt(575) { lastConnection = await ys.connect() }
+        await scheduler.scheduleAt(590) { await connection.dispose() }
 
-        scheduler.scheduleAt(621) { lastConnection.dispose() }
+        await scheduler.scheduleAt(621) { await lastConnection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(430, 2),
@@ -213,10 +213,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticastWhileConnected_error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticastWhileConnected_error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 7),
             .next(220, 3),
             .next(280, 4),
@@ -248,27 +248,27 @@ extension ObservableMulticastTest {
         var lastConnection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.multicast(makeSubject: { ReplaySubject.create(bufferSize: 1) }) }
-        scheduler.scheduleAt(405, action: {
-            subscription = ys.do(onError: { _ in
-                subscription = ys.subscribe(res)
-                _ = ys.connect()
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.multicast(makeSubject: { await ReplaySubject.create(bufferSize: 1) }) }
+        await scheduler.scheduleAt(405, action: {
+            subscription = await ys.do(onError: { _ in
+                subscription = await ys.subscribe(res)
+                _ = await ys.connect()
             }).subscribe(res)
         })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(300) { connection = ys.connect() }
-        scheduler.scheduleAt(400) { connection.dispose() }
+        await scheduler.scheduleAt(300) { connection = await ys.connect() }
+        await scheduler.scheduleAt(400) { await connection.dispose() }
 
-        scheduler.scheduleAt(420) { connection = ys.connect() }
-        scheduler.scheduleAt(440) { innerConnection = ys.connect() }
-        scheduler.scheduleAt(530) { innerConnection.dispose() }
-        scheduler.scheduleAt(575) { lastConnection = ys.connect() }
-        scheduler.scheduleAt(590) { connection.dispose() }
+        await scheduler.scheduleAt(420) { connection = await ys.connect() }
+        await scheduler.scheduleAt(440) { innerConnection = await ys.connect() }
+        await scheduler.scheduleAt(530) { await innerConnection.dispose() }
+        await scheduler.scheduleAt(575) { lastConnection = await ys.connect() }
+        await scheduler.scheduleAt(590) { await connection.dispose() }
 
-        scheduler.scheduleAt(621) { lastConnection.dispose() }
+        await scheduler.scheduleAt(621) { await lastConnection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(430, 2),
@@ -285,10 +285,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticastForever_connectControlsSourceSubscription() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticastForever_connectControlsSourceSubscription() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 7),
             .next(220, 3),
             .next(280, 4),
@@ -319,22 +319,22 @@ extension ObservableMulticastTest {
         var lastConnection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.multicast(ReplaySubject.create(bufferSize: 3)) }
-        scheduler.scheduleAt(405, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.multicast(ReplaySubject.create(bufferSize: 3)) }
+        await scheduler.scheduleAt(405, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(300) { connection = ys.connect() }
-        scheduler.scheduleAt(400) { connection.dispose() }
+        await scheduler.scheduleAt(300) { connection = await ys.connect() }
+        await scheduler.scheduleAt(400) { await connection.dispose() }
 
-        scheduler.scheduleAt(420) { connection = ys.connect() }
-        scheduler.scheduleAt(440) { innerConnection = ys.connect() }
-        scheduler.scheduleAt(530) { innerConnection.dispose() }
-        scheduler.scheduleAt(575) { lastConnection = ys.connect() }
-        scheduler.scheduleAt(590) { connection.dispose() }
+        await scheduler.scheduleAt(420) { connection = await ys.connect() }
+        await scheduler.scheduleAt(440) { innerConnection = await ys.connect() }
+        await scheduler.scheduleAt(530) { await innerConnection.dispose() }
+        await scheduler.scheduleAt(575) { lastConnection = await ys.connect() }
+        await scheduler.scheduleAt(590) { await connection.dispose() }
 
-        scheduler.scheduleAt(621) { lastConnection.dispose() }
+        await scheduler.scheduleAt(621) { await lastConnection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(405, 5),
@@ -357,10 +357,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticastForever_connectFirstThenSubscribe() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticastForever_connectFirstThenSubscribe() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 7),
             .next(220, 3),
             .next(280, 4),
@@ -391,22 +391,22 @@ extension ObservableMulticastTest {
         var lastConnection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.multicast(ReplaySubject.create(bufferSize: 1)) }
-        scheduler.scheduleAt(470, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.multicast(ReplaySubject.create(bufferSize: 1)) }
+        await scheduler.scheduleAt(470, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(300) { connection = ys.connect() }
-        scheduler.scheduleAt(400) { connection.dispose() }
+        await scheduler.scheduleAt(300) { connection = await ys.connect() }
+        await scheduler.scheduleAt(400) { await connection.dispose() }
 
-        scheduler.scheduleAt(420) { connection = ys.connect() }
-        scheduler.scheduleAt(440) { innerConnection = ys.connect() }
-        scheduler.scheduleAt(530) { innerConnection.dispose() }
-        scheduler.scheduleAt(575) { lastConnection = ys.connect() }
-        scheduler.scheduleAt(590) { connection.dispose() }
+        await scheduler.scheduleAt(420) { connection = await ys.connect() }
+        await scheduler.scheduleAt(440) { innerConnection = await ys.connect() }
+        await scheduler.scheduleAt(530) { await innerConnection.dispose() }
+        await scheduler.scheduleAt(575) { lastConnection = await ys.connect() }
+        await scheduler.scheduleAt(590) { await connection.dispose() }
 
-        scheduler.scheduleAt(621) { lastConnection.dispose() }
+        await scheduler.scheduleAt(621) { await lastConnection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(470, 9),
@@ -425,10 +425,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticastForever_completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticastForever_completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 7),
             .next(220, 3),
             .next(280, 4),
@@ -460,27 +460,27 @@ extension ObservableMulticastTest {
         var lastConnection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.multicast(ReplaySubject.create(bufferSize: 1)) }
-        scheduler.scheduleAt(405, action: {
-            subscription = ys.do(onCompleted: {
-                subscription = ys.subscribe(res)
-                _ = ys.connect()
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.multicast(ReplaySubject.create(bufferSize: 1)) }
+        await scheduler.scheduleAt(405, action: {
+            subscription = await ys.do(onCompleted: {
+                subscription = await ys.subscribe(res)
+                _ = await ys.connect()
             }).subscribe(res)
         })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(300) { connection = ys.connect() }
-        scheduler.scheduleAt(400) { connection.dispose() }
+        await scheduler.scheduleAt(300) { connection = await ys.connect() }
+        await scheduler.scheduleAt(400) { await connection.dispose() }
 
-        scheduler.scheduleAt(420) { connection = ys.connect() }
-        scheduler.scheduleAt(440) { innerConnection = ys.connect() }
-        scheduler.scheduleAt(530) { innerConnection.dispose() }
-        scheduler.scheduleAt(575) { lastConnection = ys.connect() }
-        scheduler.scheduleAt(590) { connection.dispose() }
+        await scheduler.scheduleAt(420) { connection = await ys.connect() }
+        await scheduler.scheduleAt(440) { innerConnection = await ys.connect() }
+        await scheduler.scheduleAt(530) { await innerConnection.dispose() }
+        await scheduler.scheduleAt(575) { lastConnection = await ys.connect() }
+        await scheduler.scheduleAt(590) { await connection.dispose() }
 
-        scheduler.scheduleAt(621) { lastConnection.dispose() }
+        await scheduler.scheduleAt(621) { await lastConnection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(405, 7),
@@ -498,10 +498,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticastForever_error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticastForever_error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 7),
             .next(220, 3),
             .next(280, 4),
@@ -533,27 +533,27 @@ extension ObservableMulticastTest {
         var lastConnection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.multicast(ReplaySubject.create(bufferSize: 1)) }
-        scheduler.scheduleAt(405, action: {
-            subscription = ys.do(onError: { _ in
-                subscription = ys.subscribe(res)
-                _ = ys.connect()
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.multicast(ReplaySubject.create(bufferSize: 1)) }
+        await scheduler.scheduleAt(405, action: {
+            subscription = await ys.do(onError: { _ in
+                subscription = await ys.subscribe(res)
+                _ = await ys.connect()
             }).subscribe(res)
         })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(300) { connection = ys.connect() }
-        scheduler.scheduleAt(400) { connection.dispose() }
+        await scheduler.scheduleAt(300) { connection = await ys.connect() }
+        await scheduler.scheduleAt(400) { await connection.dispose() }
 
-        scheduler.scheduleAt(420) { connection = ys.connect() }
-        scheduler.scheduleAt(440) { innerConnection = ys.connect() }
-        scheduler.scheduleAt(530) { innerConnection.dispose() }
-        scheduler.scheduleAt(575) { lastConnection = ys.connect() }
-        scheduler.scheduleAt(590) { connection.dispose() }
+        await scheduler.scheduleAt(420) { connection = await ys.connect() }
+        await scheduler.scheduleAt(440) { innerConnection = await ys.connect() }
+        await scheduler.scheduleAt(530) { await innerConnection.dispose() }
+        await scheduler.scheduleAt(575) { lastConnection = await ys.connect() }
+        await scheduler.scheduleAt(590) { await connection.dispose() }
 
-        scheduler.scheduleAt(621) { lastConnection.dispose() }
+        await scheduler.scheduleAt(621) { await lastConnection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(405, 7),
@@ -572,37 +572,37 @@ extension ObservableMulticastTest {
     }
 
     #if TRACE_RESOURCES
-        func testMulticastWhileConnected_ReleasesResourcesOnComplete() {
-            let publish = Observable<Int>.just(1).multicast(makeSubject: { PublishSubject() })
-            _ = publish.subscribe()
-            _ = publish.connect()
+    func testMulticastWhileConnected_ReleasesResourcesOnComplete() async {
+        let publish = await Observable<Int>.just(1).multicast(makeSubject: { await PublishSubject() })
+        _ = await publish.subscribe()
+        _ = await publish.connect()
         }
 
-        func testMulticastWhileConnected_ReleasesResourcesOnError() {
-            let publish = Observable<Int>.error(testError).multicast(makeSubject: { PublishSubject() })
-            _ = publish.subscribe()
-            _ = publish.connect()
+    func testMulticastWhileConnected_ReleasesResourcesOnError() async {
+        let publish = await Observable<Int>.error(testError).multicast(makeSubject: { await PublishSubject() })
+        _ = await publish.subscribe()
+        _ = await publish.connect()
         }
 
-        func testMulticastForever_ReleasesResourcesOnComplete() {
-            let publish = Observable<Int>.just(1).multicast(PublishSubject())
-            _ = publish.subscribe()
-            _ = publish.connect()
+    func testMulticastForever_ReleasesResourcesOnComplete() async {
+        let publish = await Observable<Int>.just(1).multicast(PublishSubject())
+        _ = await publish.subscribe()
+        _ = await publish.connect()
         }
 
-        func testMulticastForever_ReleasesResourcesOnError() {
-            let publish = Observable<Int>.error(testError).multicast(PublishSubject())
-            _ = publish.subscribe()
-            _ = publish.connect()
+    func testMulticastForever_ReleasesResourcesOnError() async {
+        let publish = await Observable<Int>.error(testError).multicast(PublishSubject())
+        _ = await publish.subscribe()
+        _ = await publish.connect()
         }
     #endif
 }
 
 extension ObservableMulticastTest {
-    func testMulticast_Cold_Completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticast_Cold_Completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(40, 0),
             .next(90, 1),
             .next(150, 2),
@@ -614,8 +614,8 @@ extension ObservableMulticastTest {
             .completed(390)
             ])
 
-        let res = scheduler.start {
-            xs.multicast({ PublishSubject<Int>() }) { $0 }
+        let res = await scheduler.start {
+            await xs.multicast({ PublishSubject<Int>() }) { $0 }
         }
 
         XCTAssertEqual(res.events, [
@@ -632,10 +632,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticast_Cold_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticast_Cold_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(40, 0),
             .next(90, 1),
             .next(150, 2),
@@ -647,8 +647,8 @@ extension ObservableMulticastTest {
             .error(390, testError)
             ])
 
-        let res = scheduler.start {
-            xs.multicast({ PublishSubject<Int>() }) { $0 }
+        let res = await scheduler.start {
+            await xs.multicast({ PublishSubject<Int>() }) { $0 }
         }
 
         XCTAssertEqual(res.events, [
@@ -665,10 +665,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticast_Cold_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticast_Cold_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(40, 0),
             .next(90, 1),
             .next(150, 2),
@@ -679,8 +679,8 @@ extension ObservableMulticastTest {
             .next(340, 7),
             ])
 
-        let res = scheduler.start {
-            xs.multicast({ PublishSubject<Int>() }) { $0 }
+        let res = await scheduler.start {
+            await xs.multicast({ PublishSubject<Int>() }) { $0 }
         }
 
         XCTAssertEqual(res.events, [
@@ -696,10 +696,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticast_Cold_Zip() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticast_Cold_Zip() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(40, 0),
             .next(90, 1),
             .next(150, 2),
@@ -711,8 +711,8 @@ extension ObservableMulticastTest {
             .completed(390)
             ])
 
-        let res = scheduler.start {
-            xs.multicast({ PublishSubject<Int>() }) { Observable.zip($0, $0) { a, b in a + b } }
+        let res = await scheduler.start {
+            await xs.multicast({ PublishSubject<Int>() }) { Observable.zip($0, $0) { a, b in a + b } }
         }
 
         XCTAssertEqual(res.events, [
@@ -729,17 +729,17 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticast_SubjectSelectorThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticast_SubjectSelectorThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(240, 2),
             .completed(300)
             ])
 
-        let res = scheduler.start {
-            xs.multicast({ () throws -> PublishSubject<Int> in throw testError }) { $0 }
+        let res = await scheduler.start {
+            await xs.multicast({ () throws -> PublishSubject<Int> in throw testError }) { $0 }
         }
 
         XCTAssertEqual(res.events, [
@@ -750,17 +750,17 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testMulticast_SelectorThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMulticast_SelectorThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(240, 2),
             .completed(300)
             ])
 
-        let res = scheduler.start {
-            xs.multicast({ PublishSubject<Int>() }) { _ -> Observable<Int> in throw testError }
+        let res = await scheduler.start {
+            await xs.multicast({ PublishSubject<Int>() }) { _ -> Observable<Int> in throw testError }
         }
 
         XCTAssertEqual(res.events, [
@@ -772,12 +772,12 @@ extension ObservableMulticastTest {
     }
 
     #if TRACE_RESOURCES
-        func testMulticastReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).multicast({ PublishSubject<Int>() }) { Observable.zip($0, $0) { a, b in a + b } }.subscribe()
+    func testMulticastReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).multicast({ PublishSubject<Int>() }) { Observable.zip($0, $0) { a, b in a + b } }.subscribe()
         }
 
-        func testMulticastReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).multicast({ PublishSubject<Int>() }) { Observable.zip($0, $0) { a, b in a + b } }.subscribe()
+    func testMulticastReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).multicast({ PublishSubject<Int>() }) { Observable.zip($0, $0) { a, b in a + b } }.subscribe()
         }
     #endif
 }
@@ -785,29 +785,29 @@ extension ObservableMulticastTest {
 // publish
 extension ObservableMulticastTest {
     #if TRACE_RESOURCES
-        func testPublishReleasesResourcesOnComplete() {
-            let publish = Observable<Int>.just(1).publish()
-            _ = publish.subscribe()
-            _ = publish.connect()
+    func testPublishReleasesResourcesOnComplete() async {
+        let publish = await Observable<Int>.just(1).publish()
+        _ = await publish.subscribe()
+        _ = await publish.connect()
         }
 
-        func testPublishReleasesResourcesOnError() {
-            let publish = Observable<Int>.error(testError).publish()
-            _ = publish.subscribe()
-            _ = publish.connect()
+    func testPublishReleasesResourcesOnError() async {
+        let publish = await Observable<Int>.error(testError).publish()
+        _ = await publish.subscribe()
+        _ = await publish.connect()
         }
     #endif
 }
 
 // refCount
 extension ObservableMulticastTest {
-    func testRefCount_DeadlockSimple() {
+    func testRefCount_DeadlockSimple() async {
         let subject = MySubject<Int>()
 
         var nEvents = 0
 
-        let observable = TestConnectableObservable(o: Observable.of(0, 1, 2), s: subject)
-        let d = observable.subscribe(onNext: { _ in
+        let observable = await TestConnectableObservable(o: Observable.of(0, 1, 2), s: subject)
+        let d = await observable.subscribe(onNext: { _ in
             nEvents += 1
         })
 
@@ -815,18 +815,18 @@ extension ObservableMulticastTest {
             d.dispose()
         }
 
-        observable.connect().dispose()
+        await observable.connect().dispose()
 
         XCTAssertEqual(nEvents, 3)
     }
 
-    func testRefCount_DeadlockErrorAfterN() {
+    func testRefCount_DeadlockErrorAfterN() async {
         let subject = MySubject<Int>()
 
         var nEvents = 0
 
-        let observable = TestConnectableObservable(o: Observable.concat([Observable.of(0, 1, 2), Observable.error(testError)]), s: subject)
-        let d = observable.subscribe(onError: { _ in
+        let observable = await TestConnectableObservable(o: Observable.concat([Observable.of(0, 1, 2), Observable.error(testError)]), s: subject)
+        let d = await observable.subscribe(onError: { _ in
             nEvents += 1
         })
 
@@ -834,18 +834,18 @@ extension ObservableMulticastTest {
             d.dispose()
         }
 
-        observable.connect().dispose()
+        await observable.connect().dispose()
 
         XCTAssertEqual(nEvents, 1)
     }
 
-    func testRefCount_DeadlockErrorImmediately() {
+    func testRefCount_DeadlockErrorImmediately() async {
         let subject = MySubject<Int>()
 
         var nEvents = 0
 
-        let observable = TestConnectableObservable(o: Observable.error(testError), s: subject)
-        let d = observable.subscribe(onError: { _ in
+        let observable = await TestConnectableObservable(o: Observable.error(testError), s: subject)
+        let d = await observable.subscribe(onError: { _ in
             nEvents += 1
         })
 
@@ -853,18 +853,18 @@ extension ObservableMulticastTest {
             d.dispose()
         }
 
-        observable.connect().dispose()
+        await observable.connect().dispose()
 
         XCTAssertEqual(nEvents, 1)
     }
 
-    func testRefCount_DeadlockEmpty() {
+    func testRefCount_DeadlockEmpty() async {
         let subject = MySubject<Int>()
 
         var nEvents = 0
 
-        let observable = TestConnectableObservable(o: Observable.empty(), s: subject)
-        let d = observable.subscribe(onCompleted: {
+        let observable = await TestConnectableObservable(o: Observable.empty(), s: subject)
+        let d = await observable.subscribe(onCompleted: {
             nEvents += 1
         })
 
@@ -872,15 +872,15 @@ extension ObservableMulticastTest {
             d.dispose()
         }
 
-        observable.connect().dispose()
+        await observable.connect().dispose()
 
         XCTAssertEqual(nEvents, 1)
     }
 
-    func testRefCount_ConnectsOnFirst() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRefCount_ConnectsOnFirst() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(220, 2),
             .next(230, 3),
@@ -890,9 +890,9 @@ extension ObservableMulticastTest {
 
         let subject = MySubject<Int>()
         
-        let conn = TestConnectableObservable(o: xs.asObservable(), s: subject)
+        let conn = await TestConnectableObservable(o: xs.asObservable(), s: subject)
 
-        let res = scheduler.start { conn.refCount() }
+        let res = await scheduler.start { await conn.refCount() }
 
         XCTAssertEqual(res.events, [
             .next(210, 1),
@@ -906,19 +906,19 @@ extension ObservableMulticastTest {
         XCTAssertTrue(subject.isDisposed)
     }
 
-    func testRefCount_DoesntConnectsOnFirstInCaseSynchronousCompleted() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRefCount_DoesntConnectsOnFirstInCaseSynchronousCompleted() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             ])
 
-        let subject = PublishSubject<Int>()
-        subject.on(.completed)
+        let subject = await PublishSubject<Int>()
+        await subject.on(.completed)
 
-        let conn = TestConnectableObservable(o: xs.asObservable(), s: subject)
+        let conn = await TestConnectableObservable(o: xs.asObservable(), s: subject)
 
-        let res = scheduler.start { conn.refCount() }
+        let res = await scheduler.start { await conn.refCount() }
 
         XCTAssertEqual(res.events, [
             .completed(200, Int.self)
@@ -927,19 +927,19 @@ extension ObservableMulticastTest {
         XCTAssertEqual(xs.subscriptions, [])
     }
 
-    func testRefCount_DoesntConnectsOnFirstInCaseSynchronousError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRefCount_DoesntConnectsOnFirstInCaseSynchronousError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             ])
 
-        let subject = PublishSubject<Int>()
-        subject.on(.error(testError))
+        let subject = await PublishSubject<Int>()
+        await subject.on(.error(testError))
 
-        let conn = TestConnectableObservable(o: xs.asObservable(), s: subject)
+        let conn = await TestConnectableObservable(o: xs.asObservable(), s: subject)
 
-        let res = scheduler.start { conn.refCount() }
+        let res = await scheduler.start { await conn.refCount() }
 
         XCTAssertEqual(res.events, [
             .error(200, testError, Int.self)
@@ -948,16 +948,16 @@ extension ObservableMulticastTest {
         XCTAssertEqual(xs.subscriptions, [])
     }
 
-    func testRefCount_NotConnected() {
-        _ = TestScheduler(initialClock: 0)
+    func testRefCount_NotConnected() async {
+        _ = await TestScheduler(initialClock: 0)
 
         var disconnected = false
         var count = 0
 
-        let xs: Observable<Int> = Observable.deferred {
+        let xs: Observable<Int> = await Observable.deferred {
             count += 1
-            return Observable.create { _ in
-                return Disposables.create {
+            return await Observable.create { _ in
+                return await Disposables.create {
                     disconnected = true
                 }
             }
@@ -965,39 +965,39 @@ extension ObservableMulticastTest {
 
         let subject = MySubject<Int>()
 
-        let conn = TestConnectableObservable(o: xs, s: subject)
-        let refd = conn.refCount()
+        let conn = await TestConnectableObservable(o: xs, s: subject)
+        let refd = await conn.refCount()
 
-        let dis1 = refd.subscribe { _ -> Void in () }
+        let dis1 = await refd.subscribe { _ -> Void in () }
         XCTAssertEqual(1, count)
         XCTAssertEqual(1, subject.subscribeCount)
         XCTAssertFalse(disconnected)
 
-        let dis2 = refd.subscribe { _ -> Void in () }
+        let dis2 = await refd.subscribe { _ -> Void in () }
         XCTAssertEqual(1, count)
         XCTAssertEqual(2, subject.subscribeCount)
         XCTAssertFalse(disconnected)
 
-        dis1.dispose()
+        await dis1.dispose()
         XCTAssertFalse(disconnected)
-        dis2.dispose()
+        await dis2.dispose()
         XCTAssertTrue(disconnected)
         disconnected = false
 
-        let dis3 = refd.subscribe { _ -> Void in () }
+        let dis3 = await refd.subscribe { _ -> Void in () }
         XCTAssertEqual(2, count)
         XCTAssertEqual(3, subject.subscribeCount)
         XCTAssertFalse(disconnected)
 
-        dis3.dispose()
+        await dis3.dispose()
         XCTAssertTrue(disconnected)
     }
 
-    func testRefCount_Error() {
-        let xs: Observable<Int> = Observable.error(testError)
+    func testRefCount_Error() async {
+        let xs: Observable<Int> = await Observable.error(testError)
 
-        let res = xs.publish().refCount()
-        _ = res.subscribe { event in
+        let res = await xs.publish().refCount()
+        _ = await res.subscribe { event in
             switch event {
             case .next:
                 XCTAssertTrue(false)
@@ -1007,7 +1007,7 @@ extension ObservableMulticastTest {
                 XCTAssertTrue(false)
             }
         }
-        _ = res.subscribe { event in
+        _ = await res.subscribe { event in
             switch event {
             case .next:
                 XCTAssertTrue(false)
@@ -1019,10 +1019,10 @@ extension ObservableMulticastTest {
         }
     }
 
-    func testRefCount_Publish() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRefCount_Publish() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(220, 2),
             .next(230, 3),
@@ -1035,29 +1035,29 @@ extension ObservableMulticastTest {
             .completed(300)
             ])
 
-        let res = xs.publish().refCount()
+        let res = await xs.publish().refCount()
 
         var d1: Disposable!
         let o1 = scheduler.createObserver(Int.self)
-        scheduler.scheduleAt(215) { d1 = res.subscribe(o1) }
-        scheduler.scheduleAt(235) { d1.dispose() }
+        await scheduler.scheduleAt(215) { d1 = await res.subscribe(o1) }
+        await scheduler.scheduleAt(235) { await d1.dispose() }
 
         var d2: Disposable!
         let o2 = scheduler.createObserver(Int.self)
-        scheduler.scheduleAt(225) { d2 = res.subscribe(o2) }
-        scheduler.scheduleAt(275) { d2.dispose() }
+        await scheduler.scheduleAt(225) { d2 = await res.subscribe(o2) }
+        await scheduler.scheduleAt(275) { await d2.dispose() }
 
         var d3: Disposable!
         let o3 = scheduler.createObserver(Int.self)
-        scheduler.scheduleAt(255) { d3 = res.subscribe(o3) }
-        scheduler.scheduleAt(265) { d3.dispose() }
+        await scheduler.scheduleAt(255) { d3 = await res.subscribe(o3) }
+        await scheduler.scheduleAt(265) { await d3.dispose() }
 
         var d4: Disposable!
         let o4 = scheduler.createObserver(Int.self)
-        scheduler.scheduleAt(285) { d4 = res.subscribe(o4) }
-        scheduler.scheduleAt(320) { d4.dispose() }
+        await scheduler.scheduleAt(285) { d4 = await res.subscribe(o4) }
+        await scheduler.scheduleAt(320) { await d4.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(o1.events, [
             .next(220, 2),
@@ -1087,66 +1087,66 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testRefCount_synchronousResubscribingOnErrorWorks() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRefCount_synchronousResubscribingOnErrorWorks() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs1 = scheduler.createColdObservable([
+        let xs1 = await scheduler.createColdObservable([
             .next(10, 1),
             .error(20, testError)
             ])
 
-        let xs2 = scheduler.createColdObservable([
+        let xs2 = await scheduler.createColdObservable([
             .next(10, 2),
             .error(30, testError1)
             ])
 
-        let xs3 = scheduler.createColdObservable([
+        let xs3 = await scheduler.createColdObservable([
             .next(10, 3),
             .error(40, testError2)
             ])
 
         var attempts = 0
 
-        let xs = Observable.deferred { () -> Observable<Int> in
+        let xs = await Observable.deferred { () -> Observable<Int> in
             defer { attempts += 1 }
             switch attempts {
-            case 0: return xs1.asObservable()
-            case 1: return xs2.asObservable()
-            default: return xs3.asObservable()
+            case 0: return await xs1.asObservable()
+            case 1: return await xs2.asObservable()
+            default: return await xs3.asObservable()
             }
         }
 
-        let res = xs.multicast { PublishSubject() }.refCount()
+        let res = await xs.multicast { await PublishSubject() }.refCount()
 
         let o1 = scheduler.createObserver(Int.self)
         let o2 = scheduler.createObserver(Int.self)
         let o3 = scheduler.createObserver(Int.self)
-        scheduler.scheduleAt(215) {
-            _ = res.subscribe { event in
+        await scheduler.scheduleAt(215) {
+            _ = await res.subscribe { event in
                 o1.on(event)
                 switch event {
                 case .error:
-                    _ = res.subscribe(o1)
+                    _ = await res.subscribe(o1)
                 default: break
                 }
             }
         }
-        scheduler.scheduleAt(220) {
-            _ = res.subscribe { event in
+        await scheduler.scheduleAt(220) {
+            _ = await res.subscribe { event in
                 o2.on(event)
                 switch event {
                 case .error:
-                    _ = res.subscribe(o2)
+                    _ = await res.subscribe(o2)
                 default: break
                 }
             }
         }
 
-        scheduler.scheduleAt(400) {
-            _ = res.subscribe(o3)
+        await scheduler.scheduleAt(400) {
+            _ = await res.subscribe(o3)
         }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(o1.events, [
             .next(225, 1),
@@ -1178,66 +1178,66 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testRefCount_synchronousResubscribingOnCompletedWorks() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRefCount_synchronousResubscribingOnCompletedWorks() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs1 = scheduler.createColdObservable([
+        let xs1 = await scheduler.createColdObservable([
             .next(10, 1),
             .completed(20)
             ])
 
-        let xs2 = scheduler.createColdObservable([
+        let xs2 = await scheduler.createColdObservable([
             .next(10, 2),
             .completed(30)
             ])
 
-        let xs3 = scheduler.createColdObservable([
+        let xs3 = await scheduler.createColdObservable([
             .next(10, 3),
             .completed(40)
             ])
 
         var attempts = 0
 
-        let xs = Observable.deferred { () -> Observable<Int> in
+        let xs = await Observable.deferred { () -> Observable<Int> in
             defer { attempts += 1 }
             switch attempts {
-            case 0: return xs1.asObservable()
-            case 1: return xs2.asObservable()
-            default: return xs3.asObservable()
+            case 0: return await xs1.asObservable()
+            case 1: return await xs2.asObservable()
+            default: return await xs3.asObservable()
             }
         }
 
-        let res = xs.multicast { PublishSubject() }.refCount()
+        let res = await xs.multicast { await PublishSubject() }.refCount()
 
         let o1 = scheduler.createObserver(Int.self)
         let o2 = scheduler.createObserver(Int.self)
         let o3 = scheduler.createObserver(Int.self)
-        scheduler.scheduleAt(215) {
-            _ = res.subscribe { event in
+        await scheduler.scheduleAt(215) {
+            _ = await res.subscribe { event in
                 o1.on(event)
                 switch event {
                 case .completed:
-                    _ = res.subscribe(o1)
+                    _ = await res.subscribe(o1)
                 default: break
                 }
             }
         }
-        scheduler.scheduleAt(220) {
-            _ = res.subscribe { event in
+        await scheduler.scheduleAt(220) {
+            _ = await res.subscribe { event in
                 o2.on(event)
                 switch event {
                 case .completed:
-                    _ = res.subscribe(o2)
+                    _ = await res.subscribe(o2)
                 default: break
                 }
             }
         }
 
-        scheduler.scheduleAt(400) {
-            _ = res.subscribe(o3)
+        await scheduler.scheduleAt(400) {
+            _ = await res.subscribe(o3)
         }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(o1.events, [
             .next(225, 1),
@@ -1270,21 +1270,21 @@ extension ObservableMulticastTest {
     }
 
     #if TRACE_RESOURCES
-        func testRefCountReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).publish().refCount().subscribe()
+    func testRefCountReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).publish().refCount().subscribe()
         }
 
-        func testRefCountReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).publish().refCount().subscribe()
+    func testRefCountReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).publish().refCount().subscribe()
         }
     #endif
 }
 
 extension ObservableMulticastTest {
-    func testReplayCount_Basic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayCount_Basic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1301,17 +1301,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.debug("1").replay(3) }
-        scheduler.scheduleAt(450, action: { subscription = ys.debug("2").subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.debug("1").replay(3) }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.debug("2").subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 9),
@@ -1329,10 +1329,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testReplayCount_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayCount_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1349,17 +1349,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replay(3) }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replay(3) }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 9),
@@ -1378,10 +1378,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testReplayCount_Complete() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayCount_Complete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1398,17 +1398,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replay(3) }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replay(3) }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 9),
@@ -1427,10 +1427,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testReplayCount_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayCount_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1447,17 +1447,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replay(3) }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(475) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replay(3) }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(475) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 9),
@@ -1474,10 +1474,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testReplayOneCount_Basic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayOneCount_Basic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1494,17 +1494,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replay(1) }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replay(1) }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 20),
@@ -1520,10 +1520,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testReplayOneCount_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayOneCount_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1540,17 +1540,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replay(1) }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replay(1) }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 20),
@@ -1567,10 +1567,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testReplayOneCount_Complete() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayOneCount_Complete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1587,17 +1587,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replay(1) }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replay(1) }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 20),
@@ -1614,10 +1614,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testReplayOneCount_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayOneCount_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1634,17 +1634,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replay(1) }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(475) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replay(1) }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(475) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 20),
@@ -1659,10 +1659,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testReplayAll_Basic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayAll_Basic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1679,17 +1679,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replayAll() }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replayAll() }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 5),
@@ -1709,10 +1709,10 @@ extension ObservableMulticastTest {
     }
 
 
-    func testReplayAll_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayAll_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1729,17 +1729,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replayAll() }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replayAll() }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 5),
@@ -1759,10 +1759,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testReplayAll_Complete() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayAll_Complete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1779,17 +1779,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replayAll() }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(Defaults.disposed) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replayAll() }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(Defaults.disposed) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 5),
@@ -1809,10 +1809,10 @@ extension ObservableMulticastTest {
             ])
     }
 
-    func testReplayAll_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testReplayAll_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 5),
             .next(20, 9),
             .next(30, 11),
@@ -1829,17 +1829,17 @@ extension ObservableMulticastTest {
         var connection: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.replayAll() }
-        scheduler.scheduleAt(450, action: { subscription = ys.subscribe(res) })
-        scheduler.scheduleAt(475) { subscription.dispose() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.replayAll() }
+        await scheduler.scheduleAt(450, action: { subscription = await ys.subscribe(res) })
+        await scheduler.scheduleAt(475) { await subscription.dispose() }
 
-        scheduler.scheduleAt(400) { connection = ys.connect() }
-        scheduler.scheduleAt(520) { connection.dispose() }
+        await scheduler.scheduleAt(400) { connection = await ys.connect() }
+        await scheduler.scheduleAt(520) { await connection.dispose() }
 
-        scheduler.scheduleAt(650) { connection = ys.connect() }
-        scheduler.scheduleAt(700) { connection.dispose() }
+        await scheduler.scheduleAt(650) { connection = await ys.connect() }
+        await scheduler.scheduleAt(700) { await connection.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             .next(450, 5),
@@ -1858,28 +1858,28 @@ extension ObservableMulticastTest {
     }
 
     #if TRACE_RESOURCES
-        func testReplayNReleasesResourcesOnComplete() {
-            let replay = Observable<Int>.just(1).replay(1)
-            _ = replay.connect()
-            _ = replay.subscribe()
+    func testReplayNReleasesResourcesOnComplete() async {
+        let replay = await Observable<Int>.just(1).replay(1)
+        _ = await replay.connect()
+        _ = await replay.subscribe()
         }
 
-        func testReplayNReleasesResourcesOnError() {
-            let replay = Observable<Int>.error(testError).replay(1)
-            _ = replay.connect()
-            _ = replay.subscribe()
+    func testReplayNReleasesResourcesOnError() async {
+        let replay = await Observable<Int>.error(testError).replay(1)
+        _ = await replay.connect()
+        _ = await replay.subscribe()
         }
 
-        func testReplayAllReleasesResourcesOnComplete() {
-            let replay = Observable<Int>.just(1).replayAll()
-            _ = replay.connect()
-            _ = replay.subscribe()
+    func testReplayAllReleasesResourcesOnComplete() async {
+        let replay = await Observable<Int>.just(1).replayAll()
+        _ = await replay.connect()
+        _ = await replay.subscribe()
         }
         
-        func testReplayAllReleasesResourcesOnError() {
-            let replay = Observable<Int>.error(testError).replayAll()
-            _ = replay.connect()
-            _ = replay.subscribe()
+    func testReplayAllReleasesResourcesOnError() async {
+        let replay = await Observable<Int>.error(testError).replayAll()
+        _ = await replay.connect()
+        _ = await replay.subscribe()
         }
     #endif
 }

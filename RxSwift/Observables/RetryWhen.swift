@@ -16,7 +16,7 @@ public extension ObservableType {
      - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
-    func retry<TriggerObservable: ObservableType, Error: Swift.Error>(when notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async
+    func retry<TriggerObservable: ObservableType, Error: Swift.Error>(when notificationHandler: @escaping (Observable<Error>) async -> TriggerObservable) async
         -> Observable<Element>
     {
         await RetryWhenSequence(sources: InfiniteSequence(repeatedValue: self.asObservable()), notificationHandler: notificationHandler)
@@ -47,7 +47,7 @@ public extension ObservableType {
      - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
-    func retry<TriggerObservable: ObservableType>(when notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable) async
+    func retry<TriggerObservable: ObservableType>(when notificationHandler: @escaping (Observable<Swift.Error>) async -> TriggerObservable) async
         -> Observable<Element>
     {
         await RetryWhenSequence(sources: InfiniteSequence(repeatedValue: self.asObservable()), notificationHandler: notificationHandler)
@@ -207,9 +207,9 @@ private final class RetryWhenSequence<Sequence: Swift.Sequence, TriggerObservabl
     typealias Element = Sequence.Element.Element
 
     private let sources: Sequence
-    fileprivate let notificationHandler: (Observable<Error>) -> TriggerObservable
+    fileprivate let notificationHandler: (Observable<Error>) async -> TriggerObservable
 
-    init(sources: Sequence, notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async {
+    init(sources: Sequence, notificationHandler: @escaping (Observable<Error>) async -> TriggerObservable) async {
         self.sources = sources
         self.notificationHandler = notificationHandler
         await super.init()

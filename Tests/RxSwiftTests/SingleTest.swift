@@ -16,102 +16,102 @@ class SingleTest : RxTest {
 
 // single
 extension SingleTest {
-    func testSingle_Subscription_success() {
-        let xs = Single.just(1)
+    func testSingle_Subscription_success() async {
+        let xs = await Single.just(1)
 
         var events: [SingleEvent<Int>] = []
 
-        _ = xs.subscribe { event in
+        _ = await xs.subscribe { event in
             events.append(event)
         }
 
         XCTAssertEqual(events, [.success(1)])
     }
 
-    func testSingle_Subscription_error() {
-        let xs = Single<Int>.error(testError)
+    func testSingle_Subscription_error() async {
+        let xs = await Single<Int>.error(testError)
 
         var events: [SingleEvent<Int>] = []
 
-        _ = xs.subscribe { event in
+        _ = await xs.subscribe { event in
             events.append(event)
         }
 
         XCTAssertEqual(events, [.failure(testError)])
     }
 
-    func testSingle_Subscription_onDisposed() {
+    func testSingle_Subscription_onDisposed() async {
         // Given
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
         let res = scheduler.createObserver(Int.self)
-        var observer: ((SingleEvent<Int>) -> Void)!
+        var observer: ((SingleEvent<Int>) async -> Void)!
         var subscription: Disposable!
         var onDisposesCalled = 0
         // When
-        scheduler.scheduleAt(201) {
-            subscription = Single<Int>.create {
+        await scheduler.scheduleAt(201) {
+            subscription = await Single<Int>.create {
                 observer = $0
                 return Disposables.create()
             }
             .subscribe(onDisposed: { onDisposesCalled += 1 })
         }
-        scheduler.scheduleAt(202) {
-            subscription.dispose()
+        await scheduler.scheduleAt(202) {
+            await subscription.dispose()
         }
-        scheduler.scheduleAt(203) {
-            observer(.failure(testError))
+        await scheduler.scheduleAt(203) {
+            await observer(.failure(testError))
         }
-        scheduler.start()
+        await scheduler.start()
         // Then
         XCTAssertTrue(res.events.isEmpty)
         XCTAssertEqual(onDisposesCalled, 1)
     }
 
-    func testSingle_Subscription_onDisposed_success() {
+    func testSingle_Subscription_onDisposed_success() async {
         // Given
-        let single = Single.just(1)
+        let single = await Single.just(1)
         var onDisposedCalled = 0
         // When
-        _ = single.subscribe(onDisposed: {
+        _ = await single.subscribe(onDisposed: {
             onDisposedCalled += 1
         })
         // Then
         XCTAssertEqual(onDisposedCalled, 1)
     }
 
-    func testSingle_Subscription_onDisposed_error() {
+    func testSingle_Subscription_onDisposed_error() async {
         // Given
-        let single = Single<Int>.error(testError)
+        let single = await Single<Int>.error(testError)
         var onDisposedCalled = 0
         // When
-        _ = single.subscribe(onDisposed: {
+        _ = await single.subscribe(onDisposed: {
             onDisposedCalled += 1
         })
         // Then
         XCTAssertEqual(onDisposedCalled, 1)
     }
 
-    func testSingle_create_success() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSingle_create_success() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        var observer: ((SingleEvent<Int>) -> Void)! = nil
+        var observer: ((SingleEvent<Int>) async -> Void)! = nil
 
         var disposedTime: Int?
 
-        scheduler.scheduleAt(201, action: {
-            observer(.success(1))
+        await scheduler.scheduleAt(201, action: {
+            await observer(.success(1))
         })
-        scheduler.scheduleAt(202, action: {
-            observer(.success(1))
+        await scheduler.scheduleAt(202, action: {
+            await observer(.success(1))
         })
-        scheduler.scheduleAt(203, action: {
-            observer(.failure(testError))
+        await scheduler.scheduleAt(203, action: {
+            await observer(.failure(testError))
         })
 
-        let res = scheduler.start {
-            Single<Int>.create { _observer in
+        let res = await scheduler.start {
+            await Single<Int>.create { _observer in
                 observer = _observer
-                return Disposables.create {
+                return await Disposables.create {
                     disposedTime = scheduler.clock
                 }
                 }
@@ -125,68 +125,68 @@ extension SingleTest {
         XCTAssertEqual(disposedTime, 201)
     }
 
-    func testSingle_create_error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSingle_create_error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        var observer: ((SingleEvent<Int>) -> Void)! = nil
+        var observer: ((SingleEvent<Int>) async -> Void)! = nil
 
         var disposedTime: Int?
 
-        scheduler.scheduleAt(201, action: {
-            observer(.failure(testError))
+        await scheduler.scheduleAt(201, action: {
+            await observer(.failure(testError))
         })
-        scheduler.scheduleAt(202, action: {
-            observer(.success(1))
+        await scheduler.scheduleAt(202, action: {
+            await observer(.success(1))
         })
-        scheduler.scheduleAt(203, action: {
-            observer(.failure(testError))
+        await scheduler.scheduleAt(203, action: {
+            await observer(.failure(testError))
         })
 
-        let res = scheduler.start {
-            Single<Int>.create { _observer in
+        let res = await scheduler.start {
+            await Single<Int>.create { _observer in
                 observer = _observer
-                return Disposables.create {
+                return await Disposables.create {
                     disposedTime = scheduler.clock
                 }
                 }
         }
 
-        XCTAssertEqual(res.events, [
+        await assertEqual(res.events, [
             .error(201, testError)
             ])
 
         XCTAssertEqual(disposedTime, 201)
     }
 
-    func testSingle_create_disposing() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSingle_create_disposing() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        var observer: ((SingleEvent<Int>) -> Void)! = nil
+        var observer: ((SingleEvent<Int>) async -> Void)! = nil
         var disposedTime: Int?
         var subscription: Disposable! = nil
         let res = scheduler.createObserver(Int.self)
 
-        scheduler.scheduleAt(201, action: {
-            subscription = Single<Int>.create { _observer in
+        await scheduler.scheduleAt(201, action: {
+            subscription = await Single<Int>.create { _observer in
                 observer = _observer
-                return Disposables.create {
+                return await Disposables.create {
                     disposedTime = scheduler.clock
                 }
                 }
                 .asObservable()
                 .subscribe(res)
         })
-        scheduler.scheduleAt(202, action: {
-            subscription.dispose()
+        await scheduler.scheduleAt(202, action: {
+            await subscription.dispose()
         })
-        scheduler.scheduleAt(203, action: {
-            observer(.success(1))
+        await scheduler.scheduleAt(203, action: {
+            await observer(.success(1))
         })
-        scheduler.scheduleAt(204, action: {
-            observer(.failure(testError))
+        await scheduler.scheduleAt(204, action: {
+            await observer(.failure(testError))
         })
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res.events, [
             ])
@@ -196,19 +196,19 @@ extension SingleTest {
 }
 
 extension SingleTest {
-    func test_just_producesElement() {
-        let result = try! (Single.just(1) as Single<Int>).toBlocking().first()!
+    func test_just_producesElement() async {
+        let result = try! await (Single.just(1) as Single<Int>).toBlocking().first()!
         XCTAssertEqual(result, 1)
     }
 
-    func test_just2_producesElement() {
-        let result = try! (Single.just(1, scheduler: CurrentThreadScheduler.instance) as Single<Int>).toBlocking().first()!
+    func test_just2_producesElement() async {
+        let result = try! await (Single.just(1, scheduler: CurrentThreadScheduler.instance) as Single<Int>).toBlocking().first()!
         XCTAssertEqual(result, 1)
     }
 
-    func test_error_fails() {
+    func test_error_fails() async {
         do {
-            _ = try (Single<Int>.error(testError) as Single<Int>).toBlocking().first()
+            _ = try await (Single<Int>.error(testError) as Single<Int>).toBlocking().first()
             XCTFail()
         }
         catch let e {
@@ -216,26 +216,26 @@ extension SingleTest {
         }
     }
 
-    func test_never_producesElement() {
+    func test_never_producesElement() async {
         var event: SingleEvent<Int>?
-        let subscription = (Single<Int>.never() as Single<Int>).subscribe { _event in
+        let subscription = await (Single<Int>.never() as Single<Int>).subscribe { _event in
             event = _event
         }
 
         XCTAssertNil(event)
-        subscription.dispose()
+        await subscription.dispose()
     }
 
-    func test_deferred() {
-        let result = try! (Single.deferred { Single.just(1) } as Single<Int>).toBlocking().toArray()
+    func test_deferred() async {
+        let result = try! await (Single.deferred { await Single.just(1) } as Single<Int>).toBlocking().toArray()
         XCTAssertEqual(result, [1])
     }
 
-    func test_delay() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_delay() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single.just(1).delay(.seconds(2), scheduler: scheduler)
+        let res = await scheduler.start {
+            await Single.just(1).delay(.seconds(2), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -244,11 +244,11 @@ extension SingleTest {
             ])
     }
 
-    func test_delaySubscription() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_delaySubscription() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single.just(1).delaySubscription(.seconds(2), scheduler: scheduler)
+        let res = await scheduler.start {
+            await Single.just(1).delaySubscription(.seconds(2), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -257,11 +257,11 @@ extension SingleTest {
             ])
     }
 
-    func test_observeOn() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_observeOn() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single.just(1).observe(on:scheduler)
+        let res = await scheduler.start {
+            await Single.just(1).observe(on:scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -270,11 +270,11 @@ extension SingleTest {
             ])
     }
 
-    func test_subscribeOn() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_subscribeOn() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single.just(1).subscribe(on: scheduler)
+        let res = await scheduler.start {
+            await Single.just(1).subscribe(on: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -283,11 +283,11 @@ extension SingleTest {
             ])
     }
 
-    func test_catchError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_catchError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single.error(testError).catch { _ in Single.just(2) }
+        let res = await scheduler.start {
+            await Single.error(testError).catch { _ in await Single.just(2) }
         }
 
         XCTAssertEqual(res.events, [
@@ -296,11 +296,11 @@ extension SingleTest {
             ])
     }
 
-    func test_catchAndReturn() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_catchAndReturn() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single.error(testError).catchAndReturn(2)
+        let res = await scheduler.start {
+            await Single.error(testError).catchAndReturn(2)
         }
 
         XCTAssertEqual(res.events, [
@@ -309,21 +309,21 @@ extension SingleTest {
         ])
     }
 
-    func test_retry() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_retry() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var isFirst = true
-        let res = scheduler.start {
-            (Single.error(testError)
+        let res = await scheduler.start {
+            await (Single.error(testError)
                 .catch { e in
                     defer {
                         isFirst = false
                     }
                     if isFirst {
-                        return Single.error(e)
+                        return await Single.error(e)
                     }
 
-                    return Single.just(2)
+                    return await Single.just(2)
                 }
                 .retry(2) as Single<Int>
             )
@@ -335,21 +335,21 @@ extension SingleTest {
             ])
     }
 
-    func test_retryWhen1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_retryWhen1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var isFirst = true
-        let res = scheduler.start {
-            (Single.error(testError)
+        let res = await scheduler.start {
+            await (Single.error(testError)
                 .catch { e in
                     defer {
                         isFirst = false
                     }
                     if isFirst {
-                        return Single.error(e)
+                        return await Single.error(e)
                     }
 
-                    return Single.just(2)
+                    return await Single.just(2)
                 }
                 .retry { (e: Observable<Error>) in
                     return e
@@ -363,21 +363,21 @@ extension SingleTest {
             ])
     }
 
-    func test_retryWhen2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_retryWhen2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var isFirst = true
-        let res = scheduler.start {
-            (Single.error(testError)
+        let res = await scheduler.start {
+            await (Single.error(testError)
                 .catch { e in
                     defer {
                         isFirst = false
                     }
                     if isFirst {
-                        return Single.error(e)
+                        return await Single.error(e)
                     }
 
-                    return Single.just(2)
+                    return await Single.just(2)
                 }
                 .retry { e in
                     return e
@@ -391,11 +391,11 @@ extension SingleTest {
             ])
     }
 
-    func test_debug() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_debug() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single.just(1).debug()
+        let res = await scheduler.start {
+            await Single.just(1).debug()
         }
 
         XCTAssertEqual(res.events, [
@@ -404,8 +404,8 @@ extension SingleTest {
             ])
     }
 
-    func test_using() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_using() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var disposeInvoked = 0
         var createInvoked = 0
@@ -414,19 +414,19 @@ extension SingleTest {
         var xs: TestableObservable<Int>!
         var _d: MockDisposable!
 
-        let res = scheduler.start {
-            Single.using({ () -> MockDisposable in
+        let res = await scheduler.start {
+            await Single.using({ () -> MockDisposable in
                 disposeInvoked += 1
                 disposable = MockDisposable(scheduler: scheduler)
                 return disposable
             }, primitiveSequenceFactory: { (d: MockDisposable) -> Single<Int> in
                 _d = d
                 createInvoked += 1
-                xs = scheduler.createColdObservable([
+                xs = await scheduler.createColdObservable([
                     .next(100, scheduler.clock),
                     .completed(100)
                     ])
-                return xs.asObservable().asSingle()
+                return await xs.asObservable().asSingle()
             })
         }
 
@@ -450,16 +450,16 @@ extension SingleTest {
             ])
     }
 
-    func test_timeout() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_timeout() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
                 .next(10, 1),
                 .completed(20)
             ]).asSingle()
 
-        let res = scheduler.start {
-            xs.timeout(.seconds(5), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(5), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -467,21 +467,21 @@ extension SingleTest {
             ])
     }
 
-    func test_timeout_other() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_timeout_other() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 1),
             .completed(20)
             ]).asSingle()
 
-        let xs2 = scheduler.createColdObservable([
+        let xs2 = await scheduler.createColdObservable([
             .next(20, 2),
             .completed(20)
             ]).asSingle()
 
-        let res = scheduler.start {
-            xs.timeout(.seconds(5), other: xs2, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(5), other: xs2, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -490,16 +490,16 @@ extension SingleTest {
             ])
     }
 
-    func test_timeout_succeeds() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_timeout_succeeds() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 1),
             .completed(20)
             ]).asSingle()
 
-        let res = scheduler.start {
-            xs.timeout(.seconds(30), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(30), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -508,21 +508,21 @@ extension SingleTest {
             ])
     }
 
-    func test_timeout_other_succeeds() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_timeout_other_succeeds() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 1),
             .completed(20)
             ]).asSingle()
 
-        let xs2 = scheduler.createColdObservable([
+        let xs2 = await scheduler.createColdObservable([
             .next(20, 2),
             .completed(20)
             ]).asSingle()
 
-        let res = scheduler.start {
-            xs.timeout(.seconds(30), other: xs2, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(30), other: xs2, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -533,11 +533,11 @@ extension SingleTest {
 }
 
 extension SingleTest {
-    func test_timer() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_timer() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single<Int>.timer(.seconds(2), scheduler: scheduler)
+        let res = await scheduler.start {
+            await Single<Int>.timer(.seconds(2), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -548,11 +548,11 @@ extension SingleTest {
 }
 
 extension SingleTest {
-    func test_do() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_do() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single<Int>.just(1).do(onSuccess: { _ in () }, onError: { _ in () }, onSubscribe: { () in () }, onSubscribed: { () in () }, onDispose: { () in () })
+        let res = await scheduler.start {
+            await Single<Int>.just(1).do(onSuccess: { _ in () }, onError: { _ in () }, onSubscribe: { () in () }, onSubscribed: { () in () }, onDispose: { () in () })
         }
 
         XCTAssertEqual(res.events, [
@@ -561,11 +561,11 @@ extension SingleTest {
             ])
     }
 
-    func test_filter() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_filter() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single<Int>.just(1).filter { _ in false }
+        let res = await scheduler.start {
+            await Single<Int>.just(1).filter { _ in false }
         }
 
         XCTAssertEqual(res.events, [
@@ -573,11 +573,11 @@ extension SingleTest {
             ])
     }
 
-    func test_map() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_map() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single<Int>.just(1).map { $0 * 2 }
+        let res = await scheduler.start {
+            await Single<Int>.just(1).map { $0 * 2 }
         }
 
         XCTAssertEqual(res.events, [
@@ -586,11 +586,11 @@ extension SingleTest {
             ])
     }
 
-    func test_compactMap() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_compactMap() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let res = scheduler.start {
-            (Single<String>.just("1").compactMap(Int.init) as Maybe<Int>).asObservable()
+        let res = await scheduler.start {
+            await (Single<String>.just("1").compactMap(Int.init) as Maybe<Int>).asObservable()
         }
         
         XCTAssertEqual(res.events, [
@@ -599,11 +599,11 @@ extension SingleTest {
             ])
     }
     
-    func test_compactMapNil() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_compactMapNil() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let res = scheduler.start {
-            (Single<String>.just("a").compactMap(Int.init) as Maybe<Int>).asObservable()
+        let res = await scheduler.start {
+            await (Single<String>.just("a").compactMap(Int.init) as Maybe<Int>).asObservable()
         }
         
         XCTAssertEqual(res.events, [
@@ -611,11 +611,11 @@ extension SingleTest {
             ])
     }
     
-    func test_flatMap() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_flatMap() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single<Int>.just(1).flatMap { .just($0 * 2) }
+        let res = await scheduler.start {
+            await Single<Int>.just(1).flatMap { await .just($0 * 2) }
         }
 
         XCTAssertEqual(res.events, [
@@ -624,11 +624,11 @@ extension SingleTest {
             ])
     }
 
-    func test_flatMapMaybe() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_flatMapMaybe() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single<Int>.just(1).flatMapMaybe { Maybe.just($0 * 2) }
+        let res = await scheduler.start {
+            await Single<Int>.just(1).flatMapMaybe { await Maybe.just($0 * 2) }
         }
 
         XCTAssertEqual(res.events, [
@@ -637,11 +637,11 @@ extension SingleTest {
             ])
     }
 
-    func test_flatMapCompletable() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_flatMapCompletable() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single<Int>.just(10).flatMapCompletable { _ in Completable.empty() }
+        let res = await scheduler.start {
+            await Single<Int>.just(10).flatMapCompletable { _ in await Completable.empty() }
         }
 
         XCTAssertEqual(res.events, [
@@ -649,11 +649,11 @@ extension SingleTest {
             ])
     }
 
-    func test_asMaybe() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_asMaybe() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single<Int>.just(1).asMaybe() as Maybe<Int>
+        let res = await scheduler.start {
+            await Single<Int>.just(1).asMaybe() as Maybe<Int>
         }
 
         XCTAssertEqual(res.events, [
@@ -662,11 +662,11 @@ extension SingleTest {
             ])
     }
 
-    func test_asCompletable() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_asCompletable() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single<Int>.just(5).asCompletable() as Completable
+        let res = await scheduler.start {
+            await Single<Int>.just(5).asCompletable() as Completable
         }
 
         XCTAssertEqual(res.events, [
@@ -674,11 +674,11 @@ extension SingleTest {
             ])
     }
 
-    func test_asCompletableError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_asCompletableError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single<Int>.error(testError).asCompletable() as Completable
+        let res = await scheduler.start {
+            await Single<Int>.error(testError).asCompletable() as Completable
         }
 
         XCTAssertEqual(res.events, [
@@ -688,11 +688,11 @@ extension SingleTest {
 }
 
 extension SingleTest {
-    func test_zip_tuple() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_zip_tuple() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            (Single.zip(Single.just(1), Single.just(2)) as Single<(Int, Int)>).map { $0.0 + $0.1 }
+        let res = await scheduler.start {
+            await (Single.zip(Single.just(1), Single.just(2)) as Single<(Int, Int)>).map { $0.0 + $0.1 }
         }
 
         XCTAssertEqual(res.events, [
@@ -701,11 +701,11 @@ extension SingleTest {
             ])
     }
 
-    func test_zip_resultSelector() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_zip_resultSelector() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Single.zip(Single.just(1), Single.just(2)) { $0 + $1 }
+        let res = await scheduler.start {
+            await Single.zip(Single.just(1), Single.just(2)) { $0 + $1 }
         }
 
         XCTAssertEqual(res.events, [
@@ -714,44 +714,44 @@ extension SingleTest {
             ])
     }
     
-    func testZipCollection_selector() {
-        let collection = [Single<Int>.just(1), Single<Int>.just(1), Single<Int>.just(1)]
-        let singleResult: Single<Int> = Single.zip(collection) { $0.reduce(0, +) }
+    func testZipCollection_selector() async {
+        let collection = await [Single<Int>.just(1), Single<Int>.just(1), Single<Int>.just(1)]
+        let singleResult: Single<Int> = await Single.zip(collection) { $0.reduce(0, +) }
         
-        let result = try! singleResult
+        let result = try! await singleResult
             .toBlocking()
             .first()!
         
         XCTAssertEqual(result, 3)
     }
     
-    func testZipCollection_selector_when_empty() {
+    func testZipCollection_selector_when_empty() async {
         let collection: [Single<Int>] = []
-        let singleResult = Single.zip(collection) { $0.reduce(0, +) }
+        let singleResult = await Single.zip(collection) { $0.reduce(0, +) }
         
-        let result = try! singleResult
+        let result = try! await singleResult
             .toBlocking()
             .first()!
         
         XCTAssertEqual(result, 0)
     }
     
-    func testZipCollection_tuple() {
-        let collection = [Single<Int>.just(1), Single<Int>.just(1), Single<Int>.just(1)]
-        let singleResult: Single<Int> = Single.zip(collection).map { $0.reduce(0, +) }
+    func testZipCollection_tuple() async {
+        let collection = await [Single<Int>.just(1), Single<Int>.just(1), Single<Int>.just(1)]
+        let singleResult: Single<Int> = await Single.zip(collection).map { $0.reduce(0, +) }
         
-        let result = try! singleResult
+        let result = try! await singleResult
             .toBlocking()
             .first()!
         
         XCTAssertEqual(result, 3)
     }
     
-    func testZipCollection_tuple_when_empty() {
+    func testZipCollection_tuple_when_empty() async {
         let collection: [Single<Int>] = []
-        let singleResult = Single.zip(collection)
+        let singleResult = await Single.zip(collection)
         
-        let result = try! singleResult
+        let result = try! await singleResult
             .toBlocking()
             .first()!
         
@@ -760,10 +760,10 @@ extension SingleTest {
 }
 
 extension SingleTest {
-    func testDefaultErrorHandler() {
+    func testDefaultErrorHandler() async {
         var loggedErrors = [TestError]()
 
-        _ = Single<Int>.error(testError).subscribe()
+        _ = await Single<Int>.error(testError).subscribe()
         XCTAssertEqual(loggedErrors, [])
 
         let originalErrorHandler = Hooks.defaultErrorHandler

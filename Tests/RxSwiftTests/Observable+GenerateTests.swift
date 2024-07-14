@@ -14,11 +14,11 @@ class ObservableGenerateTest : RxTest {
 }
 
 extension ObservableGenerateTest {
-    func testGenerate_Finite() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGenerate_Finite() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Observable.generate(initialState: 0, condition: { x in x <= 3 }, scheduler: scheduler) { x in
+        let res = await scheduler.start {
+            await Observable.generate(initialState: 0, condition: { x in x <= 3 }, scheduler: scheduler) { x in
                 x + 1
             }
         }
@@ -33,11 +33,11 @@ extension ObservableGenerateTest {
 
     }
 
-    func testGenerate_ThrowCondition() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGenerate_ThrowCondition() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Observable.generate(initialState: 0, condition: { _ in throw testError }, scheduler: scheduler) { x in
+        let res = await scheduler.start {
+            await Observable.generate(initialState: 0, condition: { _ in throw testError }, scheduler: scheduler) { x in
                 x + 1
             }
         }
@@ -48,11 +48,11 @@ extension ObservableGenerateTest {
 
     }
 
-    func testGenerate_ThrowIterate() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGenerate_ThrowIterate() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Observable.generate(initialState: 0, condition: { _ in true }, scheduler: scheduler) { (_: Int) -> Int in
+        let res = await scheduler.start {
+            await Observable.generate(initialState: 0, condition: { _ in true }, scheduler: scheduler) { (_: Int) -> Int in
                 throw testError
             }
         }
@@ -64,11 +64,11 @@ extension ObservableGenerateTest {
 
     }
 
-    func testGenerate_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testGenerate_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start(disposed: 203) {
-            Observable.generate(initialState: 0, condition: { _ in true }, scheduler: scheduler) { x in
+        let res = await scheduler.start(disposed: 203) {
+            await Observable.generate(initialState: 0, condition: { _ in true }, scheduler: scheduler) { x in
                 x + 1
             }
         }
@@ -80,12 +80,12 @@ extension ObservableGenerateTest {
 
     }
 
-    func testGenerate_take() {
+    func testGenerate_take() async {
         var count = 0
 
         var elements = [Int]()
 
-        _ = Observable.generate(initialState: 0, condition: { _ in true }) { x in
+        _ = await Observable.generate(initialState: 0, condition: { _ in true }) { x in
             count += 1
             return x + 1
             }
@@ -99,20 +99,20 @@ extension ObservableGenerateTest {
     }
 
     #if TRACE_RESOURCES
-        func testGenerateReleasesResourcesOnComplete() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.generate(initialState: 0, condition: { _ in false }, scheduler: testScheduler) { (x: Int) -> Int in
+    func testGenerateReleasesResourcesOnComplete() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.generate(initialState: 0, condition: { _ in false }, scheduler: testScheduler) { (x: Int) -> Int in
                 return x
             }.subscribe()
-            testScheduler.start()
+        await testScheduler.start()
         }
 
-        func testGenerateReleasesResourcesOnError() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.generate(initialState: 0, condition: { _ in false }, scheduler: testScheduler) { _ -> Int in
+    func testGenerateReleasesResourcesOnError() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.generate(initialState: 0, condition: { _ in false }, scheduler: testScheduler) { _ -> Int in
                 throw testError
             }.subscribe()
-            testScheduler.start()
+        await testScheduler.start()
         }
     #endif
 }

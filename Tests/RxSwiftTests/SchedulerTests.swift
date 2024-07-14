@@ -31,7 +31,7 @@ class OperationQueueSchedulerTests: RxTest {
 }
 
 extension ConcurrentDispatchQueueSchedulerTests {
-    func test_scheduleRelative() {
+    func test_scheduleRelative() async {
         let expectScheduling = expectation(description: "wait")
         let start = Date()
 
@@ -39,20 +39,20 @@ extension ConcurrentDispatchQueueSchedulerTests {
 
         let scheduler = self.createScheduler()
 
-        _ = scheduler.scheduleRelative(1, dueTime: .milliseconds(500)) { _ -> Disposable in
+        _ = await scheduler.scheduleRelative(1, dueTime: .milliseconds(500)) { _ -> Disposable in
             interval = Date().timeIntervalSince(start)
             expectScheduling.fulfill()
             return Disposables.create()
         }
 
-        waitForExpectations(timeout: 1.0) { error in
+        await waitForExpectations(timeout: 1.0) { error in
             XCTAssertNil(error)
         }
 
         XCTAssertEqual(interval, 0.5, accuracy: 0.2)
     }
 
-    func test_scheduleRelativeCancel() {
+    func test_scheduleRelativeCancel() async {
         let expectScheduling = expectation(description: "wait")
         let start = Date()
 
@@ -60,32 +60,32 @@ extension ConcurrentDispatchQueueSchedulerTests {
 
         let scheduler = self.createScheduler()
 
-        let disposable = scheduler.scheduleRelative(1, dueTime: .milliseconds(100)) { _ -> Disposable in
+        let disposable = await scheduler.scheduleRelative(1, dueTime: .milliseconds(100)) { _ -> Disposable in
             interval = Date().timeIntervalSince(start)
             expectScheduling.fulfill()
             return Disposables.create()
         }
-        disposable.dispose()
+        await disposable.dispose()
 
         DispatchQueue.main.asyncAfter (deadline: .now() + .milliseconds(200)) {
             expectScheduling.fulfill()
         }
 
-        waitForExpectations(timeout: 0.5) { error in
+        await waitForExpectations(timeout: 0.5) { error in
             XCTAssertNil(error)
         }
 
         XCTAssertEqual(interval, 0.0, accuracy: 0.0)
     }
 
-    func test_schedulePeriodic() {
+    func test_schedulePeriodic() async {
         let expectScheduling = expectation(description: "wait")
         let start = Date()
         let times = Synchronized([Date]())
 
         let scheduler = self.createScheduler()
 
-        let disposable = scheduler.schedulePeriodic(0, startAfter: .milliseconds(200), period: .milliseconds(300)) { state -> Int in
+        let disposable = await scheduler.schedulePeriodic(0, startAfter: .milliseconds(200), period: .milliseconds(300)) { state -> Int in
             times.mutate { $0.append(Date()) }
             if state == 1 {
                 expectScheduling.fulfill()
@@ -93,35 +93,35 @@ extension ConcurrentDispatchQueueSchedulerTests {
             return state + 1
         }
 
-        waitForExpectations(timeout: 1.0) { error in
+        await waitForExpectations(timeout: 1.0) { error in
             XCTAssertNil(error)
         }
 
-        disposable.dispose()
+        await disposable.dispose()
 
         XCTAssertEqual(times.value.count, 2)
         XCTAssertEqual(times.value[0].timeIntervalSince(start), 0.2, accuracy: 0.1)
         XCTAssertEqual(times.value[1].timeIntervalSince(start), 0.5, accuracy: 0.2)
     }
 
-    func test_schedulePeriodicCancel() {
+    func test_schedulePeriodicCancel() async {
         let expectScheduling = expectation(description: "wait")
         var times = [Date]()
 
         let scheduler = self.createScheduler()
 
-        let disposable = scheduler.schedulePeriodic(0, startAfter: .milliseconds(200), period: .milliseconds(300)) { state -> Int in
+        let disposable = await scheduler.schedulePeriodic(0, startAfter: .milliseconds(200), period: .milliseconds(300)) { state -> Int in
             times.append(Date())
             return state + 1
         }
 
-        disposable.dispose()
+        await disposable.dispose()
 
         DispatchQueue.main.asyncAfter (deadline: .now() + .milliseconds(300)) {
             expectScheduling.fulfill()
         }
 
-        waitForExpectations(timeout: 1.0) { error in
+        await waitForExpectations(timeout: 1.0) { error in
             XCTAssertNil(error)
         }
 
@@ -130,7 +130,7 @@ extension ConcurrentDispatchQueueSchedulerTests {
 }
 
 extension OperationQueueSchedulerTests {
-    func test_scheduleWithPriority() {
+    func test_scheduleWithPriority() async {
         let expectScheduling = expectation(description: "wait")
 
         let operationQueue = OperationQueue()
@@ -141,14 +141,14 @@ extension OperationQueueSchedulerTests {
 
         var times = [String]()
 
-        _ = highPriority.schedule(Int.self) { _ -> Disposable in
+        _ = await highPriority.schedule(Int.self) { _ -> Disposable in
             Thread.sleep(forTimeInterval: 0.4)
             times.append("HIGH")
 
             return Disposables.create()
             }
 
-        _ = lowPriority.schedule(Int.self) { _ -> Disposable in
+        _ = await lowPriority.schedule(Int.self) { _ -> Disposable in
             Thread.sleep(forTimeInterval: 1)
             times.append("LOW")
 
@@ -157,14 +157,14 @@ extension OperationQueueSchedulerTests {
             return Disposables.create()
             }
 
-        _ = highPriority.schedule(Int.self) { _ -> Disposable in
+        _ = await highPriority.schedule(Int.self) { _ -> Disposable in
             Thread.sleep(forTimeInterval: 0.2)
             times.append("HIGH")
 
             return Disposables.create()
             }
 
-        waitForExpectations(timeout: 4.0) { error in
+        await waitForExpectations(timeout: 4.0) { error in
             XCTAssertNil(error)
         }
 

@@ -58,7 +58,7 @@ extension ObservableAmbTest {
             ])
         
         let res = await scheduler.start {
-            await Observable.amb([x1, x2, x3].asyncMap { await $0.asObservable() })
+            await Observable.amb([x1, x2, x3].map { await $0.asObservable() })
         }
         
         XCTAssertEqual(res.events, [
@@ -297,7 +297,7 @@ extension ObservableAmbTest {
 
 extension Array {
  
-    func asyncMap<T>(_ transform: (Element) async throws -> T) async rethrows -> [T] {
+    func map<T>(_ transform: (Element) async throws -> T) async rethrows -> [T] {
         var array = [T]()
         array.reserveCapacity(count)
         for el in self {

@@ -16,7 +16,7 @@ public extension ObservableType {
      - returns: An observable sequence whose elements are the result of invoking the transform function on each element of source.
 
      */
-    func map<Result>(_ transform: @escaping (Element) throws -> Result) async
+    func map<Result>(_ transform: @escaping (Element) async throws -> Result) async
         -> Observable<Result>
     {
         await Map(source: self.asObservable(), transform: transform)
@@ -24,7 +24,7 @@ public extension ObservableType {
 }
 
 private final class MapSink<SourceType, Observer: ObserverType>: Sink<Observer>, ObserverType {
-    typealias Transform = (SourceType) throws -> ResultType
+    typealias Transform = (SourceType) async throws -> ResultType
 
     typealias ResultType = Observer.Element
 
@@ -39,7 +39,7 @@ private final class MapSink<SourceType, Observer: ObserverType>: Sink<Observer>,
         switch event {
         case .next(let element):
             do {
-                let mappedElement = try self.transform(element)
+                let mappedElement = try await self.transform(element)
                 await self.forwardOn(.next(mappedElement))
             }
             catch let e {
@@ -57,7 +57,7 @@ private final class MapSink<SourceType, Observer: ObserverType>: Sink<Observer>,
 }
 
 private final class Map<SourceType, ResultType>: Producer<ResultType> {
-    typealias Transform = (SourceType) throws -> ResultType
+    typealias Transform = (SourceType) async throws -> ResultType
 
     private let source: Observable<SourceType>
 

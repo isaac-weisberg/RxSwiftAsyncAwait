@@ -14,14 +14,14 @@ class ObservableDefaultIfEmptyTest : RxTest {
 }
 
 extension ObservableDefaultIfEmptyTest {
-    func testDefaultIfEmpty_Source_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let xs = scheduler.createHotObservable([
+    func testDefaultIfEmpty_Source_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let xs = await scheduler.createHotObservable([
                 .completed(201, Int.self)
             ])
         let defaultValue = 1
-        let res = scheduler.start {
-            xs.ifEmpty(default: defaultValue)
+        let res = await scheduler.start {
+            await xs.ifEmpty(default: defaultValue)
         }
         
         XCTAssertEqual(res.events, [
@@ -33,14 +33,14 @@ extension ObservableDefaultIfEmptyTest {
             ])
     }
     
-    func testDefaultIfEmpty_Source_Errors() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let xs = scheduler.createHotObservable([
+    func testDefaultIfEmpty_Source_Errors() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let xs = await scheduler.createHotObservable([
                 .error(201, testError, Int.self)
             ])
         let defaultValue = 1
-        let res = scheduler.start {
-            xs.ifEmpty(default: defaultValue)
+        let res = await scheduler.start {
+            await xs.ifEmpty(default: defaultValue)
         }
         
         XCTAssertEqual(res.events, [
@@ -51,17 +51,17 @@ extension ObservableDefaultIfEmptyTest {
             ])
     }
     
-    func testDefaultIfEmpty_Source_Emits() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let xs = scheduler.createHotObservable([
+    func testDefaultIfEmpty_Source_Emits() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let xs = await scheduler.createHotObservable([
                 .next(201, 1),
                 .next(202, 2),
                 .next(203, 3),
                 .completed(204)
             ])
         let defaultValue = 42
-        let res = scheduler.start {
-            xs.ifEmpty(default: defaultValue)
+        let res = await scheduler.start {
+            await xs.ifEmpty(default: defaultValue)
         }
         
         XCTAssertEqual(res.events, [
@@ -75,14 +75,14 @@ extension ObservableDefaultIfEmptyTest {
             ])
     }
     
-    func testDefaultIfEmpty_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let xs = scheduler.createHotObservable([
+    func testDefaultIfEmpty_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let xs = await scheduler.createHotObservable([
             .next(0, 0)
             ])
         let defaultValue = 42
-        let res = scheduler.start {
-            xs.ifEmpty(default: defaultValue)
+        let res = await scheduler.start {
+            await xs.ifEmpty(default: defaultValue)
         }
         
         XCTAssertEqual(res.events, [])
@@ -92,16 +92,16 @@ extension ObservableDefaultIfEmptyTest {
     }
 
     #if TRACE_RESOURCES
-        func testDefaultIfEmptyReleasesResourcesOnComplete1() {
-            _ = Observable<Int>.just(1).ifEmpty(default: -1).subscribe()
+    func testDefaultIfEmptyReleasesResourcesOnComplete1() async {
+        _ = await Observable<Int>.just(1).ifEmpty(default: -1).subscribe()
         }
 
-        func testDefaultIfEmptyReleasesResourcesOnComplete2() {
-            _ = Observable<Int>.empty().ifEmpty(default: -1).subscribe()
+    func testDefaultIfEmptyReleasesResourcesOnComplete2() async {
+        _ = await Observable<Int>.empty().ifEmpty(default: -1).subscribe()
         }
 
-        func testDefaultIfEmptyReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).ifEmpty(default: -1).subscribe()
+    func testDefaultIfEmptyReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).ifEmpty(default: -1).subscribe()
         }
     #endif
 }
