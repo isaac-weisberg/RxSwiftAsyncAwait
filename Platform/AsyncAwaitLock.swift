@@ -8,10 +8,10 @@
 
 import Foundation
 
-final actor AsyncAwaitLock {
+public final actor AsyncAwaitLock {
     private var latestTask: Task<Void, Never>?
     
-    init() async {
+    public init() async {
         #if TRACE_RESOURCES
             _ = await Resources.incrementTotal()
         #endif
@@ -25,7 +25,7 @@ final actor AsyncAwaitLock {
         #endif
     }
     
-    func performLocked<R>(_ work: @escaping () async -> R) async -> R {
+    public func performLocked<R>(_ work: @escaping () async -> R) async -> R {
         let theActualTask: Task<R, Never> = Task { [self] in
             if let latestTask {
                 _ = await latestTask.value
@@ -51,7 +51,7 @@ final actor AsyncAwaitLock {
         return await theActualTask.value
     }
     
-    func performLockedThrowing<R>(_ work: @escaping () async throws -> R) async throws -> R {
+    public func performLockedThrowing<R>(_ work: @escaping () async throws -> R) async throws -> R {
         let theActualTask: Task<R, Error> = Task { [self] in
             if let latestTask {
                 _ = await latestTask.value

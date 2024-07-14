@@ -48,8 +48,8 @@ extension ObservableType where Element == Never {
     /**
      - returns: An observable sequence that completes.
      */
-    public func asCompletable()
+    public func asCompletable() async
         -> Completable {
-            return PrimitiveSequence(raw: self.asObservable())
+            return await PrimitiveSequence(raw: self.asObservable())
     }
 }

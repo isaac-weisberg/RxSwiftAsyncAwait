@@ -14,10 +14,10 @@ class ObservableSampleTest : RxTest {
 }
 
 extension ObservableSampleTest {
-    func testSample_Sampler_DefaultValue() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSample_Sampler_DefaultValue() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .next(240, 3),
@@ -27,7 +27,7 @@ extension ObservableSampleTest {
             .completed(400)
             ])
         
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(150, ""),
             .next(210, "bar"),
             .next(250, "foo"),
@@ -36,8 +36,8 @@ extension ObservableSampleTest {
             .completed(500)
             ])
         
-        let res = scheduler.start {
-            xs.sample(ys, defaultValue: 0)
+        let res = await scheduler.start {
+            await xs.sample(ys, defaultValue: 0)
         }
         
         let correct = Recorded.events(
@@ -60,10 +60,10 @@ extension ObservableSampleTest {
             ])
     }
 
-    func testSample_Sampler_SamplerThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSample_Sampler_SamplerThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .next(240, 3),
@@ -73,7 +73,7 @@ extension ObservableSampleTest {
             .completed(400)
             ])
 
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(150, ""),
             .next(210, "bar"),
             .next(250, "foo"),
@@ -81,8 +81,8 @@ extension ObservableSampleTest {
             .error(320, testError)
             ])
 
-        let res = scheduler.start {
-            xs.sample(ys)
+        let res = await scheduler.start {
+            await xs.sample(ys)
         }
 
         let correct = Recorded.events(
@@ -101,10 +101,10 @@ extension ObservableSampleTest {
         ])
     }
 
-    func testSample_Sampler_Simple1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSample_Sampler_Simple1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .next(240, 3),
@@ -114,7 +114,7 @@ extension ObservableSampleTest {
             .completed(400)
             ])
 
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(150, ""),
             .next(210, "bar"),
             .next(250, "foo"),
@@ -123,8 +123,8 @@ extension ObservableSampleTest {
             .completed(500)
             ])
 
-        let res = scheduler.start {
-            xs.sample(ys)
+        let res = await scheduler.start {
+            await xs.sample(ys)
         }
 
         let correct = Recorded.events(
@@ -144,10 +144,10 @@ extension ObservableSampleTest {
             ])
     }
 
-    func testSample_Sampler_Simple2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSample_Sampler_Simple2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .next(240, 3),
@@ -158,7 +158,7 @@ extension ObservableSampleTest {
             .completed(400)
             ])
 
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(150, ""),
             .next(210, "bar"),
             .next(250, "foo"),
@@ -167,8 +167,8 @@ extension ObservableSampleTest {
             .completed(500)
             ])
 
-        let res = scheduler.start {
-            xs.sample(ys)
+        let res = await scheduler.start {
+            await xs.sample(ys)
         }
 
         let correct = Recorded.events(
@@ -189,10 +189,10 @@ extension ObservableSampleTest {
             ])
     }
 
-    func testSample_Sampler_Simple3() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSample_Sampler_Simple3() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .next(240, 3),
@@ -200,7 +200,7 @@ extension ObservableSampleTest {
             .completed(300)
             ])
 
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(150, ""),
             .next(210, "bar"),
             .next(250, "foo"),
@@ -209,8 +209,8 @@ extension ObservableSampleTest {
             .completed(500)
             ])
 
-        let res = scheduler.start {
-            xs.sample(ys)
+        let res = await scheduler.start {
+            await xs.sample(ys)
         }
 
         let correct = Recorded.events(
@@ -230,10 +230,10 @@ extension ObservableSampleTest {
             ])
     }
 
-    func testSample_Sampler_SourceThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSample_Sampler_SourceThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .next(240, 3),
@@ -243,7 +243,7 @@ extension ObservableSampleTest {
             .error(320, testError)
             ])
 
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(150, ""),
             .next(210, "bar"),
             .next(250, "foo"),
@@ -252,8 +252,8 @@ extension ObservableSampleTest {
             .completed(400)
             ])
 
-        let res = scheduler.start {
-            xs.sample(ys)
+        let res = await scheduler.start {
+            await xs.sample(ys)
         }
 
         let correct = Recorded.events(
@@ -274,16 +274,16 @@ extension ObservableSampleTest {
     }
 
     #if TRACE_RESOURCES
-        func testSampleReleasesResourcesOnComplete() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).throttle(.seconds(0), latest: true, scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testSampleReleasesResourcesOnComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).throttle(.seconds(0), latest: true, scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
 
-        func testSamepleReleasesResourcesOnError() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).throttle(.seconds(0), latest: true, scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testSamepleReleasesResourcesOnError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).throttle(.seconds(0), latest: true, scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
     #endif
 }

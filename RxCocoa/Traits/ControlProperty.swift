@@ -52,8 +52,8 @@ public struct ControlProperty<PropertyType> : ControlPropertyType {
     /// - parameter valueSink: Observer that enables binding values to control property.
     /// - returns: Control property created with a observable sequence of values and an observer that enables binding values
     /// to property.
-    public init<Values: ObservableType, Sink: ObserverType>(values: Values, valueSink: Sink) where Element == Values.Element, Element == Sink.Element {
-        self.values = values.subscribe(on: ConcurrentMainScheduler.instance)
+    public init<Values: ObservableType, Sink: ObserverType>(values: Values, valueSink: Sink) async where Element == Values.Element, Element == Sink.Element {
+        self.values = await values.subscribe(on: ConcurrentMainScheduler.instance)
         self.valueSink = valueSink.asObserver()
     }
 
@@ -61,8 +61,8 @@ public struct ControlProperty<PropertyType> : ControlPropertyType {
     ///
     /// - parameter observer: Observer to subscribe to property values.
     /// - returns: Disposable object that can be used to unsubscribe the observer from receiving control property values.
-    public func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        self.values.subscribe(observer)
+    public func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await self.values.subscribe(observer)
     }
 
     /// `ControlEvent` of user initiated value changes. Every time user updates control value change event
@@ -94,14 +94,14 @@ public struct ControlProperty<PropertyType> : ControlPropertyType {
     /// - In case next element is received, it is being set to control value.
     /// - In case error is received, DEBUG builds raise fatal error, RELEASE builds log event to standard output.
     /// - In case sequence completes, nothing happens.
-    public func on(_ event: Event<Element>) {
+    public func on(_ event: Event<Element>) async {
         switch event {
         case .error(let error):
             bindingError(error)
         case .next:
-            self.valueSink.on(event)
+            await self.valueSink.on(event)
         case .completed:
-            self.valueSink.on(event)
+            await self.valueSink.on(event)
         }
     }
 }

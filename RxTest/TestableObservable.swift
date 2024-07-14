@@ -22,13 +22,13 @@ public class TestableObservable<Element>
     /// Parent test scheduler.
     internal let testScheduler: TestScheduler
 
-    init(testScheduler: TestScheduler, recordedEvents: [Recorded<Event<Element>>]) {
+    init(testScheduler: TestScheduler, recordedEvents: [Recorded<Event<Element>>]) async {
         self.testScheduler = testScheduler
         self.recordedEvents = recordedEvents
         self.subscriptions = []
     }
 
-    public func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    public func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
         fatalError("Abstract method")
     }
 }

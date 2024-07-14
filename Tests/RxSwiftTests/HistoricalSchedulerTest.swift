@@ -15,30 +15,30 @@ class HistoricalSchedulerTest : RxTest {
 }
 
 extension HistoricalSchedulerTest {
-    func testHistoricalScheduler_initialClock() {
-        let scheduler = HistoricalScheduler(initialClock: Date(timeIntervalSince1970: 10.0))
+    func testHistoricalScheduler_initialClock() async {
+        let scheduler = await HistoricalScheduler(initialClock: Date(timeIntervalSince1970: 10.0))
         XCTAssertEqual(scheduler.now, Date(timeIntervalSince1970: 10.0))
         XCTAssertEqual(scheduler.clock, Date(timeIntervalSince1970: 10.0))
     }
 
-    func testHistoricalScheduler_start() {
-        let scheduler = HistoricalScheduler()
+    func testHistoricalScheduler_start() async {
+        let scheduler = await HistoricalScheduler()
 
         var times: [Date] = []
 
-        _ = scheduler.scheduleRelative((), dueTime: .seconds(10)) { _ in
+        _ = await scheduler.scheduleRelative((), dueTime: .seconds(10)) { _ in
             times.append(scheduler.now)
-            _ = scheduler.scheduleRelative((), dueTime: .seconds(20)) { _ in
+            _ = await scheduler.scheduleRelative((), dueTime: .seconds(20)) { _ in
                 times.append(scheduler.now)
                 return Disposables.create()
             }
-            return scheduler.schedule(()) { _ in
+            return await scheduler.schedule(()) { _ in
                 times.append(scheduler.now)
                 return Disposables.create()
             }
         }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(times, [
             Date(timeIntervalSince1970: 10.0),
@@ -47,52 +47,52 @@ extension HistoricalSchedulerTest {
         ])
     }
 
-    func testHistoricalScheduler_disposeStart() {
-        let scheduler = HistoricalScheduler()
+    func testHistoricalScheduler_disposeStart() async {
+        let scheduler = await HistoricalScheduler()
 
         var times: [Date] = []
 
-        _ = scheduler.scheduleRelative((), dueTime: .seconds(10)) { _ in
+        _ = await scheduler.scheduleRelative((), dueTime: .seconds(10)) { _ in
             times.append(scheduler.now)
-            let d = scheduler.scheduleRelative((), dueTime: .seconds(20)) { _ in
+            let d = await scheduler.scheduleRelative((), dueTime: .seconds(20)) { _ in
                 times.append(scheduler.now)
                 return Disposables.create()
             }
-            let d2 = scheduler.schedule(()) { _ in
+            let d2 = await scheduler.schedule(()) { _ in
                 times.append(scheduler.now)
                 return Disposables.create()
             }
 
-            d2.dispose()
-            d.dispose()
+            await d2.dispose()
+            await d.dispose()
             return Disposables.create()
         }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(times, [
             Date(timeIntervalSince1970: 10.0),
             ])
     }
 
-    func testHistoricalScheduler_advanceToAfter() {
-        let scheduler = HistoricalScheduler()
+    func testHistoricalScheduler_advanceToAfter() async {
+        let scheduler = await HistoricalScheduler()
 
         var times: [Date] = []
 
-        _ = scheduler.scheduleRelative((), dueTime: .seconds(10)) { _ in
+        _ = await scheduler.scheduleRelative((), dueTime: .seconds(10)) { _ in
             times.append(scheduler.now)
-            _ = scheduler.scheduleRelative((), dueTime: .seconds(20)) { _ in
+            _ = await scheduler.scheduleRelative((), dueTime: .seconds(20)) { _ in
                 times.append(scheduler.now)
                 return Disposables.create()
             }
-            return scheduler.schedule(()) { _ in
+            return await scheduler.schedule(()) { _ in
                 times.append(scheduler.now)
                 return Disposables.create()
             }
         }
 
-        scheduler.advanceTo(Date(timeIntervalSince1970: 100.0))
+        await scheduler.advanceTo(Date(timeIntervalSince1970: 100.0))
 
         XCTAssertEqual(times, [
             Date(timeIntervalSince1970: 10.0),
@@ -101,24 +101,24 @@ extension HistoricalSchedulerTest {
         ])
     }
 
-    func testHistoricalScheduler_advanceToBefore() {
-        let scheduler = HistoricalScheduler()
+    func testHistoricalScheduler_advanceToBefore() async {
+        let scheduler = await HistoricalScheduler()
 
         var times: [Date] = []
 
-        _ = scheduler.scheduleRelative((), dueTime: .seconds(10)) { [weak scheduler] _ in
+        _ = await scheduler.scheduleRelative((), dueTime: .seconds(10)) { [weak scheduler] _ in
             times.append(scheduler!.now)
-            _ = scheduler!.scheduleRelative((), dueTime: .seconds(20)) { _ in
+            _ = await scheduler!.scheduleRelative((), dueTime: .seconds(20)) { _ in
                 times.append(scheduler!.now)
                 return Disposables.create()
             }
-            return scheduler!.schedule(()) { _ in
+            return await scheduler!.schedule(()) { _ in
                 times.append(scheduler!.now)
                 return Disposables.create()
             }
         }
 
-        scheduler.advanceTo(Date(timeIntervalSince1970: 10.0))
+        await scheduler.advanceTo(Date(timeIntervalSince1970: 10.0))
 
         XCTAssertEqual(times, [
             Date(timeIntervalSince1970: 10.0),
@@ -126,46 +126,46 @@ extension HistoricalSchedulerTest {
         ])
     }
 
-    func testHistoricalScheduler_disposeAdvanceTo() {
-        let scheduler = HistoricalScheduler()
+    func testHistoricalScheduler_disposeAdvanceTo() async {
+        let scheduler = await HistoricalScheduler()
 
         var times: [Date] = []
 
-        _ = scheduler.scheduleRelative((), dueTime: .seconds(10)) { [weak scheduler] _ in
+        _ = await scheduler.scheduleRelative((), dueTime: .seconds(10)) { [weak scheduler] _ in
             times.append(scheduler!.now)
-            let d1 = scheduler!.scheduleRelative((), dueTime: .seconds(20)) { _ in
+            let d1 = await scheduler!.scheduleRelative((), dueTime: .seconds(20)) { _ in
                 times.append(scheduler!.now)
                 return Disposables.create()
             }
-            let d2 = scheduler!.schedule(()) { _ in
+            let d2 = await scheduler!.schedule(()) { _ in
                 times.append(scheduler!.now)
                 return Disposables.create()
             }
 
-            d1.dispose()
-            d2.dispose()
+            await d1.dispose()
+            await d2.dispose()
             return Disposables.create()
         }
 
-        scheduler.advanceTo(Date(timeIntervalSince1970: 200.0))
+        await scheduler.advanceTo(Date(timeIntervalSince1970: 200.0))
 
         XCTAssertEqual(times, [
             Date(timeIntervalSince1970: 10.0),
         ])
     }
 
-    func testHistoricalScheduler_stop() {
-        let scheduler = HistoricalScheduler()
+    func testHistoricalScheduler_stop() async {
+        let scheduler = await HistoricalScheduler()
 
         var times: [Date] = []
 
-        _ = scheduler.scheduleRelative((), dueTime: .seconds(10)) { [weak scheduler] _ in
+        _ = await scheduler.scheduleRelative((), dueTime: .seconds(10)) { [weak scheduler] _ in
             times.append(scheduler!.now)
-            _ = scheduler!.scheduleRelative((), dueTime: .seconds(20)) { _ in
+            _ = await scheduler!.scheduleRelative((), dueTime: .seconds(20)) { _ in
                 times.append(scheduler!.now)
                 return Disposables.create()
             }
-            _ = scheduler!.schedule(()) { _ in
+            _ = await scheduler!.schedule(()) { _ in
                 times.append(scheduler!.now)
                 return Disposables.create()
             }
@@ -175,27 +175,27 @@ extension HistoricalSchedulerTest {
             return Disposables.create()
         }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(times, [
             Date(timeIntervalSince1970: 10.0),
             ])
     }
 
-    func testHistoricalScheduler_sleep() {
-        let scheduler = HistoricalScheduler()
+    func testHistoricalScheduler_sleep() async {
+        let scheduler = await HistoricalScheduler()
 
         var times: [Date] = []
 
-        _ = scheduler.scheduleRelative((), dueTime: .seconds(10)) { [weak scheduler] _ in
+        _ = await scheduler.scheduleRelative((), dueTime: .seconds(10)) { [weak scheduler] _ in
             times.append(scheduler!.now)
 
             scheduler!.sleep(100)
-            _ = scheduler!.scheduleRelative((), dueTime: .seconds(20)) { _ in
+            _ = await scheduler!.scheduleRelative((), dueTime: .seconds(20)) { _ in
                 times.append(scheduler!.now)
                 return Disposables.create()
             }
-            _ = scheduler!.schedule(()) { _ in
+            _ = await scheduler!.schedule(()) { _ in
                 times.append(scheduler!.now)
                 return Disposables.create()
             }
@@ -204,7 +204,7 @@ extension HistoricalSchedulerTest {
             return Disposables.create()
         }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(times, [
             Date(timeIntervalSince1970: 10.0),

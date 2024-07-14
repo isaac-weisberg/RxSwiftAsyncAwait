@@ -34,23 +34,25 @@ final class RunLoopLock {
         self.currentRunLoop = CFRunLoopGetCurrent()
     }
 
-    func dispatch(_ action: @escaping () -> Void) {
+    func dispatch(_ action: @escaping () async -> Void) {
         CFRunLoopPerformBlock(self.currentRunLoop, runLoopModeRaw) {
-            if CurrentThreadScheduler.isScheduleRequired {
-                _ = CurrentThreadScheduler.instance.schedule(()) { _ in
-                    action()
-                    return Disposables.create()
+            Task {
+                if CurrentThreadScheduler.isScheduleRequired {
+                    _ = await CurrentThreadScheduler.instance.schedule(()) { _ in
+                        await action()
+                        return Disposables.create()
+                    }
                 }
-            }
-            else {
-                action()
+                else {
+                    await action()
+                }
             }
         }
         CFRunLoopWakeUp(self.currentRunLoop)
     }
 
-    func stop() {
-        if decrement(self.calledStop) > 1 {
+    func stop() async {
+        if await decrement(self.calledStop) > 1 {
             return
         }
         CFRunLoopPerformBlock(self.currentRunLoop, runLoopModeRaw) {
@@ -59,8 +61,8 @@ final class RunLoopLock {
         CFRunLoopWakeUp(self.currentRunLoop)
     }
 
-    func run() throws {
-        if increment(self.calledRun) != 0 {
+    func run() async throws {
+        if await increment(self.calledRun) != 0 {
             fatalError("Run can be only called once")
         }
         if let timeout = self.timeout {

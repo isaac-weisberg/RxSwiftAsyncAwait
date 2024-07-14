@@ -15,17 +15,17 @@ class ObservableEnumeratedTest : RxTest {
 
 extension ObservableEnumeratedTest {
 
-    func test_Infinite() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_Infinite() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, "a"),
             .next(220, "b"),
             .next(280, "c")
             ])
 
-        let res = scheduler.start {
-            xs.enumerated()
+        let res = await scheduler.start {
+            await xs.enumerated()
         }
 
         XCTAssertArraysEqual(res.events, [
@@ -39,18 +39,18 @@ extension ObservableEnumeratedTest {
             ])
     }
 
-    func test_Completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_Completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, "a"),
             .next(220, "b"),
             .next(280, "c"),
             .completed(300)
             ])
 
-        let res = scheduler.start {
-            xs.enumerated()
+        let res = await scheduler.start {
+            await xs.enumerated()
         }
 
         XCTAssertArraysEqual(res.events, [
@@ -65,18 +65,18 @@ extension ObservableEnumeratedTest {
             ])
     }
 
-    func test_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, "a"),
             .next(220, "b"),
             .next(280, "c"),
             .error(300, testError)
             ])
 
-        let res = scheduler.start {
-            xs.enumerated()
+        let res = await scheduler.start {
+            await xs.enumerated()
         }
 
         XCTAssertArraysEqual(res.events, [
@@ -92,12 +92,12 @@ extension ObservableEnumeratedTest {
     }
 
     #if TRACE_RESOURCES
-        func testEnumeratedReleasesResourcesOnComplete() {
-        _ = Observable<Int>.just(1).enumerated().subscribe()
+    func testEnumeratedReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).enumerated().subscribe()
         }
 
-        func testEnumeratedReleasesResourcesOnError() {
-        _ = Observable<Int>.error(testError).enumerated().subscribe()
+    func testEnumeratedReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).enumerated().subscribe()
         }
     #endif
 }

@@ -14,10 +14,10 @@ class ObservableTakeLastTest : RxTest {
 }
 
 extension ObservableTakeLastTest {
-    func testTakeLast_Complete_Less() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeLast_Complete_Less() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -28,8 +28,8 @@ extension ObservableTakeLastTest {
             .completed(300)
             ])
         
-        let res = scheduler.start {
-            xs.takeLast(7)
+        let res = await scheduler.start {
+            await xs.takeLast(7)
         }
         
         XCTAssertEqual(res.events, [
@@ -46,10 +46,10 @@ extension ObservableTakeLastTest {
             ])
     }
     
-    func testTakeLast_Complete_Same() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeLast_Complete_Same() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -60,8 +60,8 @@ extension ObservableTakeLastTest {
             .completed(310)
             ])
         
-        let res = scheduler.start {
-            xs.takeLast(5)
+        let res = await scheduler.start {
+            await xs.takeLast(5)
         }
         
         XCTAssertEqual(res.events, [
@@ -78,10 +78,10 @@ extension ObservableTakeLastTest {
             ])
     }
     
-    func testTakeLast_Complete_More() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeLast_Complete_More() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -94,8 +94,8 @@ extension ObservableTakeLastTest {
             .completed(350)
             ])
         
-        let res = scheduler.start {
-            xs.takeLast(5)
+        let res = await scheduler.start {
+            await xs.takeLast(5)
         }
         
         XCTAssertEqual(res.events, [
@@ -112,10 +112,10 @@ extension ObservableTakeLastTest {
             ])
     }
     
-    func testTakeLast_Error_Less() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeLast_Error_Less() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -126,8 +126,8 @@ extension ObservableTakeLastTest {
             .error(300, testError)
             ])
         
-        let res = scheduler.start {
-            xs.takeLast(7)
+        let res = await scheduler.start {
+            await xs.takeLast(7)
         }
         
         XCTAssertEqual(res.events, [
@@ -139,10 +139,10 @@ extension ObservableTakeLastTest {
             ])
     }
     
-    func testTakeLast_Error_Same() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeLast_Error_Same() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -153,8 +153,8 @@ extension ObservableTakeLastTest {
             .error(310, testError)
             ])
         
-        let res = scheduler.start {
-            xs.takeLast(5)
+        let res = await scheduler.start {
+            await xs.takeLast(5)
         }
         
         XCTAssertEqual(res.events, [
@@ -166,10 +166,10 @@ extension ObservableTakeLastTest {
             ])
     }
     
-    func testTakeLast_Error_More() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeLast_Error_More() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -182,8 +182,8 @@ extension ObservableTakeLastTest {
             .error(360, testError)
             ])
         
-        let res = scheduler.start {
-            xs.takeLast(5)
+        let res = await scheduler.start {
+            await xs.takeLast(5)
         }
         
         XCTAssertEqual(res.events, [
@@ -195,18 +195,18 @@ extension ObservableTakeLastTest {
             ])
     }
     
-    func testTakeLast_0_DefaultScheduler() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeLast_0_DefaultScheduler() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
             .next(230, 13)
             ])
         
-        let res = scheduler.start {
-            xs.takeLast(0)
+        let res = await scheduler.start {
+            await xs.takeLast(0)
         }
         
         XCTAssertEqual(res.events, [
@@ -217,10 +217,10 @@ extension ObservableTakeLastTest {
             ])
     }
     
-    func testTakeLast_TakeLast1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeLast_TakeLast1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -234,8 +234,8 @@ extension ObservableTakeLastTest {
             .completed(400)
             ])
         
-        let res = scheduler.start {
-            xs.takeLast(3)
+        let res = await scheduler.start {
+            await xs.takeLast(3)
         }
         
         XCTAssertEqual(res.events, [
@@ -250,27 +250,27 @@ extension ObservableTakeLastTest {
             ])
     }
     
-    func testTakeLast_DecrementCountsFirst() {
-        let k = BehaviorSubject(value: false)
+    func testTakeLast_DecrementCountsFirst() async {
+        let k = await BehaviorSubject(value: false)
 
         var elements = [Bool]()
-        _ = k.takeLast(1).subscribe(onNext: { n in
+        _ = await k.takeLast(1).subscribe(onNext: { n in
             elements.append(n)
-            k.on(.next(!n))
+            await k.on(.next(!n))
         })
 
-        k.on(.completed)
+        await k.on(.completed)
 
         XCTAssertEqual(elements, [false])
     }
 
     #if TRACE_RESOURCES
-        func testTakeLastReleasesResourcesOnComplete() {
-        _ = Observable<Int>.of(1, 2).takeLast(1).subscribe()
+    func testTakeLastReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.of(1, 2).takeLast(1).subscribe()
         }
 
-        func testTakeLastReleasesResourcesOnError() {
-        _ = Observable<Int>.error(testError).takeLast(1).subscribe()
+    func testTakeLastReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).takeLast(1).subscribe()
         }
     #endif
 }

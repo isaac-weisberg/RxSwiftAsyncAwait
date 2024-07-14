@@ -15,8 +15,8 @@ public final class ReplayRelay<Element>: ObservableType {
     private let subject: ReplaySubject<Element>
 
     /// Accepts `event` and emits it to subscribers
-    public func accept(_ event: Element) {
-        self.subject.onNext(event)
+    public func accept(_ event: Element) async {
+        await self.subject.onNext(event)
     }
 
     private init(subject: ReplaySubject<Element>) {
@@ -27,20 +27,20 @@ public final class ReplayRelay<Element>: ObservableType {
     ///
     /// - parameter bufferSize: Maximal number of elements to replay to observers after subscription.
     /// - returns: New instance of replay relay.
-    public static func create(bufferSize: Int) -> ReplayRelay<Element> {
-        ReplayRelay(subject: ReplaySubject.create(bufferSize: bufferSize))
+    public static func create(bufferSize: Int) async -> ReplayRelay<Element> {
+        await ReplayRelay(subject: ReplaySubject.create(bufferSize: bufferSize))
     }
 
     /// Creates a new instance of `ReplayRelay` that buffers all the sent to it.
     /// To avoid filling up memory, developer needs to make sure that the use case will only ever store a 'reasonable'
     /// number of elements.
-    public static func createUnbound() -> ReplayRelay<Element> {
-        ReplayRelay(subject: ReplaySubject.createUnbounded())
+    public static func createUnbound() async -> ReplayRelay<Element> {
+        await ReplayRelay(subject: ReplaySubject.createUnbounded())
     }
 
     /// Subscribes observer
-    public func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        self.subject.subscribe(observer)
+    public func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await self.subject.subscribe(observer)
     }
 
     /// - returns: Canonical interface for push style sequence
@@ -51,7 +51,7 @@ public final class ReplayRelay<Element>: ObservableType {
     /// Convert to an `Infallible`
     ///
     /// - returns: `Infallible<Element>`
-    public func asInfallible() -> Infallible<Element> {
-        asInfallible(onErrorFallbackTo: .empty())
+    public func asInfallible() async -> Infallible<Element> {
+        await asInfallible(onErrorFallbackTo: .empty())
     }
 }

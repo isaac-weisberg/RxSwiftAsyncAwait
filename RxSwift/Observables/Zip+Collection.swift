@@ -135,7 +135,7 @@ private final class ZipCollectionTypeSink<Collection: Swift.Collection, Observer
         var j = 0
         for i in self.parent.sources {
             let index = j
-            let source = i.asObservable()
+            let source = await i.asObservable()
 
             let disposable = await source.subscribe(AnyObserver { event in
                 await self.on(event, atIndex: index)

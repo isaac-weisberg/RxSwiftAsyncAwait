@@ -15,10 +15,10 @@ class ObservableElementAtTest : RxTest {
 
 extension ObservableElementAtTest {
     
-    func testElementAt_Complete_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testElementAt_Complete_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -41,8 +41,8 @@ extension ObservableElementAtTest {
             .completed(690)
             ])
         
-        let res = scheduler.start {
-            xs.element(at: 10)
+        let res = await scheduler.start {
+            await xs.element(at: 10)
         }
         
         XCTAssertEqual(res.events, [
@@ -56,10 +56,10 @@ extension ObservableElementAtTest {
     }
     
     
-    func testElementAt_Complete_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testElementAt_Complete_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -70,8 +70,8 @@ extension ObservableElementAtTest {
             .completed(320)
             ])
         
-        let res = scheduler.start {
-            xs.element(at: 10)
+        let res = await scheduler.start {
+            await xs.element(at: 10)
         }
         
         XCTAssertEqual(res.events, [
@@ -83,10 +83,10 @@ extension ObservableElementAtTest {
             ])
     }
     
-    func testElementAt_Error_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testElementAt_Error_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -109,8 +109,8 @@ extension ObservableElementAtTest {
             .error(690, testError)
             ])
         
-        let res = scheduler.start {
-            xs.element(at: 10)
+        let res = await scheduler.start {
+            await xs.element(at: 10)
         }
         
         XCTAssertEqual(res.events, [
@@ -123,10 +123,10 @@ extension ObservableElementAtTest {
             ])
     }
     
-    func testElementAt_Error_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testElementAt_Error_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -137,8 +137,8 @@ extension ObservableElementAtTest {
             .error(310, testError)
             ])
         
-        let res = scheduler.start {
-            xs.element(at: 10)
+        let res = await scheduler.start {
+            await xs.element(at: 10)
         }
         
         XCTAssertEqual(res.events, [
@@ -150,10 +150,10 @@ extension ObservableElementAtTest {
             ])
     }
     
-    func testElementAt_Dispose_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testElementAt_Dispose_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -176,8 +176,8 @@ extension ObservableElementAtTest {
             .error(690, testError)
             ])
         
-        let res = scheduler.start(disposed: 250) {
-            xs.element(at: 3)
+        let res = await scheduler.start(disposed: 250) {
+            await xs.element(at: 3)
         }
         
         XCTAssertEqual(res.events, [])
@@ -187,10 +187,10 @@ extension ObservableElementAtTest {
             ])
     }
     
-    func testElementAt_Dispose_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testElementAt_Dispose_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -213,8 +213,8 @@ extension ObservableElementAtTest {
             .error(690, testError)
             ])
         
-        let res = scheduler.start(disposed: 400) {
-            xs.element(at: 3)
+        let res = await scheduler.start(disposed: 400) {
+            await xs.element(at: 3)
         }
         
         XCTAssertEqual(res.events, [
@@ -227,10 +227,10 @@ extension ObservableElementAtTest {
             ])
     }
     
-    func testElementAt_First() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testElementAt_First() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -244,8 +244,8 @@ extension ObservableElementAtTest {
             .completed(400)
             ])
         
-        let res = scheduler.start {
-            xs.element(at: 0)
+        let res = await scheduler.start {
+            await xs.element(at: 0)
         }
         
         XCTAssertEqual(res.events, [
@@ -259,12 +259,12 @@ extension ObservableElementAtTest {
     }
 
     #if TRACE_RESOURCES
-        func testElementAtReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).element(at: 0).subscribe()
+    func testElementAtReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).element(at: 0).subscribe()
         }
 
-        func testElementAtReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).element(at: 1).subscribe()
+    func testElementAtReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).element(at: 1).subscribe()
         }
     #endif
 }

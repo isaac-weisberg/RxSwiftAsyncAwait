@@ -16,34 +16,34 @@ import RxSwift
 final class HotObservable<Element>
     : TestableObservable<Element> {
 
-    typealias Observer = (Event<Element>) -> Void
+    typealias Observer = (Event<Element>) async -> Void
     typealias Observers = Bag<Observer>
 
     /// Current subscribed observers.
     private var observers: Observers
 
-    override init(testScheduler: TestScheduler, recordedEvents: [Recorded<Event<Element>>]) {
+    override init(testScheduler: TestScheduler, recordedEvents: [Recorded<Event<Element>>]) async {
         self.observers = Observers()
         
-        super.init(testScheduler: testScheduler, recordedEvents: recordedEvents)
+        await super.init(testScheduler: testScheduler, recordedEvents: recordedEvents)
 
         for recordedEvent in recordedEvents {
-            testScheduler.scheduleAt(recordedEvent.time) { () -> Void in
-                self.observers.forEach {
-                    $0(recordedEvent.value)
+            await testScheduler.scheduleAt(recordedEvent.time) { () -> Void in
+                await self.observers.forEach {
+                    await $0(recordedEvent.value)
                 }
             }
         }
     }
 
     /// Subscribes `observer` to receive events for this sequence.
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
         let key = self.observers.insert(observer.on)
         self.subscriptions.append(Subscription(self.testScheduler.clock))
         
         let i = self.subscriptions.count - 1
         
-        return Disposables.create {
+        return await Disposables.create {
             let removed = self.observers.removeKey(key)
             assert(removed != nil)
             

@@ -77,10 +77,10 @@ public extension ObservableType {
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
     func subscribe(
-        onNext: ((Element) -> Void)? = nil,
-        onError: ((Swift.Error) -> Void)? = nil,
-        onCompleted: (() -> Void)? = nil,
-        onDisposed: (() -> Void)? = nil
+        onNext: ((Element) async -> Void)? = nil,
+        onError: ((Swift.Error) async -> Void)? = nil,
+        onCompleted: (() async -> Void)? = nil,
+        onDisposed: (() async -> Void)? = nil
     ) async -> Disposable {
         let disposable: Disposable
             
@@ -104,17 +104,17 @@ public extension ObservableType {
             await scope {
                 switch event {
                 case .next(let value):
-                    onNext?(value)
+                    await onNext?(value)
                 case .error(let error):
                     if let onError = onError {
-                        onError(error)
+                        await onError(error)
                     }
                     else {
                         await Hooks.getDefaultErrorHandler()(callStack, error)
                     }
                     await disposable.dispose()
                 case .completed:
-                    onCompleted?()
+                    await onCompleted?()
                     await disposable.dispose()
                 }
             }

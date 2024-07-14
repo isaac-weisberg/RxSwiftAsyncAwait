@@ -55,9 +55,9 @@ class RxTest
         var startNumberOfAllocatedBytes: Int64 = 0
     #endif
 
-    override func setUp() {
-        super.setUp()
-        setUpActions()
+    override func setUp() async throws  {
+        try await super.setUp()
+        await setUpActions()
     }
 
     override func tearDown() {
@@ -85,9 +85,10 @@ extension RxTest {
         Thread.sleep(forTimeInterval: time)
     }
 
-    func setUpActions(){
-        _ = Hooks.defaultErrorHandler // lazy load resource so resource count matches
-        _ = Hooks.customCaptureSubscriptionCallstack // lazy load resource so resource count matches
+    func setUpActions() async {
+        await Hooks.initialize()
+        _ = await Hooks.getDefaultErrorHandler() // lazy load resource so resource count matches
+        _ = await Hooks.getCustomCaptureSubscriptionCallstack() // lazy load resource so resource count matches
         #if TRACE_RESOURCES
             self.startResourceCount = Resources.total
             //registerMallocHooks()

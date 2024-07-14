@@ -98,7 +98,7 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
     private final func nextElementArrived(element: Element) async -> (Int, Observable<Source.Element>)? {
         await self.lock.performLocked {
             do {
-                let observable = try self.performMap(element).asObservable()
+                let observable = try await self.performMap(element).asObservable()
                 self.hasLatest = true
                 self.latest = self.latest &+ 1
                 return (self.latest, observable)

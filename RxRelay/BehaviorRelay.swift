@@ -15,24 +15,26 @@ public final class BehaviorRelay<Element>: ObservableType {
     private let subject: BehaviorSubject<Element>
 
     /// Accepts `event` and emits it to subscribers
-    public func accept(_ event: Element) {
-        self.subject.onNext(event)
+    public func accept(_ event: Element) async {
+        await self.subject.onNext(event)
     }
 
     /// Current value of behavior subject
     public var value: Element {
         // this try! is ok because subject can't error out or be disposed
-        return try! self.subject.value()
+        get async {
+            return try! await self.subject.value
+        }
     }
 
     /// Initializes behavior relay with initial value.
-    public init(value: Element) {
-        self.subject = BehaviorSubject(value: value)
+    public init(value: Element) async {
+        self.subject = await BehaviorSubject(value: value)
     }
 
     /// Subscribes observer
-    public func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        self.subject.subscribe(observer)
+    public func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await self.subject.subscribe(observer)
     }
 
     /// - returns: Canonical interface for push style sequence
@@ -43,7 +45,7 @@ public final class BehaviorRelay<Element>: ObservableType {
     /// Convert to an `Infallible`
     ///
     /// - returns: `Infallible<Element>`
-    public func asInfallible() -> Infallible<Element> {
-        asInfallible(onErrorFallbackTo: .empty())
+    public func asInfallible() async -> Infallible<Element> {
+        await asInfallible(onErrorFallbackTo: .empty())
     }
 }

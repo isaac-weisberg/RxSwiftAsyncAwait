@@ -92,7 +92,7 @@ open class VirtualTimeScheduler<Converter: VirtualTimeConverterType>:
      - parameter action: Action to be executed.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    public func scheduleRelativeVirtual<StateType>(_ state: StateType, dueTime: VirtualTimeInterval, action: @escaping (StateType) -> Disposable) async -> Disposable {
+    public func scheduleRelativeVirtual<StateType>(_ state: StateType, dueTime: VirtualTimeInterval, action: @escaping (StateType) async -> Disposable) async -> Disposable {
         let time = self.converter.offsetVirtualTime(self.clock, offset: dueTime)
         return await self.scheduleAbsoluteVirtual(state, time: time, action: action)
     }

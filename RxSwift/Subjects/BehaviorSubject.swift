@@ -64,18 +64,20 @@ public final class BehaviorSubject<Element>:
     /// Gets the current value or throws an error.
     ///
     /// - returns: Latest value.
-    public func value() async throws -> Element {
-        try await self.lock.performLockedThrowing {
-            if await self.isDisposed() {
-                throw RxError.disposed(object: self)
-            }
-
-            if let error = self.stoppedEvent?.error {
-                // intentionally throw exception
-                throw error
-            }
-            else {
-                return self.element
+    public var value: Element {
+        get async throws {
+            try await self.lock.performLockedThrowing {
+                if await self.isDisposed() {
+                    throw RxError.disposed(object: self)
+                }
+                
+                if let error = self.stoppedEvent?.error {
+                    // intentionally throw exception
+                    throw error
+                }
+                else {
+                    return self.element
+                }
             }
         }
     }

@@ -16,7 +16,7 @@ struct InvocableScheduledItem<I: InvocableWithValueType> : InvocableType {
         self.state = state
     }
 
-    func invoke() {
-        self.invocable.invoke(self.state)
+    func invoke() async {
+        await self.invocable.invoke(self.state)
     }
 }

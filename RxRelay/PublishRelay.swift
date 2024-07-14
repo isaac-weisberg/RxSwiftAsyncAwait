@@ -15,18 +15,18 @@ public final class PublishRelay<Element>: ObservableType {
     private let subject: PublishSubject<Element>
     
     /// Accepts `event` and emits it to subscribers
-    public func accept(_ event: Element) {
-        self.subject.onNext(event)
+    public func accept(_ event: Element) async {
+        await self.subject.onNext(event)
     }
     
     /// Initializes with internal empty subject.
-    public init() {
-        self.subject = PublishSubject()
+    public init() async {
+        self.subject = await PublishSubject()
     }
 
     /// Subscribes observer
-    public func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        self.subject.subscribe(observer)
+    public func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await self.subject.subscribe(observer)
     }
     
     /// - returns: Canonical interface for push style sequence
@@ -37,7 +37,7 @@ public final class PublishRelay<Element>: ObservableType {
     /// Convert to an `Infallible`
     ///
     /// - returns: `Infallible<Element>`
-    public func asInfallible() -> Infallible<Element> {
-        asInfallible(onErrorFallbackTo: .empty())
+    public func asInfallible() async -> Infallible<Element> {
+        await asInfallible(onErrorFallbackTo: .empty())
     }
 }

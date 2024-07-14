@@ -15,12 +15,12 @@ extension Reactive where Base: UIControl {
     /// Reactive wrapper for target action pattern.
     ///
     /// - parameter controlEvents: Filter for observed event types.
-    public func controlEvent(_ controlEvents: UIControl.Event) -> ControlEvent<()> {
-        let source: Observable<Void> = Observable.create { [weak control = self.base] observer in
+    public func controlEvent(_ controlEvents: UIControl.Event) async -> ControlEvent<()> {
+        let source: Observable<Void> = await Observable.create { [weak control = self.base] observer in
                 MainScheduler.ensureRunningOnMainThread()
 
                 guard let control = control else {
-                    observer.on(.completed)
+                    await observer.on(.completed)
                     return Disposables.create()
                 }
 
@@ -28,11 +28,11 @@ extension Reactive where Base: UIControl {
                     observer.on(.next(()))
                 }
 
-                return Disposables.create(with: controlTarget.dispose)
+            return await Disposables.create(with: controlTarget.dispose)
             }
             .take(until: deallocated)
 
-        return ControlEvent(events: source)
+        return await ControlEvent(events: source)
     }
 
     /// Creates a `ControlProperty` that is triggered by target/action pattern value updates.
@@ -44,28 +44,30 @@ extension Reactive where Base: UIControl {
         editingEvents: UIControl.Event,
         getter: @escaping (Base) -> T,
         setter: @escaping (Base, T) -> Void
-    ) -> ControlProperty<T> {
-        let source: Observable<T> = Observable.create { [weak weakControl = base] observer in
+    ) async -> ControlProperty<T> {
+        let source: Observable<T> = await Observable.create { [weak weakControl = base] observer in
                 guard let control = weakControl else {
-                    observer.on(.completed)
+                    await observer.on(.completed)
                     return Disposables.create()
                 }
 
-                observer.on(.next(getter(control)))
+            await observer.on(.next(getter(control)))
 
                 let controlTarget = ControlTarget(control: control, controlEvents: editingEvents) { _ in
                     if let control = weakControl {
-                        observer.on(.next(getter(control)))
+                        Task { @MainActor in
+                            await observer.on(.next(getter(control)))
+                        }
                     }
                 }
                 
-                return Disposables.create(with: controlTarget.dispose)
+            return await Disposables.create(with: controlTarget.dispose)
             }
             .take(until: deallocated)
 
-        let bindingObserver = Binder(base, binding: setter)
+        let bindingObserver = await Binder(base, binding: setter)
 
-        return ControlProperty<T>(values: source, valueSink: bindingObserver)
+        return await ControlProperty<T>(values: source, valueSink: bindingObserver)
     }
 
     /// This is a separate method to better communicate to public consumers that
@@ -74,7 +76,7 @@ extension Reactive where Base: UIControl {
         editingEvents: UIControl.Event = [.allEditingEvents, .valueChanged],
         getter: @escaping (Base) -> T,
         setter: @escaping (Base, T) -> Void
-        ) -> ControlProperty<T> {
+    ) async -> ControlProperty<T> {
         return controlProperty(
             editingEvents: editingEvents,
             getter: getter,

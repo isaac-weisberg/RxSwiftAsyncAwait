@@ -15,16 +15,16 @@ class ObservableSingleTest : RxTest {
 
 extension ObservableSingleTest {
     
-    func testSingle_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSingle_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            xs.single()
+        let res = await scheduler.start {
+            await xs.single()
         }
         
         XCTAssertEqual(res.events, [
@@ -36,17 +36,17 @@ extension ObservableSingleTest {
             ])
     }
     
-    func testSingle_One() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSingle_One() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            xs.single()
+        let res = await scheduler.start {
+            await xs.single()
         }
         
         XCTAssertEqual(res.events, [
@@ -59,18 +59,18 @@ extension ObservableSingleTest {
             ])
     }
     
-    func testSingle_Many() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSingle_Many() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            xs.single()
+        let res = await scheduler.start {
+            await xs.single()
         }
         
         XCTAssertEqual(res.events, [
@@ -83,16 +83,16 @@ extension ObservableSingleTest {
             ])
     }
     
-    func testSingle_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSingle_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .error(210, testError)
             ])
         
-        let res = scheduler.start {
-            xs.single()
+        let res = await scheduler.start {
+            await xs.single()
         }
         
         XCTAssertEqual(res.events, [
@@ -114,16 +114,16 @@ extension ObservableSingleTest {
     }
     #endif
     
-    func testSinglePredicate_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSinglePredicate_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            xs.single { e in
+        let res = await scheduler.start {
+            await xs.single { e in
                 return e % 2 == 1
             }
         }
@@ -137,10 +137,10 @@ extension ObservableSingleTest {
             ])
     }
     
-    func testSinglePredicate_One() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSinglePredicate_One() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -149,8 +149,8 @@ extension ObservableSingleTest {
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            xs.single { e in
+        let res = await scheduler.start {
+            await xs.single { e in
                 return e == 4
             }
         }
@@ -165,10 +165,10 @@ extension ObservableSingleTest {
             ])
     }
     
-    func testSinglePredicate_Many() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSinglePredicate_Many() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -177,8 +177,8 @@ extension ObservableSingleTest {
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            xs.single { e in
+        let res = await scheduler.start {
+            await xs.single { e in
                 return (e % 2) == 1
             }
         }
@@ -193,16 +193,16 @@ extension ObservableSingleTest {
             ])
     }
     
-    func testSinglePredicate_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSinglePredicate_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .error(210, testError)
             ])
         
-        let res = scheduler.start {
-            xs.single { e in
+        let res = await scheduler.start {
+            await xs.single { e in
                 return e % 2 == 1
             }
         }
@@ -216,10 +216,10 @@ extension ObservableSingleTest {
             ])
     }
     
-    func testSinglePredicate_Throws() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSinglePredicate_Throws() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -228,8 +228,8 @@ extension ObservableSingleTest {
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            xs.single { (e: Int) -> Bool in
+        let res = await scheduler.start {
+            await xs.single { (e: Int) -> Bool in
                 guard e < 4 else {
                     throw testError
                 }
@@ -257,12 +257,12 @@ extension ObservableSingleTest {
     #endif
 
     #if TRACE_RESOURCES
-        func testSingleReleasesResourcesOnComplete() {
-        _ = Observable<Int>.just(1).single().subscribe()
+    func testSingleReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).single().subscribe()
         }
 
-        func testSinleReleasesResourcesOnError() {
-        _ = Observable<Int>.error(testError).single().subscribe()
+    func testSinleReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).single().subscribe()
         }
     #endif
 }

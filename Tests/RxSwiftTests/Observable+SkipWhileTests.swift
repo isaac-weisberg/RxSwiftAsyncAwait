@@ -15,10 +15,10 @@ class ObservableSkipWhileTest : RxTest {
 
 extension ObservableSkipWhileTest {
 
-    func testSkipWhile_Complete_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipWhile_Complete_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -36,8 +36,8 @@ extension ObservableSkipWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start {
-            xs.skip(while: { x in
+        let res = await scheduler.start {
+            await xs.skip(while: { x in
                 invoked += 1
                 return isPrime(x)
             })
@@ -54,10 +54,10 @@ extension ObservableSkipWhileTest {
         XCTAssertEqual(4, invoked)
     }
     
-    func testSkipWhile_Complete_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipWhile_Complete_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -74,8 +74,8 @@ extension ObservableSkipWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start {
-            xs.skip(while: { x in
+        let res = await scheduler.start {
+            await xs.skip(while: { x in
                 invoked += 1
                 return isPrime(x)
             })
@@ -96,10 +96,10 @@ extension ObservableSkipWhileTest {
         XCTAssertEqual(6, invoked)
     }
     
-    func testSkipWhile_Error_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipWhile_Error_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -116,8 +116,8 @@ extension ObservableSkipWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start {
-            xs.skip(while: { x in
+        let res = await scheduler.start {
+            await xs.skip(while: { x in
                 invoked += 1
                 return isPrime(x)
             })
@@ -136,10 +136,10 @@ extension ObservableSkipWhileTest {
         XCTAssertEqual(2, invoked)
     }
     
-    func testSkipWhile_Error_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipWhile_Error_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -156,8 +156,8 @@ extension ObservableSkipWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start {
-            xs.skip(while: { x in
+        let res = await scheduler.start {
+            await xs.skip(while: { x in
                 invoked += 1
                 return isPrime(x)
             })
@@ -178,10 +178,10 @@ extension ObservableSkipWhileTest {
         XCTAssertEqual(6, invoked)
     }
     
-    func testSkipWhile_Dispose_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipWhile_Dispose_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -198,8 +198,8 @@ extension ObservableSkipWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start(disposed: 300) {
-            xs.skip(while: { x in
+        let res = await scheduler.start(disposed: 300) {
+            await xs.skip(while: { x in
                 invoked += 1
                 return isPrime(x)
             })
@@ -214,10 +214,10 @@ extension ObservableSkipWhileTest {
         XCTAssertEqual(3, invoked)
     }
     
-    func testSkipWhile_Dispose_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipWhile_Dispose_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -234,8 +234,8 @@ extension ObservableSkipWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start(disposed: 470) {
-            xs.skip(while: { x in
+        let res = await scheduler.start(disposed: 470) {
+            await xs.skip(while: { x in
                 invoked += 1
                 return isPrime(x)
             })
@@ -254,10 +254,10 @@ extension ObservableSkipWhileTest {
         XCTAssertEqual(6, invoked)
     }
     
-    func testSkipWhile_Zero() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipWhile_Zero() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(205, 100),
@@ -275,8 +275,8 @@ extension ObservableSkipWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start {
-            xs.skip(while: { x in
+        let res = await scheduler.start {
+            await xs.skip(while: { x in
                 invoked += 1
                 return isPrime(x)
             })
@@ -303,10 +303,10 @@ extension ObservableSkipWhileTest {
         XCTAssertEqual(1, invoked)
     }
     
-    func testSkipWhile_Throw() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipWhile_Throw() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -323,8 +323,8 @@ extension ObservableSkipWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start {
-            xs.skip(while: { x in
+        let res = await scheduler.start {
+            await xs.skip(while: { x in
                 invoked += 1
                 if invoked == 3 {
                     throw testError
@@ -345,12 +345,12 @@ extension ObservableSkipWhileTest {
     }
 
     #if TRACE_RESOURCES
-        func testSkipWhileReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).skip(while: { _ in true }).subscribe()
+    func testSkipWhileReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).skip(while: { _ in true }).subscribe()
         }
 
-        func testSkipWhileReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).skip(while: { _ in true }).subscribe()
+    func testSkipWhileReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).skip(while: { _ in true }).subscribe()
         }
     #endif
 }

@@ -44,16 +44,16 @@ public struct ControlEvent<PropertyType> : ControlEventType {
     ///
     /// - parameter events: Observable sequence that represents events.
     /// - returns: Control event created with a observable sequence of events.
-    public init<Ev: ObservableType>(events: Ev) where Ev.Element == Element {
-        self.events = events.subscribe(on: ConcurrentMainScheduler.instance)
+    public init<Ev: ObservableType>(events: Ev) async where Ev.Element == Element {
+        self.events = await events.subscribe(on: ConcurrentMainScheduler.instance)
     }
 
     /// Subscribes an observer to control events.
     ///
     /// - parameter observer: Observer to subscribe to events.
     /// - returns: Disposable object that can be used to unsubscribe the observer from receiving control events.
-    public func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        self.events.subscribe(observer)
+    public func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await self.events.subscribe(observer)
     }
 
     /// - returns: `Observable` interface.
@@ -67,7 +67,7 @@ public struct ControlEvent<PropertyType> : ControlEventType {
     }
     
     /// - returns: `Infallible` interface.
-    public func asInfallible() -> Infallible<Element> {
-        asInfallible(onErrorFallbackTo: .empty())
+    public func asInfallible() async -> Infallible<Element> {
+        await asInfallible(onErrorFallbackTo: .empty())
     }
 }

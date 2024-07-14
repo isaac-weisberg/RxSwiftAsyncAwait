@@ -18,45 +18,49 @@ class PrimitiveHotObservable<Element> : ObservableType {
     typealias Observer = AnyObserver<Element>
     
     var _subscriptions = [Subscription]()
-    let observers = PublishSubject<Element>()
+    let observers: PublishSubject<Element>
     
     public var subscriptions: [Subscription] {
-        lock.lock()
-        defer { lock.unlock() }
-        return _subscriptions
+        get async {
+            await lock.performLocked {
+                self._subscriptions
+            }
+        }
     }
 
-    let lock = RecursiveLock()
+    let lock: RecursiveLock
     
-    init() {
+    init() async {
+        self.lock = await RecursiveLock()
+        observers = await PublishSubject<Element>()
     }
 
-    func on(_ event: Event<Element>) {
-        lock.lock()
-        defer { lock.unlock() }
-        observers.on(event)
+    func on(_ event: Event<Element>) async {
+        await lock.performLocked { [self] in
+            await self.observers.on(event)
+        }
     }
     
-    func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        lock.lock()
-        defer { lock.unlock() }
-
-        let removeObserver = observers.subscribe(observer)
-        _subscriptions.append(SubscribedToHotObservable)
-
-        let i = self.subscriptions.count - 1
-
-        var count = 0
-        
-        return Disposables.create {
-            self.lock.lock()
-            defer { self.lock.unlock() }
-
-            removeObserver.dispose()
-            count += 1
-            assert(count == 1)
+    func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await lock.performLocked { [self] in
             
-            self._subscriptions[i] = UnsunscribedFromHotObservable
+            let removeObserver = await self.observers.subscribe(observer)
+            self._subscriptions.append(SubscribedToHotObservable)
+            
+            let i = await self.subscriptions.count - 1
+            
+            var count = 0
+            
+            return await Disposables.create { [self] in
+                await self.lock.performLocked {
+                    
+                    await removeObserver.dispose()
+                    count += 1
+                    assert(count == 1)
+                    
+                    self._subscriptions[i] = UnsunscribedFromHotObservable
+                }
+            }
         }
     }
 }

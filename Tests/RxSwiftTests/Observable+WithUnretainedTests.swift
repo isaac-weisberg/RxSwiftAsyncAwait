@@ -14,13 +14,14 @@ class WithUnretainedTests: XCTestCase {
     fileprivate var testClass: TestClass!
     var values: TestableObservable<Int>!
     var tupleValues: TestableObservable<(Int, String)>!
-    let scheduler = TestScheduler(initialClock: 0)
+    var scheduler: TestScheduler!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
+        scheduler = await TestScheduler(initialClock: 0)
 
         testClass = TestClass()
-        values = scheduler.createColdObservable([
+        values = await scheduler.createColdObservable([
             .next(210, 1),
             .next(215, 2),
             .next(220, 3),
@@ -29,7 +30,7 @@ class WithUnretainedTests: XCTestCase {
             .completed(250)
         ])
 
-        tupleValues = scheduler.createColdObservable([
+        tupleValues = await scheduler.createColdObservable([
             .next(210, (1, "a")),
             .next(215, (2, "b")),
             .next(220, (3, "c")),
@@ -39,7 +40,7 @@ class WithUnretainedTests: XCTestCase {
         ])
     }
 
-    func testObjectAttached() {
+    func testObjectAttached() async {
         let testClassId = testClass.id
 
         let correctValues: [Recorded<Event<String>>] = [
@@ -51,8 +52,8 @@ class WithUnretainedTests: XCTestCase {
             .completed(450)
         ]
 
-        let res = scheduler.start {
-            self.values
+        let res = await scheduler.start {
+            await self.values
                 .withUnretained(self.testClass)
                 .map { "\($0.id), \($1)" }
         }
@@ -60,8 +61,8 @@ class WithUnretainedTests: XCTestCase {
         XCTAssertEqual(res.events, correctValues)
     }
 
-    func testObjectDeallocates() {
-        _ = self.values
+    func testObjectDeallocates() async {
+        _ = await self.values
                 .withUnretained(self.testClass)
                 .subscribe()
 
@@ -71,7 +72,7 @@ class WithUnretainedTests: XCTestCase {
         XCTAssertTrue(testClass == nil)
     }
 
-    func testObjectDeallocatesSequenceCompletes() {
+    func testObjectDeallocatesSequenceCompletes() async {
         let testClassId = testClass.id
 
         let correctValues: [Recorded<Event<String>>] = [
@@ -81,8 +82,8 @@ class WithUnretainedTests: XCTestCase {
             .completed(425)
         ]
 
-        let res = scheduler.start {
-            self.values
+        let res = await scheduler.start {
+            await self.values
                 .withUnretained(self.testClass)
                 .do(onNext: { _, value in
                     // Release the object in the middle of the sequence
@@ -97,7 +98,7 @@ class WithUnretainedTests: XCTestCase {
         XCTAssertEqual(res.events, correctValues)
     }
 
-    func testResultsSelector() {
+    func testResultsSelector() async {
         let testClassId = testClass.id
 
         let correctValues: [Recorded<Event<String>>] = [
@@ -109,8 +110,8 @@ class WithUnretainedTests: XCTestCase {
             .completed(450)
         ]
 
-        let res = scheduler.start {
-            self.tupleValues
+        let res = await scheduler.start {
+            await self.tupleValues
                 .withUnretained(self.testClass) { ($0, $1.0, $1.1) }
                 .map { "\($0.id), \($1), \($2)" }
         }

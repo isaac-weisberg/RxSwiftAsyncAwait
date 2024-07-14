@@ -86,7 +86,7 @@ class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
 
             var e = g
 
-            guard let nextCandidate = e.next()?.asObservable() else {
+            guard let nextCandidate = await e.next()?.asObservable() else {
                 continue
             }
 

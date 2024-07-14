@@ -14,10 +14,10 @@ class ObservableDistinctUntilChangedTest : RxTest {
 }
 
 extension ObservableDistinctUntilChangedTest {
-    func testDistinctUntilChanged_allChanges() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDistinctUntilChanged_allChanges() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -26,7 +26,7 @@ extension ObservableDistinctUntilChangedTest {
             .completed(250)
         ])
 
-        let res = scheduler.start { xs.distinctUntilChanged { $0 } }
+        let res = await scheduler.start { await xs.distinctUntilChanged { $0 } }
 
         let correctMessages = Recorded.events(
             .next(210, 2),
@@ -44,10 +44,10 @@ extension ObservableDistinctUntilChangedTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDistinctUntilChanged_someChanges() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDistinctUntilChanged_someChanges() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2), // *
             .next(215, 3), // *
@@ -60,7 +60,7 @@ extension ObservableDistinctUntilChangedTest {
             ])
 
 
-        let res = scheduler.start { xs.distinctUntilChanged { $0 } }
+        let res = await scheduler.start { await xs.distinctUntilChanged { $0 } }
 
         let correctMessages = Recorded.events(
             .next(210, 2),
@@ -79,10 +79,10 @@ extension ObservableDistinctUntilChangedTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDistinctUntilChanged_allEqual() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDistinctUntilChanged_allEqual() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -91,7 +91,7 @@ extension ObservableDistinctUntilChangedTest {
             .completed(250)
             ])
 
-        let res = scheduler.start { xs.distinctUntilChanged { _, _ in true } }
+        let res = await scheduler.start { await xs.distinctUntilChanged { _, _ in true } }
 
         let correctMessages = Recorded.events(
             .next(210, 2),
@@ -106,10 +106,10 @@ extension ObservableDistinctUntilChangedTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDistinctUntilChanged_allDifferent() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDistinctUntilChanged_allDifferent() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 2),
@@ -118,7 +118,7 @@ extension ObservableDistinctUntilChangedTest {
             .completed(250)
             ])
 
-        let res = scheduler.start { xs.distinctUntilChanged { _, _ in false } }
+        let res = await scheduler.start { await xs.distinctUntilChanged { _, _ in false } }
 
         let correctMessages = Recorded.events(
             .next(210, 2),
@@ -136,10 +136,10 @@ extension ObservableDistinctUntilChangedTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDistinctUntilChanged_keySelector_Div2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDistinctUntilChanged_keySelector_Div2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 4),
@@ -148,7 +148,7 @@ extension ObservableDistinctUntilChangedTest {
             .completed(250)
             ])
 
-        let res = scheduler.start { xs.distinctUntilChanged({ $0 % 2 }) }
+        let res = await scheduler.start { await xs.distinctUntilChanged({ $0 % 2 }) }
 
         let correctMessages = Recorded.events(
             .next(210, 2),
@@ -164,17 +164,17 @@ extension ObservableDistinctUntilChangedTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDistinctUntilChanged_keySelectorThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDistinctUntilChanged_keySelectorThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
             .completed(250)
             ])
 
-        let res = scheduler.start { xs.distinctUntilChanged { _, _ -> Bool in throw testError } }
+        let res = await scheduler.start { await xs.distinctUntilChanged { _, _ -> Bool in throw testError } }
 
         let correctMessages = Recorded.events(
             .next(210, 2),
@@ -189,15 +189,15 @@ extension ObservableDistinctUntilChangedTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDistinctUntilChangedKeyPath_allChanges() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDistinctUntilChangedKeyPath_allChanges() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         struct TestObject: Equatable {
             let value: Int
             let other = ""
         }
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, TestObject(value: 1)),
             .next(210, TestObject(value: 2)),
             .next(220, TestObject(value: 3)),
@@ -206,7 +206,7 @@ extension ObservableDistinctUntilChangedTest {
             .completed(250)
         ])
 
-        let res = scheduler.start { xs.distinctUntilChanged(at: \.value) }
+        let res = await scheduler.start { await xs.distinctUntilChanged(at: \.value) }
 
         let correctMessages = Recorded.events(
             .next(210, TestObject(value: 2)),
@@ -224,17 +224,17 @@ extension ObservableDistinctUntilChangedTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDistinctUntilChanged_comparerThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDistinctUntilChanged_comparerThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
             .completed(250)
             ])
 
-        let res = scheduler.start { xs.distinctUntilChanged({ $0 }, comparer: { _, _ in throw testError }) }
+        let res = await scheduler.start { await xs.distinctUntilChanged({ $0 }, comparer: { _, _ in throw testError }) }
 
         let correctMessages = Recorded.events(
             .next(210, 2),
@@ -250,12 +250,12 @@ extension ObservableDistinctUntilChangedTest {
     }
 
     #if TRACE_RESOURCES
-        func testDistinctUntilChangedReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).distinctUntilChanged().subscribe()
+    func testDistinctUntilChangedReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).distinctUntilChanged().subscribe()
         }
 
-        func testDistinctUntilChangedReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).distinctUntilChanged().subscribe()
+    func testDistinctUntilChangedReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).distinctUntilChanged().subscribe()
         }
     #endif
 }

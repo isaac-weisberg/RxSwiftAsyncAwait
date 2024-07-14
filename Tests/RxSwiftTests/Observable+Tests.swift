@@ -7,82 +7,82 @@
 //
 
 import RxSwift
-import RxCocoa
+// import RxCocoa
 import RxTest
 import XCTest
 
 class ObservableTest: RxTest { }
 
 extension ObservableTest {
-    func testAnonymousObservable_detachesOnDispose() {
+    func testAnonymousObservable_detachesOnDispose() async {
         var observer: AnyObserver<Int>!
-        let a = Observable.create { o in
+        let a = await Observable.create { o in
             observer = o
             return Disposables.create()
         } as Observable<Int>
         
         var elements = [Int]()
         
-        let d = a.subscribe(onNext: { n in
+        let d = await a.subscribe(onNext: { n in
             elements.append(n)
         })
         
         XCTAssertEqual(elements, [])
         
-        observer.on(.next(0))
+        await observer.on(.next(0))
         XCTAssertEqual(elements, [0])
         
-        d.dispose()
+        await d.dispose()
 
-        observer.on(.next(1))
+        await observer.on(.next(1))
         XCTAssertEqual(elements, [0])
     }
     
-    func testAnonymousObservable_detachesOnComplete() {
+    func testAnonymousObservable_detachesOnComplete() async {
         var observer: AnyObserver<Int>!
-        let a = Observable.create { o in
+        let a = await Observable.create { o in
             observer = o
             return Disposables.create()
         } as Observable<Int>
         
         var elements = [Int]()
         
-        _ = a.subscribe(onNext: { n in
+        _ = await a.subscribe(onNext: { n in
             elements.append(n)
         })
 
         XCTAssertEqual(elements, [])
         
-        observer.on(.next(0))
+        await observer.on(.next(0))
         XCTAssertEqual(elements, [0])
         
-        observer.on(.completed)
+        await observer.on(.completed)
         
-        observer.on(.next(1))
+        await observer.on(.next(1))
         XCTAssertEqual(elements, [0])
     }
 
-    func testAnonymousObservable_detachesOnError() {
+    func testAnonymousObservable_detachesOnError() async {
         var observer: AnyObserver<Int>!
-        let a = Observable.create { o in
+        let a = await Observable.create { o in
             observer = o
             return Disposables.create()
         } as Observable<Int>
         
         var elements = [Int]()
 
-        _ = a.subscribe(onNext: { n in
+        _ = await a.subscribe(onNext: { n in
             elements.append(n)
         })
 
         XCTAssertEqual(elements, [])
         
-        observer.on(.next(0))
+        await observer.on(.next(0))
         XCTAssertEqual(elements, [0])
         
-        observer.on(.error(testError))
+        await observer.on(.error(testError))
         
-        observer.on(.next(1))
+        await observer.on(.next(1))
         XCTAssertEqual(elements, [0])
     }
 
@@ -130,20 +130,20 @@ extension ObservableTest {
 }
 
 extension ObservableTest {
-    func testAsObservable_asObservable() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testAsObservable_asObservable() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .completed(250)
         ])
 
-        let ys = xs.asObservable()
+        let ys = await xs.asObservable()
 
         XCTAssert(xs !== ys)
 
-        let res = scheduler.start { ys }
+        let res = await scheduler.start { ys }
 
         let correct = Recorded.events(
             .next(220, 2),
@@ -153,20 +153,20 @@ extension ObservableTest {
         XCTAssertEqual(res.events, correct)
     }
 
-    func testAsObservable_hides() {
-        let xs = PrimitiveHotObservable<Int>()
+    func testAsObservable_hides() async {
+        let xs = await PrimitiveHotObservable<Int>()
 
-        let res = xs.asObservable()
+        let res = await xs.asObservable()
 
         XCTAssertTrue(res !== xs)
     }
 
-    func testAsObservable_never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testAsObservable_never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs : Observable<Int> = Observable.never()
+        let xs : Observable<Int> = await Observable.never()
 
-        let res = scheduler.start { xs }
+        let res = await scheduler.start { xs }
 
         let correct: [Recorded<Event<Int>>] = []
 
@@ -174,26 +174,26 @@ extension ObservableTest {
     }
 
     #if TRACE_RESOURCES
-        func testAsObservableReleasesResourcesOnComplete() {
-            _ = Observable<Int>.empty().asObservable().subscribe()
+    func testAsObservableReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.empty().asObservable().subscribe()
         }
 
-        func testAsObservableReleasesResourcesOnError() {
-            _ = Observable<Int>.empty().asObservable().subscribe()
+    func testAsObservableReleasesResourcesOnError() async {
+        _ = await Observable<Int>.empty().asObservable().subscribe()
         }
     #endif
 }
 
 // MARK: - Subscribe with object
 extension ObservableTest {
-    func testSubscribeWithNext() {
+    func testSubscribeWithNext() async {
         var testObject: TestObject! = TestObject()
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
         var values = [String]()
         var disposed: UUID?
         var completed: UUID?
 
-        let observable = scheduler.createColdObservable([
+        let observable = await scheduler.createColdObservable([
             .next(10, 0),
             .next(20, 1),
             .next(30, 2),
@@ -201,7 +201,7 @@ extension ObservableTest {
             .completed(50)
         ])
         
-        _ = observable
+        _ = await observable
             .subscribe(
                 with: testObject,
                 onNext: { object, value in values.append(object.id.uuidString + "\(value)") },
@@ -209,7 +209,7 @@ extension ObservableTest {
                 onDisposed: { disposed = $0.id }
             )
         
-        scheduler.start()
+        await scheduler.start()
         
         let uuid = testObject.id
         XCTAssertEqual(values, [
@@ -236,22 +236,22 @@ private class DeferredExpectation {
         self.expectation = expectation
     }
 
-    func bar() -> Observable<Void> {
-        Observable<Void>
+    func bar() async -> Observable<Void> {
+        await Observable<Void>
             .deferred {
                 self.expectation.fulfill()
-                return .never()
+                return await .never()
             }
     }
 }
 
 extension ObservableTest {
-    func testDeferredFactoryClosureLifetime() {
+    func testDeferredFactoryClosureLifetime() async {
         let factoryClosureInvoked = expectation(description: "Factory closure has been invoked")
         var foo: DeferredExpectation? = DeferredExpectation(expectation: factoryClosureInvoked)
         weak var initialFoo = foo
 
-        let disposable = foo?.bar().subscribe()
+        let disposable = await foo?.bar().subscribe()
 
         wait(for: [factoryClosureInvoked])
 
@@ -263,10 +263,10 @@ extension ObservableTest {
         // keeping the object alive
         XCTAssertNil(initialFoo)
 
-        disposable?.dispose()
+        await disposable?.dispose()
     }
 
-    func testObservableFactoryClosureLifetime() {
+    func testObservableFactoryClosureLifetime() async {
         class Foo {
             let expectation: XCTestExpectation
 
@@ -274,8 +274,8 @@ extension ObservableTest {
                 self.expectation = expectation
             }
 
-            func bar() -> Observable<Void> {
-                Observable<Void>
+            func bar() async -> Observable<Void> {
+                await Observable<Void>
                     .create { _ in
                         self.expectation.fulfill()
                         return Disposables.create()
@@ -287,7 +287,7 @@ extension ObservableTest {
         var foo: Foo? = Foo(expectation: factoryClosureInvoked)
         weak var initialFoo = foo
 
-        let disposable = foo?.bar().subscribe()
+        let disposable = await foo?.bar().subscribe()
 
         wait(for: [factoryClosureInvoked])
 
@@ -296,7 +296,7 @@ extension ObservableTest {
 
         XCTAssertNil(initialFoo)
 
-        disposable?.dispose()
+        await disposable?.dispose()
     }
 }
 

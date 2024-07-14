@@ -15,8 +15,8 @@ extension ObservableConvertibleType {
     - parameter onErrorJustReturn: Element to return in case of error and after that complete the sequence.
     - returns: Driver trait.
     */
-    public func asDriver(onErrorJustReturn: Element) -> Driver<Element> {
-        let source = self
+    public func asDriver(onErrorJustReturn: Element) async -> Driver<Element> {
+        let source = await self
             .asObservable()
             .observe(on:DriverSharingStrategy.scheduler)
             .catchAndReturn(onErrorJustReturn)
@@ -29,8 +29,8 @@ extension ObservableConvertibleType {
     - parameter onErrorDriveWith: Driver that continues to drive the sequence in case of error.
     - returns: Driver trait.
     */
-    public func asDriver(onErrorDriveWith: Driver<Element>) -> Driver<Element> {
-        let source = self
+    public func asDriver(onErrorDriveWith: Driver<Element>) async -> Driver<Element> {
+        let source = await self
             .asObservable()
             .observe(on:DriverSharingStrategy.scheduler)
             .catch { _ in
@@ -45,8 +45,8 @@ extension ObservableConvertibleType {
     - parameter onErrorRecover: Calculates driver that continues to drive the sequence in case of error.
     - returns: Driver trait.
     */
-    public func asDriver(onErrorRecover: @escaping (_ error: Swift.Error) -> Driver<Element>) -> Driver<Element> {
-        let source = self
+    public func asDriver(onErrorRecover: @escaping (_ error: Swift.Error) -> Driver<Element>) async -> Driver<Element> {
+        let source = await self
             .asObservable()
             .observe(on:DriverSharingStrategy.scheduler)
             .catch { error in
