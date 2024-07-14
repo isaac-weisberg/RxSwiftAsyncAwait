@@ -17,10 +17,10 @@ public extension ObservableType {
      - parameter count: Number of elements to take from the end of the source sequence.
      - returns: An observable sequence containing the specified number of elements from the end of the source sequence.
      */
-    func takeLast(_ count: Int)
+    func takeLast(_ count: Int) async
         -> Observable<Element>
     {
-        TakeLast(source: self.asObservable(), count: count)
+        await TakeLast(source: self.asObservable(), count: count)
     }
 }
 
@@ -62,12 +62,13 @@ private final class TakeLast<Element>: Producer<Element> {
     private let source: Observable<Element>
     fileprivate let count: Int
 
-    init(source: Observable<Element>, count: Int) {
+    init(source: Observable<Element>, count: Int) async {
         if count < 0 {
             rxFatalError("count can't be negative")
         }
         self.source = source
         self.count = count
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

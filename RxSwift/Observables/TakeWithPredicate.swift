@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter other: Observable sequence that terminates propagation of elements of the source sequence.
      - returns: An observable sequence containing the elements of the source sequence up to the point the other sequence interrupted further propagation.
      */
-    func take<Source: ObservableType>(until other: Source)
+    func take<Source: ObservableType>(until other: Source) async
         -> Observable<Element>
     {
-        TakeUntil(source: self.asObservable(), other: other.asObservable())
+        await TakeUntil(source: self.asObservable(), other: other.asObservable())
     }
 
     /**
@@ -32,10 +32,10 @@ public extension ObservableType {
      - returns: An observable sequence that contains the elements from the input sequence that occur before the element at which the test passes.
      */
     func take(until predicate: @escaping (Element) throws -> Bool,
-              behavior: TakeBehavior = .exclusive)
+              behavior: TakeBehavior = .exclusive) async
         -> Observable<Element>
     {
-        TakeUntilPredicate(source: self.asObservable(),
+        await TakeUntilPredicate(source: self.asObservable(),
                            behavior: behavior,
                            predicate: predicate)
     }
@@ -49,10 +49,10 @@ public extension ObservableType {
      - returns: An observable sequence that contains the elements from the input sequence that occur before the element at which the test no longer passes.
      */
     func take(while predicate: @escaping (Element) throws -> Bool,
-              behavior: TakeBehavior = .exclusive)
+              behavior: TakeBehavior = .exclusive) async
         -> Observable<Element>
     {
-        self.take(until: { try !predicate($0) }, behavior: behavior)
+        await self.take(until: { try !predicate($0) }, behavior: behavior)
     }
 
     /**
@@ -64,10 +64,10 @@ public extension ObservableType {
      - returns: An observable sequence containing the elements of the source sequence up to the point the other sequence interrupted further propagation.
      */
     @available(*, deprecated, renamed: "take(until:)")
-    func takeUntil<Source: ObservableType>(_ other: Source)
+    func takeUntil<Source: ObservableType>(_ other: Source) async
         -> Observable<Element>
     {
-        self.take(until: other)
+        await self.take(until: other)
     }
 
     /**
@@ -81,10 +81,10 @@ public extension ObservableType {
      */
     @available(*, deprecated, renamed: "take(until:behavior:)")
     func takeUntil(_ behavior: TakeBehavior,
-                   predicate: @escaping (Element) throws -> Bool)
+                   predicate: @escaping (Element) throws -> Bool) async
         -> Observable<Element>
     {
-        self.take(until: predicate, behavior: behavior)
+        await self.take(until: predicate, behavior: behavior)
     }
 
     /**
@@ -96,10 +96,10 @@ public extension ObservableType {
      - returns: An observable sequence that contains the elements from the input sequence that occur before the element at which the test no longer passes.
      */
     @available(*, deprecated, renamed: "take(while:)")
-    func takeWhile(_ predicate: @escaping (Element) throws -> Bool)
+    func takeWhile(_ predicate: @escaping (Element) throws -> Bool) async
         -> Observable<Element>
     {
-        self.take(until: { try !predicate($0) }, behavior: .exclusive)
+        await self.take(until: { try !predicate($0) }, behavior: .exclusive)
     }
 }
 
@@ -214,9 +214,10 @@ private final class TakeUntil<Element, Other>: Producer<Element> {
     fileprivate let source: Observable<Element>
     fileprivate let other: Observable<Other>
 
-    init(source: Observable<Element>, other: Observable<Other>) {
+    init(source: Observable<Element>, other: Observable<Other>) async {
         self.source = source
         self.other = other
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
@@ -283,11 +284,12 @@ private final class TakeUntilPredicate<Element>: Producer<Element> {
 
     init(source: Observable<Element>,
          behavior: TakeBehavior,
-         predicate: @escaping Predicate)
+         predicate: @escaping Predicate) async
     {
         self.source = source
         self.behavior = behavior
         self.predicate = predicate
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

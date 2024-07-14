@@ -14,8 +14,8 @@ public extension ObservableType {
 
      - returns: The observable sequence that terminates with specified error.
      */
-    static func error(_ error: Swift.Error) -> Observable<Element> {
-        ErrorProducer(error: error)
+    static func error(_ error: Swift.Error) async -> Observable<Element> {
+        await ErrorProducer(error: error)
     }
 }
 

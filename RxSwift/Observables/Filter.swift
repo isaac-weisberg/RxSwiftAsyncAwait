@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter predicate: A function to test each source element for a condition.
      - returns: An observable sequence that contains elements from the input sequence that satisfy the condition.
      */
-    func filter(_ predicate: @escaping (Element) throws -> Bool)
+    func filter(_ predicate: @escaping (Element) throws -> Bool) async
         -> Observable<Element>
     {
-        Filter(source: self.asObservable(), predicate: predicate)
+        await Filter(source: self.asObservable(), predicate: predicate)
     }
 }
 
@@ -30,10 +30,10 @@ public extension ObservableType {
 
      - returns: An observable sequence that skips all elements of the source sequence.
      */
-    func ignoreElements()
+    func ignoreElements() async
         -> Observable<Never>
     {
-        self.flatMap { _ in Observable<Never>.empty() }
+        await self.flatMap { _ in await Observable<Never>.empty() }
     }
 }
 
@@ -74,9 +74,10 @@ private final class Filter<Element>: Producer<Element> {
     private let source: Observable<Element>
     private let predicate: Predicate
 
-    init(source: Observable<Element>, predicate: @escaping Predicate) {
+    init(source: Observable<Element>, predicate: @escaping Predicate) async {
         self.source = source
         self.predicate = predicate
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

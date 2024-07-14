@@ -16,10 +16,10 @@ public extension ObservableType {
      - returns: An observable sequence that emits the desired element as its own sole emission.
      */
     @available(*, deprecated, renamed: "element(at:)")
-    func elementAt(_ index: Int)
+    func elementAt(_ index: Int) async
         -> Observable<Element>
     {
-        self.element(at: index)
+        await self.element(at: index)
     }
 
     /**
@@ -30,10 +30,10 @@ public extension ObservableType {
      - parameter index: The index of the required element (starting from 0).
      - returns: An observable sequence that emits the desired element as its own sole emission.
      */
-    func element(at index: Int)
+    func element(at index: Int) async
         -> Observable<Element>
     {
-        ElementAt(source: self.asObservable(), index: index, throwOnEmpty: true)
+        await ElementAt(source: self.asObservable(), index: index, throwOnEmpty: true)
     }
 }
 
@@ -90,7 +90,7 @@ private final class ElementAt<SourceType>: Producer<SourceType> {
     let throwOnEmpty: Bool
     let index: Int
 
-    init(source: Observable<SourceType>, index: Int, throwOnEmpty: Bool) {
+    init(source: Observable<SourceType>, index: Int, throwOnEmpty: Bool) async {
         if index < 0 {
             rxFatalError("index can't be negative")
         }
@@ -98,6 +98,7 @@ private final class ElementAt<SourceType>: Producer<SourceType> {
         self.source = source
         self.index = index
         self.throwOnEmpty = throwOnEmpty
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceType {

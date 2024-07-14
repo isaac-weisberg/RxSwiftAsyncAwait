@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter other: Observable sequence that starts propagation of elements of the source sequence.
      - returns: An observable sequence containing the elements of the source sequence that are emitted after the other sequence emits an item.
      */
-    func skip<Source: ObservableType>(until other: Source)
+    func skip<Source: ObservableType>(until other: Source) async
         -> Observable<Element>
     {
-        SkipUntil(source: self.asObservable(), other: other.asObservable())
+        await SkipUntil(source: self.asObservable(), other: other.asObservable())
     }
 
     /**
@@ -30,10 +30,10 @@ public extension ObservableType {
      - returns: An observable sequence containing the elements of the source sequence that are emitted after the other sequence emits an item.
      */
     @available(*, deprecated, renamed: "skip(until:)")
-    func skipUntil<Source: ObservableType>(_ other: Source)
+    func skipUntil<Source: ObservableType>(_ other: Source) async
         -> Observable<Element>
     {
-        self.skip(until: other)
+        await self.skip(until: other)
     }
 }
 

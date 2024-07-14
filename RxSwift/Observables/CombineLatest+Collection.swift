@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter resultSelector: Function to invoke whenever any of the sources produces an element.
      - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
      */
-    static func combineLatest<Collection: Swift.Collection>(_ collection: Collection, resultSelector: @escaping ([Collection.Element.Element]) throws -> Element) -> Observable<Element>
+    static func combineLatest<Collection: Swift.Collection>(_ collection: Collection, resultSelector: @escaping ([Collection.Element.Element]) throws -> Element) async -> Observable<Element>
         where Collection.Element: ObservableType
     {
-        CombineLatestCollectionType(sources: collection, resultSelector: resultSelector)
+        await CombineLatestCollectionType(sources: collection, resultSelector: resultSelector)
     }
 
     /**
@@ -28,10 +28,10 @@ public extension ObservableType {
 
      - returns: An observable sequence containing the result of combining elements of the sources.
      */
-    static func combineLatest<Collection: Swift.Collection>(_ collection: Collection) -> Observable<[Element]>
+    static func combineLatest<Collection: Swift.Collection>(_ collection: Collection) async -> Observable<[Element]>
         where Collection.Element: ObservableType, Collection.Element.Element == Element
     {
-        CombineLatestCollectionType(sources: collection, resultSelector: { $0 })
+        await CombineLatestCollectionType(sources: collection, resultSelector: { $0 })
     }
 }
 
@@ -157,10 +157,11 @@ final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: P
     let resultSelector: ResultSelector
     let count: Int
 
-    init(sources: Collection, resultSelector: @escaping ResultSelector) {
+    init(sources: Collection, resultSelector: @escaping ResultSelector) async {
         self.sources = sources
         self.resultSelector = resultSelector
         self.count = self.sources.count
+        await super.init()
     }
     
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {

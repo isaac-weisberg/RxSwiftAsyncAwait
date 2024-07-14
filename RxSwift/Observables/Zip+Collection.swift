@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter resultSelector: Function to invoke for each series of elements at corresponding indexes in the sources.
      - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
      */
-    static func zip<Collection: Swift.Collection>(_ collection: Collection, resultSelector: @escaping ([Collection.Element.Element]) throws -> Element) -> Observable<Element>
+    static func zip<Collection: Swift.Collection>(_ collection: Collection, resultSelector: @escaping ([Collection.Element.Element]) throws -> Element) async -> Observable<Element>
         where Collection.Element: ObservableType
     {
-        ZipCollectionType(sources: collection, resultSelector: resultSelector)
+        await ZipCollectionType(sources: collection, resultSelector: resultSelector)
     }
 
     /**
@@ -28,10 +28,10 @@ public extension ObservableType {
 
      - returns: An observable sequence containing the result of combining elements of the sources.
      */
-    static func zip<Collection: Swift.Collection>(_ collection: Collection) -> Observable<[Element]>
+    static func zip<Collection: Swift.Collection>(_ collection: Collection) async -> Observable<[Element]>
         where Collection.Element: ObservableType, Collection.Element.Element == Element
     {
-        ZipCollectionType(sources: collection, resultSelector: { $0 })
+        await ZipCollectionType(sources: collection, resultSelector: { $0 })
     }
 }
 
@@ -159,10 +159,11 @@ private final class ZipCollectionType<Collection: Swift.Collection, Result>: Pro
     let resultSelector: ResultSelector
     let count: Int
     
-    init(sources: Collection, resultSelector: @escaping ResultSelector) {
+    init(sources: Collection, resultSelector: @escaping ResultSelector) async {
         self.sources = sources
         self.resultSelector = resultSelector
         self.count = self.sources.count
+        await super.init()
     }
     
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {

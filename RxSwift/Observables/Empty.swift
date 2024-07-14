@@ -14,8 +14,8 @@ public extension ObservableType {
 
      - returns: An observable sequence with no elements.
      */
-    static func empty() -> Observable<Element> {
-        EmptyProducer<Element>()
+    static func empty() async -> Observable<Element> {
+        await EmptyProducer<Element>()
     }
 }
 

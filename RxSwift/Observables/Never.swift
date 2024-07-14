@@ -14,8 +14,8 @@ public extension ObservableType {
 
      - returns: An observable sequence whose observers will never get called.
      */
-    static func never() -> Observable<Element> {
-        NeverProducer()
+    static func never() async -> Observable<Element> {
+        await NeverProducer()
     }
 }
 

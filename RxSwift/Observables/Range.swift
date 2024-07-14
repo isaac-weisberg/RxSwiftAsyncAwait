@@ -17,8 +17,8 @@ public extension ObservableType where Element: RxAbstractInteger {
      - parameter scheduler: Scheduler to run the generator loop on.
      - returns: An observable sequence that contains a range of sequential integral numbers.
      */
-    static func range(start: Element, count: Element, scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) -> Observable<Element> {
-        RangeProducer<Element>(start: start, count: count, scheduler: scheduler)
+    static func range(start: Element, count: Element, scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async -> Observable<Element> {
+        await RangeProducer<Element>(start: start, count: count, scheduler: scheduler)
     }
 }
 
@@ -27,7 +27,7 @@ private final class RangeProducer<Element: RxAbstractInteger>: Producer<Element>
     fileprivate let count: Element
     fileprivate let scheduler: ImmediateSchedulerType
 
-    init(start: Element, count: Element, scheduler: ImmediateSchedulerType) {
+    init(start: Element, count: Element, scheduler: ImmediateSchedulerType) async {
         guard count >= 0 else {
             rxFatalError("count can't be negative")
         }
@@ -39,6 +39,7 @@ private final class RangeProducer<Element: RxAbstractInteger>: Producer<Element>
         self.start = start
         self.count = count
         self.scheduler = scheduler
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

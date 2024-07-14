@@ -32,6 +32,7 @@ private final class AnonymousDisposable: DisposeBase, Cancelable {
     // Non-deprecated version of the constructor, used by `Disposables.create(with:)`
     fileprivate init(disposeAction: @escaping DisposeAction) async {
         self.disposeAction = disposeAction
+        disposed = await AtomicInt(0)
         await super.init()
     }
 

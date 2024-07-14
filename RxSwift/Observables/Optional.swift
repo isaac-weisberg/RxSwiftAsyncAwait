@@ -15,8 +15,8 @@ public extension ObservableType {
      - parameter optional: Optional element in the resulting observable sequence.
      - returns: An observable sequence containing the wrapped value or not from given optional.
      */
-    static func from(optional: Element?) -> Observable<Element> {
-        ObservableOptional(optional: optional)
+    static func from(optional: Element?) async -> Observable<Element> {
+        await ObservableOptional(optional: optional)
     }
 
     /**
@@ -28,8 +28,8 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to send the optional element on.
      - returns: An observable sequence containing the wrapped value or not from given optional.
      */
-    static func from(optional: Element?, scheduler: ImmediateSchedulerType) -> Observable<Element> {
-        ObservableOptionalScheduled(optional: optional, scheduler: scheduler)
+    static func from(optional: Element?, scheduler: ImmediateSchedulerType) async -> Observable<Element> {
+        await ObservableOptionalScheduled(optional: optional, scheduler: scheduler)
     }
 }
 
@@ -66,9 +66,10 @@ private final class ObservableOptionalScheduled<Element>: Producer<Element> {
     fileprivate let optional: Element?
     fileprivate let scheduler: ImmediateSchedulerType
 
-    init(optional: Element?, scheduler: ImmediateSchedulerType) {
+    init(optional: Element?, scheduler: ImmediateSchedulerType) async {
         self.optional = optional
         self.scheduler = scheduler
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
@@ -81,8 +82,9 @@ private final class ObservableOptionalScheduled<Element>: Producer<Element> {
 private final class ObservableOptional<Element>: Producer<Element> {
     private let optional: Element?
 
-    init(optional: Element?) {
+    init(optional: Element?) async {
         self.optional = optional
+        await super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {

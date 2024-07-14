@@ -15,8 +15,8 @@ public extension ObservableType {
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    func concat<Source: ObservableConvertibleType>(_ second: Source) -> Observable<Element> where Source.Element == Element {
-        Observable.concat([self.asObservable(), second.asObservable()])
+    func concat<Source: ObservableConvertibleType>(_ second: Source) async -> Observable<Element> where Source.Element == Element {
+        await Observable.concat([self.asObservable(), second.asObservable()])
     }
 }
 
@@ -34,10 +34,10 @@ public extension ObservableType {
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat<Sequence: Swift.Sequence>(_ sequence: Sequence) -> Observable<Element>
+    static func concat<Sequence: Swift.Sequence>(_ sequence: Sequence) async -> Observable<Element>
         where Sequence.Element == Observable<Element>
     {
-        return Concat(sources: sequence, count: nil)
+        return await Concat(sources: sequence, count: nil)
     }
 
     /**
@@ -53,10 +53,10 @@ public extension ObservableType {
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat<Collection: Swift.Collection>(_ collection: Collection) -> Observable<Element>
+    static func concat<Collection: Swift.Collection>(_ collection: Collection) async -> Observable<Element>
         where Collection.Element == Observable<Element>
     {
-        return Concat(sources: collection, count: Int64(collection.count))
+        return await Concat(sources: collection, count: Int64(collection.count))
     }
 
     /**
@@ -72,8 +72,8 @@ public extension ObservableType {
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat(_ sources: Observable<Element> ...) -> Observable<Element> {
-        Concat(sources: sources, count: Int64(sources.count))
+    static func concat(_ sources: Observable<Element> ...) async -> Observable<Element> {
+        await Concat(sources: sources, count: Int64(sources.count))
     }
 }
 
@@ -119,9 +119,10 @@ private final class Concat<Sequence: Swift.Sequence>: Producer<Sequence.Element.
     fileprivate let sources: Sequence
     fileprivate let count: IntMax?
 
-    init(sources: Sequence, count: IntMax?) {
+    init(sources: Sequence, count: IntMax?) async {
         self.sources = sources
         self.count = count
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

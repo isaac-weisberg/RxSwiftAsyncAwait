@@ -17,10 +17,10 @@ public extension ObservableType {
      - parameter count: The number of elements to skip before returning the remaining elements.
      - returns: An observable sequence that contains the elements that occur after the specified index in the input sequence.
      */
-    func skip(_ count: Int)
+    func skip(_ count: Int) async
         -> Observable<Element>
     {
-        SkipCount(source: self.asObservable(), count: count)
+        await SkipCount(source: self.asObservable(), count: count)
     }
 }
 
@@ -34,10 +34,10 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run the timer on.
      - returns: An observable sequence with the elements skipped during the specified duration from the start of the source sequence.
      */
-    func skip(_ duration: RxTimeInterval, scheduler: SchedulerType)
+    func skip(_ duration: RxTimeInterval, scheduler: SchedulerType) async
         -> Observable<Element>
     {
-        SkipTime(source: self.asObservable(), duration: duration, scheduler: scheduler)
+        await SkipTime(source: self.asObservable(), duration: duration, scheduler: scheduler)
     }
 }
 
@@ -81,9 +81,10 @@ private final class SkipCount<Element>: Producer<Element> {
     let source: Observable<Element>
     let count: Int
 
-    init(source: Observable<Element>, count: Int) {
+    init(source: Observable<Element>, count: Int) async {
         self.source = source
         self.count = count
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
@@ -145,10 +146,11 @@ private final class SkipTime<Element>: Producer<Element> {
     let duration: RxTimeInterval
     let scheduler: SchedulerType
 
-    init(source: Observable<Element>, duration: RxTimeInterval, scheduler: SchedulerType) {
+    init(source: Observable<Element>, duration: RxTimeInterval, scheduler: SchedulerType) async {
         self.source = source
         self.scheduler = scheduler
         self.duration = duration
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

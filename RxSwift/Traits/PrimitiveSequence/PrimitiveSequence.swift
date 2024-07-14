@@ -66,12 +66,12 @@ public extension PrimitiveSequence
      - parameter observableFactory: Observable factory function to invoke for each observer that subscribes to the resulting sequence.
      - returns: An observable sequence whose observers trigger an invocation of the given observable factory function.
      */
-    static func deferred(_ observableFactory: @escaping () throws -> PrimitiveSequence<Trait, Element>)
+    static func deferred(_ observableFactory: @escaping () async throws -> PrimitiveSequence<Trait, Element>) async
         -> PrimitiveSequence<Trait, Element>
     {
-        return PrimitiveSequence(raw: Observable.deferred
+        return await PrimitiveSequence(raw: Observable.deferred
         {
-            try observableFactory().asObservable()
+            try await observableFactory().asObservable()
         })
     }
 
@@ -84,10 +84,10 @@ public extension PrimitiveSequence
      - parameter scheduler: Scheduler to run the subscription delay timer on.
      - returns: the source Observable shifted in time by the specified delay.
      */
-    func delay(_ dueTime: RxTimeInterval, scheduler: SchedulerType)
+    func delay(_ dueTime: RxTimeInterval, scheduler: SchedulerType) async
         -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence(raw: self.primitiveSequence.source.delay(dueTime, scheduler: scheduler))
+        await PrimitiveSequence(raw: self.primitiveSequence.source.delay(dueTime, scheduler: scheduler))
     }
 
     /**
@@ -99,10 +99,10 @@ public extension PrimitiveSequence
      - parameter scheduler: Scheduler to run the subscription delay timer on.
      - returns: Time-shifted sequence.
      */
-    func delaySubscription(_ dueTime: RxTimeInterval, scheduler: SchedulerType)
+    func delaySubscription(_ dueTime: RxTimeInterval, scheduler: SchedulerType) async
         -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence(raw: self.source.delaySubscription(dueTime, scheduler: scheduler))
+        await PrimitiveSequence(raw: self.source.delaySubscription(dueTime, scheduler: scheduler))
     }
 
     /**
@@ -155,10 +155,10 @@ public extension PrimitiveSequence
      - parameter scheduler: Scheduler to perform subscription and unsubscription actions on.
      - returns: The source sequence whose subscriptions and unsubscriptions happen on the specified scheduler.
      */
-    func subscribe(on scheduler: ImmediateSchedulerType)
+    func subscribe(on scheduler: ImmediateSchedulerType) async
         -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence(raw: self.source.subscribe(on: scheduler))
+        await PrimitiveSequence(raw: self.source.subscribe(on: scheduler))
     }
 
     /**
@@ -177,10 +177,10 @@ public extension PrimitiveSequence
      - returns: The source sequence whose subscriptions and unsubscriptions happen on the specified scheduler.
      */
     @available(*, deprecated, renamed: "subscribe(on:)")
-    func subscribeOn(_ scheduler: ImmediateSchedulerType)
+    func subscribeOn(_ scheduler: ImmediateSchedulerType) async
         -> PrimitiveSequence<Trait, Element>
     {
-        self.subscribe(on: scheduler)
+        await self.subscribe(on: scheduler)
     }
 
     /**
@@ -192,10 +192,10 @@ public extension PrimitiveSequence
      - returns: An observable sequence containing the source sequence's elements, followed by the elements produced by the handler's resulting observable sequence in case an error occurred.
      */
     @available(*, deprecated, renamed: "catch(_:)")
-    func catchError(_ handler: @escaping (Swift.Error) throws -> PrimitiveSequence<Trait, Element>)
+    func catchError(_ handler: @escaping (Swift.Error) throws -> PrimitiveSequence<Trait, Element>) async
         -> PrimitiveSequence<Trait, Element>
     {
-        self.catch(handler)
+        await self.catch(handler)
     }
 
     /**
@@ -206,10 +206,10 @@ public extension PrimitiveSequence
      - parameter handler: Error handler function, producing another observable sequence.
      - returns: An observable sequence containing the source sequence's elements, followed by the elements produced by the handler's resulting observable sequence in case an error occurred.
      */
-    func `catch`(_ handler: @escaping (Swift.Error) throws -> PrimitiveSequence<Trait, Element>)
+    func `catch`(_ handler: @escaping (Swift.Error) throws -> PrimitiveSequence<Trait, Element>) async
         -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence(raw: self.source.catch { try handler($0).asObservable() })
+        await PrimitiveSequence(raw: self.source.catch { try handler($0).asObservable() })
     }
 
     /**
@@ -220,10 +220,10 @@ public extension PrimitiveSequence
      - parameter maxAttemptCount: Maximum number of times to attempt the sequence subscription.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully.
      */
-    func retry(_ maxAttemptCount: Int)
+    func retry(_ maxAttemptCount: Int) async
         -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence(raw: self.source.retry(maxAttemptCount))
+        await PrimitiveSequence(raw: self.source.retry(maxAttemptCount))
     }
 
     /**
@@ -235,41 +235,10 @@ public extension PrimitiveSequence
      - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
-    func retry<TriggerObservable: ObservableType, Error: Swift.Error>(when notificationHandler: @escaping (Observable<Error>) -> TriggerObservable)
+    func retry<TriggerObservable: ObservableType, Error: Swift.Error>(when notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async
         -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence(raw: self.source.retry(when: notificationHandler))
-    }
-
-    /**
-     Repeats the source observable sequence on error when the notifier emits a next value.
-     If the source observable errors and the notifier completes, it will complete the source sequence.
-
-     - seealso: [retry operator on reactivex.io](http://reactivex.io/documentation/operators/retry.html)
-
-     - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
-     - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
-     */
-    @available(*, deprecated, renamed: "retry(when:)")
-    func retryWhen<TriggerObservable: ObservableType, Error: Swift.Error>(_ notificationHandler: @escaping (Observable<Error>) -> TriggerObservable)
-        -> PrimitiveSequence<Trait, Element>
-    {
-        self.retry(when: notificationHandler)
-    }
-
-    /**
-     Repeats the source observable sequence on error when the notifier emits a next value.
-     If the source observable errors and the notifier completes, it will complete the source sequence.
-
-     - seealso: [retry operator on reactivex.io](http://reactivex.io/documentation/operators/retry.html)
-
-     - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
-     - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
-     */
-    func retry<TriggerObservable: ObservableType>(when notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable)
-        -> PrimitiveSequence<Trait, Element>
-    {
-        PrimitiveSequence(raw: self.source.retry(when: notificationHandler))
+        await PrimitiveSequence(raw: self.source.retry(when: notificationHandler))
     }
 
     /**
@@ -282,10 +251,41 @@ public extension PrimitiveSequence
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
     @available(*, deprecated, renamed: "retry(when:)")
-    func retryWhen<TriggerObservable: ObservableType>(_ notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable)
+    func retryWhen<TriggerObservable: ObservableType, Error: Swift.Error>(_ notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async
         -> PrimitiveSequence<Trait, Element>
     {
-        self.retry(when: notificationHandler)
+        await self.retry(when: notificationHandler)
+    }
+
+    /**
+     Repeats the source observable sequence on error when the notifier emits a next value.
+     If the source observable errors and the notifier completes, it will complete the source sequence.
+
+     - seealso: [retry operator on reactivex.io](http://reactivex.io/documentation/operators/retry.html)
+
+     - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
+     - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
+     */
+    func retry<TriggerObservable: ObservableType>(when notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable) async
+        -> PrimitiveSequence<Trait, Element>
+    {
+        await PrimitiveSequence(raw: self.source.retry(when: notificationHandler))
+    }
+
+    /**
+     Repeats the source observable sequence on error when the notifier emits a next value.
+     If the source observable errors and the notifier completes, it will complete the source sequence.
+
+     - seealso: [retry operator on reactivex.io](http://reactivex.io/documentation/operators/retry.html)
+
+     - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
+     - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
+     */
+    @available(*, deprecated, renamed: "retry(when:)")
+    func retryWhen<TriggerObservable: ObservableType>(_ notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable) async
+        -> PrimitiveSequence<Trait, Element>
+    {
+        await self.retry(when: notificationHandler)
     }
 
     /**
@@ -297,10 +297,10 @@ public extension PrimitiveSequence
      - parameter trimOutput: Should output be trimmed to max 40 characters.
      - returns: An observable sequence whose events are printed to standard output.
      */
-    func debug(_ identifier: String? = nil, trimOutput: Bool = false, file: String = #file, line: UInt = #line, function: String = #function)
+    func debug(_ identifier: String? = nil, trimOutput: Bool = false, file: String = #file, line: UInt = #line, function: String = #function) async
         -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence(raw: self.source.debug(identifier, trimOutput: trimOutput, file: file, line: line, function: function))
+        await PrimitiveSequence(raw: self.source.debug(identifier, trimOutput: trimOutput, file: file, line: line, function: function))
     }
 
     /**
@@ -312,10 +312,10 @@ public extension PrimitiveSequence
      - parameter primitiveSequenceFactory: Factory function to obtain an observable sequence that depends on the obtained resource.
      - returns: An observable sequence whose lifetime controls the lifetime of the dependent resource object.
      */
-    static func using<Resource: Disposable>(_ resourceFactory: @escaping () throws -> Resource, primitiveSequenceFactory: @escaping (Resource) throws -> PrimitiveSequence<Trait, Element>)
+    static func using<Resource: Disposable>(_ resourceFactory: @escaping () throws -> Resource, primitiveSequenceFactory: @escaping (Resource) throws -> PrimitiveSequence<Trait, Element>) async
         -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence(raw: Observable.using(resourceFactory, observableFactory: { (resource: Resource) throws -> Observable<Element> in
+        await PrimitiveSequence(raw: Observable.using(resourceFactory, observableFactory: { (resource: Resource) throws -> Observable<Element> in
             try primitiveSequenceFactory(resource).asObservable()
         }))
     }
@@ -329,10 +329,10 @@ public extension PrimitiveSequence
      - parameter scheduler: Scheduler to run the timeout timer on.
      - returns: An observable sequence with a `RxError.timeout` in case of a timeout.
      */
-    func timeout(_ dueTime: RxTimeInterval, scheduler: SchedulerType)
+    func timeout(_ dueTime: RxTimeInterval, scheduler: SchedulerType) async
         -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence<Trait, Element>(raw: self.primitiveSequence.source.timeout(dueTime, scheduler: scheduler))
+        await PrimitiveSequence<Trait, Element>(raw: self.primitiveSequence.source.timeout(dueTime, scheduler: scheduler))
     }
 
     /**
@@ -347,9 +347,9 @@ public extension PrimitiveSequence
      */
     func timeout(_ dueTime: RxTimeInterval,
                  other: PrimitiveSequence<Trait, Element>,
-                 scheduler: SchedulerType) -> PrimitiveSequence<Trait, Element>
+                 scheduler: SchedulerType) async -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence<Trait, Element>(raw: self.primitiveSequence.source.timeout(dueTime, other: other.source, scheduler: scheduler))
+        await PrimitiveSequence<Trait, Element>(raw: self.primitiveSequence.source.timeout(dueTime, other: other.source, scheduler: scheduler))
     }
 }
 
@@ -364,9 +364,9 @@ public extension PrimitiveSequenceType where Element: RxAbstractInteger
      - parameter scheduler: Scheduler to run timers on.
      - returns: An observable sequence that produces a value after due time has elapsed and then each period.
      */
-    static func timer(_ dueTime: RxTimeInterval, scheduler: SchedulerType)
+    static func timer(_ dueTime: RxTimeInterval, scheduler: SchedulerType) async
         -> PrimitiveSequence<Trait, Element>
     {
-        PrimitiveSequence(raw: Observable<Element>.timer(dueTime, scheduler: scheduler))
+        await PrimitiveSequence(raw: Observable<Element>.timer(dueTime, scheduler: scheduler))
     }
 }

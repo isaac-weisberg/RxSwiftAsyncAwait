@@ -16,10 +16,10 @@ public extension ObservableType {
     
      - returns: A Single sequence containing all the emitted elements as array.
      */
-    func toArray()
+    func toArray() async
         -> Single<[Element]>
     {
-        PrimitiveSequence(raw: ToArray(source: self.asObservable()))
+        await PrimitiveSequence(raw: ToArray(source: self.asObservable()))
     }
 }
 
@@ -53,8 +53,9 @@ private final class ToArraySink<SourceType, Observer: ObserverType>: Sink<Observ
 private final class ToArray<SourceType>: Producer<[SourceType]> {
     let source: Observable<SourceType>
 
-    init(source: Observable<SourceType>) {
+    init(source: Observable<SourceType>) async {
         self.source = source
+        await super.init()
     }
     
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == [SourceType] {

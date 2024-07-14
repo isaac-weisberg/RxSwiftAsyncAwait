@@ -37,10 +37,10 @@ public extension ObservableType {
      - parameter selector: Selector function which can use the multicasted source sequence subject to the policies enforced by the created subject.
      - returns: An observable sequence that contains the elements of a sequence produced by multicasting the source sequence within a selector function.
      */
-    func multicast<Subject: SubjectType, Result>(_ subjectSelector: @escaping () throws -> Subject, selector: @escaping (Observable<Subject.Element>) throws -> Observable<Result>)
+    func multicast<Subject: SubjectType, Result>(_ subjectSelector: @escaping () throws -> Subject, selector: @escaping (Observable<Subject.Element>) throws -> Observable<Result>) async
         -> Observable<Result> where Subject.Observer.Element == Element
     {
-        return Multicast(
+        return await Multicast(
             source: self.asObservable(),
             subjectSelector: subjectSelector,
             selector: selector
@@ -104,8 +104,8 @@ public extension ConnectableObservableType {
 
      - returns: An observable sequence that stays connected to the source as long as there is at least one subscription to the observable sequence.
      */
-    func refCount() -> Observable<Element> {
-        RefCount(source: self)
+    func refCount() async -> Observable<Element> {
+        await RefCount(source: self)
     }
 }
 
@@ -342,6 +342,7 @@ private final class RefCount<ConnectableSource: ConnectableObservableType>: Prod
     init(source: ConnectableSource) async {
         self.lock = await RecursiveLock()
         self.source = source
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable)
@@ -402,10 +403,11 @@ private final class Multicast<Subject: SubjectType, Result>: Producer<Result> {
     fileprivate let subjectSelector: SubjectSelectorType
     fileprivate let selector: SelectorType
 
-    init(source: Observable<Subject.Observer.Element>, subjectSelector: @escaping SubjectSelectorType, selector: @escaping SelectorType) {
+    init(source: Observable<Subject.Observer.Element>, subjectSelector: @escaping SubjectSelectorType, selector: @escaping SelectorType) async {
         self.source = source
         self.subjectSelector = subjectSelector
         self.selector = selector
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {

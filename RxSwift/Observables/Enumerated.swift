@@ -14,10 +14,10 @@ public extension ObservableType {
 
      - returns: An observable sequence that contains tuples of source sequence elements and their indexes.
      */
-    func enumerated()
+    func enumerated() async
         -> Observable<(index: Int, element: Element)>
     {
-        Enumerated(source: self.asObservable())
+        await Enumerated(source: self.asObservable())
     }
 }
 
@@ -49,8 +49,9 @@ private final class EnumeratedSink<Element, Observer: ObserverType>: Sink<Observ
 private final class Enumerated<Element>: Producer<(index: Int, element: Element)> {
     private let source: Observable<Element>
 
-    init(source: Observable<Element>) {
+    init(source: Observable<Element>) async {
         self.source = source
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == (index: Int, element: Element) {

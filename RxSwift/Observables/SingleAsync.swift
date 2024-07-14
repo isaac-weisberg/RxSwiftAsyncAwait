@@ -15,10 +15,10 @@ public extension ObservableType {
 
      - returns: An observable sequence that emits a single element or throws an exception if more (or none) of them are emitted.
      */
-    func single()
+    func single() async
         -> Observable<Element>
     {
-        SingleAsync(source: self.asObservable())
+        await SingleAsync(source: self.asObservable())
     }
 
     /**
@@ -30,10 +30,10 @@ public extension ObservableType {
      - parameter predicate: A function to test each source element for a condition.
      - returns: An observable sequence that emits a single element or throws an exception if more (or none) of them are emitted.
      */
-    func single(_ predicate: @escaping (Element) throws -> Bool)
+    func single(_ predicate: @escaping (Element) throws -> Bool) async
         -> Observable<Element>
     {
-        SingleAsync(source: self.asObservable(), predicate: predicate)
+        await SingleAsync(source: self.asObservable(), predicate: predicate)
     }
 }
 
@@ -91,9 +91,10 @@ final class SingleAsync<Element>: Producer<Element> {
     private let source: Observable<Element>
     fileprivate let predicate: Predicate?
 
-    init(source: Observable<Element>, predicate: Predicate? = nil) {
+    init(source: Observable<Element>, predicate: Predicate? = nil) async {
         self.source = source
         self.predicate = predicate
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

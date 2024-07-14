@@ -21,8 +21,8 @@ extension ObservableType {
     public func withUnretained<Object: AnyObject, Out>(
         _ obj: Object,
         resultSelector: @escaping (Object, Element) -> Out
-    ) -> Observable<Out> {
-        map { [weak obj] element -> Out in
+    ) async -> Observable<Out> {
+        await map { [weak obj] element -> Out in
             guard let obj = obj else { throw UnretainedError.failedRetaining }
 
             return resultSelector(obj, element)
@@ -30,10 +30,10 @@ extension ObservableType {
         .catch { error -> Observable<Out> in
             guard let unretainedError = error as? UnretainedError,
                   unretainedError == .failedRetaining else {
-                return .error(error)
+                return await .error(error)
             }
 
-            return .empty()
+            return await .empty()
         }
     }
 
@@ -48,8 +48,8 @@ extension ObservableType {
      - parameter obj: The object to provide an unretained reference on.
      - returns: An observable sequence of tuples that contains both an unretained reference on `obj` and the values of the original sequence.
      */
-    public func withUnretained<Object: AnyObject>(_ obj: Object) -> Observable<(Object, Element)> {
-        return withUnretained(obj) { ($0, $1) }
+    public func withUnretained<Object: AnyObject>(_ obj: Object) async -> Observable<(Object, Element)> {
+        return await withUnretained(obj) { ($0, $1) }
     }
 }
 

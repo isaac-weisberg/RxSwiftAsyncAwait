@@ -15,7 +15,7 @@ public extension ObservableType {
      - parameter handler: Error handler function, producing another observable sequence.
      - returns: An observable sequence containing the source sequence's elements, followed by the elements produced by the handler's resulting observable sequence in case an error occurred.
      */
-    func `catch`(_ handler: @escaping (Swift.Error) throws -> Observable<Element>) async
+    func `catch`(_ handler: @escaping (Swift.Error) async throws -> Observable<Element>) async
         -> Observable<Element>
     {
         await Catch(source: self.asObservable(), handler: handler)
@@ -47,7 +47,7 @@ public extension ObservableType {
     func catchAndReturn(_ element: Element) async
         -> Observable<Element>
     {
-        await Catch(source: self.asObservable(), handler: { _ in Observable.just(element) })
+        await Catch(source: self.asObservable(), handler: { _ in await Observable.just(element) })
     }
 
     /**
@@ -180,7 +180,7 @@ private final class CatchSink<Observer: ObserverType>: Sink<Observer>, ObserverT
             await self.dispose()
         case .error(let error):
             do {
-                let catchSequence = try self.parent.handler(error)
+                let catchSequence = try await self.parent.handler(error)
 
                 let observer = CatchSinkProxy(parent: self)
 
@@ -195,7 +195,7 @@ private final class CatchSink<Observer: ObserverType>: Sink<Observer>, ObserverT
 }
 
 private final class Catch<Element>: Producer<Element> {
-    typealias Handler = (Swift.Error) throws -> Observable<Element>
+    typealias Handler = (Swift.Error) async throws -> Observable<Element>
 
     fileprivate let source: Observable<Element>
     fileprivate let handler: Handler

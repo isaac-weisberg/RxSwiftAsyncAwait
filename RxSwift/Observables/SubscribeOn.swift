@@ -22,10 +22,10 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to perform subscription and unsubscription actions on.
      - returns: The source sequence whose subscriptions and unsubscriptions happen on the specified scheduler.
      */
-    func subscribe(on scheduler: ImmediateSchedulerType)
+    func subscribe(on scheduler: ImmediateSchedulerType) async
         -> Observable<Element>
     {
-        SubscribeOn(source: self, scheduler: scheduler)
+        await SubscribeOn(source: self, scheduler: scheduler)
     }
 
     /**
@@ -44,10 +44,10 @@ public extension ObservableType {
      - returns: The source sequence whose subscriptions and unsubscriptions happen on the specified scheduler.
      */
     @available(*, deprecated, renamed: "subscribe(on:)")
-    func subscribeOn(_ scheduler: ImmediateSchedulerType)
+    func subscribeOn(_ scheduler: ImmediateSchedulerType) async
         -> Observable<Element>
     {
-        self.subscribe(on: scheduler)
+        await self.subscribe(on: scheduler)
     }
 }
 
@@ -92,9 +92,10 @@ private final class SubscribeOn<Ob: ObservableType>: Producer<Ob.Element> {
     let source: Ob
     let scheduler: ImmediateSchedulerType
 
-    init(source: Ob, scheduler: ImmediateSchedulerType) {
+    init(source: Ob, scheduler: ImmediateSchedulerType) async {
         self.source = source
         self.scheduler = scheduler
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Ob.Element {

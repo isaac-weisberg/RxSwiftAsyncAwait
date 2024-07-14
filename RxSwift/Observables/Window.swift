@@ -19,10 +19,10 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run windowing timers on.
      - returns: An observable sequence of windows (instances of `Observable`).
      */
-    func window(timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType)
+    func window(timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType) async
         -> Observable<Observable<Element>>
     {
-        return WindowTimeCount(source: self.asObservable(), timeSpan: timeSpan, count: count, scheduler: scheduler)
+        return await WindowTimeCount(source: self.asObservable(), timeSpan: timeSpan, count: count, scheduler: scheduler)
     }
 }
 
@@ -38,7 +38,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
     
     let lock: RecursiveLock
     
-    private var subject = PublishSubject<Element>()
+    private var subject: PublishSubject<Element>
     private var count = 0
     private var windowId = 0
     
@@ -47,6 +47,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
     private let groupDisposable: CompositeDisposable
     
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+        subject = await PublishSubject<Element>()
         self.timerD = await SerialDisposable()
         self.lock = await RecursiveLock()
         self.parent = parent
@@ -67,8 +68,8 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
     }
     
     func startNewWindowAndCompleteCurrentOne() async {
-        self.subject.on(.completed)
-        self.subject = PublishSubject<Element>()
+        await self.subject.on(.completed)
+        self.subject = await PublishSubject<Element>()
         
         await self.forwardOn(.next(AddRef(source: self.subject, refCount: self.refCountDisposable).asObservable()))
     }
@@ -83,12 +84,12 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
         
         switch event {
         case .next(let element):
-            self.subject.on(.next(element))
+            await self.subject.on(.next(element))
             
             do {
                 _ = try incrementChecked(&self.count)
             } catch let e {
-                self.subject.on(.error(e as Swift.Error))
+                await self.subject.on(.error(e as Swift.Error))
                 await self.dispose()
             }
             
@@ -101,12 +102,12 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
             }
             
         case .error(let error):
-            self.subject.on(.error(error))
+            await self.subject.on(.error(error))
             await self.forwardOn(.error(error))
             await self.dispose()
 
         case .completed:
-            self.subject.on(.completed)
+            await self.subject.on(.completed)
             await self.forwardOn(.completed)
             await self.dispose()
         }
@@ -159,11 +160,12 @@ private final class WindowTimeCount<Element>: Producer<Observable<Element>> {
     fileprivate let scheduler: SchedulerType
     fileprivate let source: Observable<Element>
     
-    init(source: Observable<Element>, timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType) {
+    init(source: Observable<Element>, timeSpan: RxTimeInterval, count: Int, scheduler: SchedulerType) async {
         self.source = source
         self.timeSpan = timeSpan
         self.count = count
         self.scheduler = scheduler
+        await super.init()
     }
     
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Observable<Element> {

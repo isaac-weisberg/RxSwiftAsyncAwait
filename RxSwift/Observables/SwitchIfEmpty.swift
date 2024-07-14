@@ -15,8 +15,8 @@ public extension ObservableType {
      - parameter other: Observable sequence being returned when source sequence is empty.
      - returns: Observable sequence that contains elements from switchTo sequence if source is empty, otherwise returns source sequence elements.
      */
-    func ifEmpty(switchTo other: Observable<Element>) -> Observable<Element> {
-        SwitchIfEmpty(source: self.asObservable(), ifEmpty: other)
+    func ifEmpty(switchTo other: Observable<Element>) async -> Observable<Element> {
+        await SwitchIfEmpty(source: self.asObservable(), ifEmpty: other)
     }
 }
 
@@ -24,9 +24,10 @@ private final class SwitchIfEmpty<Element>: Producer<Element> {
     private let source: Observable<Element>
     private let ifEmpty: Observable<Element>
     
-    init(source: Observable<Element>, ifEmpty: Observable<Element>) {
+    init(source: Observable<Element>, ifEmpty: Observable<Element>) async {
         self.source = source
         self.ifEmpty = ifEmpty
+        await super.init()
     }
     
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

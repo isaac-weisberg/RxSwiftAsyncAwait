@@ -17,14 +17,14 @@ public extension ObservableType {
      - parameter count: The number of elements to return.
      - returns: An observable sequence that contains the specified number of elements from the start of the input sequence.
      */
-    func take(_ count: Int)
+    func take(_ count: Int) async
         -> Observable<Element>
     {
         if count == 0 {
-            return Observable.empty()
+            return await Observable.empty()
         }
         else {
-            return TakeCount(source: self.asObservable(), count: count)
+            return await TakeCount(source: self.asObservable(), count: count)
         }
     }
 }
@@ -39,10 +39,10 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run the timer on.
      - returns: An observable sequence with the elements taken during the specified duration from the start of the source sequence.
      */
-    func take(for duration: RxTimeInterval, scheduler: SchedulerType)
+    func take(for duration: RxTimeInterval, scheduler: SchedulerType) async
         -> Observable<Element>
     {
-        TakeTime(source: self.asObservable(), duration: duration, scheduler: scheduler)
+        await TakeTime(source: self.asObservable(), duration: duration, scheduler: scheduler)
     }
 
     /**
@@ -55,10 +55,10 @@ public extension ObservableType {
      - returns: An observable sequence with the elements taken during the specified duration from the start of the source sequence.
      */
     @available(*, deprecated, renamed: "take(for:scheduler:)")
-    func take(_ duration: RxTimeInterval, scheduler: SchedulerType)
+    func take(_ duration: RxTimeInterval, scheduler: SchedulerType) async
         -> Observable<Element>
     {
-        self.take(for: duration, scheduler: scheduler)
+        await self.take(for: duration, scheduler: scheduler)
     }
 }
 
@@ -106,12 +106,13 @@ private final class TakeCount<Element>: Producer<Element> {
     private let source: Observable<Element>
     fileprivate let count: Int
 
-    init(source: Observable<Element>, count: Int) {
+    init(source: Observable<Element>, count: Int) async {
         if count < 0 {
             rxFatalError("count can't be negative")
         }
         self.source = source
         self.count = count
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
@@ -184,10 +185,11 @@ private final class TakeTime<Element>: Producer<Element> {
     fileprivate let duration: TimeInterval
     fileprivate let scheduler: SchedulerType
 
-    init(source: Observable<Element>, duration: TimeInterval, scheduler: SchedulerType) {
+    init(source: Observable<Element>, duration: TimeInterval, scheduler: SchedulerType) async {
         self.source = source
         self.scheduler = scheduler
         self.duration = duration
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

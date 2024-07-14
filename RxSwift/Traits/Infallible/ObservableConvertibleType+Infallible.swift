@@ -10,8 +10,8 @@ public extension ObservableConvertibleType {
     /// Convert to an `Infallible`
     ///
     /// - returns: `Infallible<Element>`
-    func asInfallible(onErrorJustReturn element: Element) -> Infallible<Element> {
-        Infallible(self.asObservable().catchAndReturn(element))
+    func asInfallible(onErrorJustReturn element: Element) async -> Infallible<Element> {
+        await Infallible(self.asObservable().catchAndReturn(element))
     }
 
     /// Convert to an `Infallible`
@@ -20,8 +20,8 @@ public extension ObservableConvertibleType {
     ///
     ///
     /// - returns: `Infallible<Element>`
-    func asInfallible(onErrorFallbackTo infallible: Infallible<Element>) -> Infallible<Element> {
-        Infallible(self.asObservable().catch { _ in infallible.asObservable() })
+    func asInfallible(onErrorFallbackTo infallible: Infallible<Element>) async -> Infallible<Element> {
+        await Infallible(self.asObservable().catch { _ in infallible.asObservable() })
     }
 
     /// Convert to an `Infallible`
@@ -29,7 +29,7 @@ public extension ObservableConvertibleType {
     /// - parameter onErrorRecover: Recover with the this infallible closure
     ///
     /// - returns: `Infallible<Element>`
-    func asInfallible(onErrorRecover: @escaping (Swift.Error) -> Infallible<Element>) -> Infallible<Element> {
-        Infallible(asObservable().catch { onErrorRecover($0).asObservable() })
+    func asInfallible(onErrorRecover: @escaping (Swift.Error) -> Infallible<Element>) async -> Infallible<Element> {
+        await Infallible(asObservable().catch { onErrorRecover($0).asObservable() })
     }
 }

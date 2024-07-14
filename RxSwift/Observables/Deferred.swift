@@ -15,7 +15,7 @@ public extension ObservableType {
      - parameter observableFactory: Observable factory function to invoke for each observer that subscribes to the resulting sequence.
      - returns: An observable sequence whose observers trigger an invocation of the given observable factory function.
      */
-    static func deferred(_ observableFactory: @escaping () throws -> Observable<Element>) async
+    static func deferred(_ observableFactory: @escaping () async throws -> Observable<Element>) async
         -> Observable<Element>
     {
         await Deferred(observableFactory: observableFactory)
@@ -28,7 +28,7 @@ private final class DeferredSink<Source: ObservableType, Observer: ObserverType>
 
     func run(_ parent: Parent) async -> Disposable {
         do {
-            let result = try parent.observableFactory()
+            let result = try await parent.observableFactory()
             return await result.subscribe(self)
         }
         catch let e {
@@ -53,7 +53,7 @@ private final class DeferredSink<Source: ObservableType, Observer: ObserverType>
 }
 
 private final class Deferred<Source: ObservableType>: Producer<Source.Element> {
-    typealias Factory = () throws -> Source
+    typealias Factory = () async throws -> Source
 
     let observableFactory: Factory
 

@@ -14,10 +14,10 @@ public extension ObservableType where Element: Equatable {
 
      - returns: An observable sequence only containing the distinct contiguous elements, based on equality operator, from the source sequence.
      */
-    func distinctUntilChanged()
+    func distinctUntilChanged() async
         -> Observable<Element>
     {
-        self.distinctUntilChanged({ $0 }, comparer: { $0 == $1 })
+        await self.distinctUntilChanged({ $0 }, comparer: { $0 == $1 })
     }
 }
 
@@ -30,10 +30,10 @@ public extension ObservableType {
      - parameter keySelector: A function to compute the comparison key for each element.
      - returns: An observable sequence only containing the distinct contiguous elements, based on a computed key value, from the source sequence.
      */
-    func distinctUntilChanged<Key: Equatable>(_ keySelector: @escaping (Element) throws -> Key)
+    func distinctUntilChanged<Key: Equatable>(_ keySelector: @escaping (Element) throws -> Key) async
         -> Observable<Element>
     {
-        self.distinctUntilChanged(keySelector, comparer: { $0 == $1 })
+        await self.distinctUntilChanged(keySelector, comparer: { $0 == $1 })
     }
 
     /**
@@ -44,10 +44,10 @@ public extension ObservableType {
      - parameter comparer: Equality comparer for computed key values.
      - returns: An observable sequence only containing the distinct contiguous elements, based on `comparer`, from the source sequence.
      */
-    func distinctUntilChanged(_ comparer: @escaping (Element, Element) throws -> Bool)
+    func distinctUntilChanged(_ comparer: @escaping (Element, Element) throws -> Bool) async
         -> Observable<Element>
     {
-        self.distinctUntilChanged({ $0 }, comparer: comparer)
+        await self.distinctUntilChanged({ $0 }, comparer: comparer)
     }
 
     /**
@@ -59,10 +59,10 @@ public extension ObservableType {
      - parameter comparer: Equality comparer for computed key values.
      - returns: An observable sequence only containing the distinct contiguous elements, based on a computed key value and the comparer, from the source sequence.
      */
-    func distinctUntilChanged<K>(_ keySelector: @escaping (Element) throws -> K, comparer: @escaping (K, K) throws -> Bool)
+    func distinctUntilChanged<K>(_ keySelector: @escaping (Element) throws -> K, comparer: @escaping (K, K) throws -> Bool) async
         -> Observable<Element>
     {
-        return DistinctUntilChanged(source: self.asObservable(), selector: keySelector, comparer: comparer)
+        return await DistinctUntilChanged(source: self.asObservable(), selector: keySelector, comparer: comparer)
     }
 
     /**
@@ -72,10 +72,10 @@ public extension ObservableType {
 
      - returns: An observable sequence only containing the distinct contiguous elements, based on equality operator on the provided key path
      */
-    func distinctUntilChanged<Property: Equatable>(at keyPath: KeyPath<Element, Property>) ->
+    func distinctUntilChanged<Property: Equatable>(at keyPath: KeyPath<Element, Property>) async ->
         Observable<Element>
     {
-        self.distinctUntilChanged { $0[keyPath: keyPath] == $1[keyPath: keyPath] }
+        await self.distinctUntilChanged { $0[keyPath: keyPath] == $1[keyPath: keyPath] }
     }
 }
 

@@ -18,10 +18,10 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run the timeout timer on.
      - returns: An observable sequence with a `RxError.timeout` in case of a timeout.
      */
-    func timeout(_ dueTime: RxTimeInterval, scheduler: SchedulerType)
+    func timeout(_ dueTime: RxTimeInterval, scheduler: SchedulerType) async
         -> Observable<Element>
     {
-        return Timeout(source: self.asObservable(), dueTime: dueTime, other: Observable.error(RxError.timeout), scheduler: scheduler)
+        return await Timeout(source: self.asObservable(), dueTime: dueTime, other: Observable.error(RxError.timeout), scheduler: scheduler)
     }
 
     /**
@@ -34,10 +34,10 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run the timeout timer on.
      - returns: The source sequence switching to the other sequence in case of a timeout.
      */
-    func timeout<Source: ObservableConvertibleType>(_ dueTime: RxTimeInterval, other: Source, scheduler: SchedulerType)
+    func timeout<Source: ObservableConvertibleType>(_ dueTime: RxTimeInterval, other: Source, scheduler: SchedulerType) async
         -> Observable<Element> where Element == Source.Element
     {
-        return Timeout(source: self.asObservable(), dueTime: dueTime, other: other.asObservable(), scheduler: scheduler)
+        return await Timeout(source: self.asObservable(), dueTime: dueTime, other: other.asObservable(), scheduler: scheduler)
     }
 }
 
@@ -141,11 +141,12 @@ private final class Timeout<Element>: Producer<Element> {
     fileprivate let other: Observable<Element>
     fileprivate let scheduler: SchedulerType
     
-    init(source: Observable<Element>, dueTime: RxTimeInterval, other: Observable<Element>, scheduler: SchedulerType) {
+    init(source: Observable<Element>, dueTime: RxTimeInterval, other: Observable<Element>, scheduler: SchedulerType) async {
         self.source = source
         self.dueTime = dueTime
         self.other = other
         self.scheduler = scheduler
+        await super.init()
     }
     
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

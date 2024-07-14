@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-    func flatMap<Source: ObservableConvertibleType>(_ selector: @escaping (Element) throws -> Source)
+    func flatMap<Source: ObservableConvertibleType>(_ selector: @escaping (Element) async throws -> Source) async
         -> Observable<Source.Element>
     {
-        return FlatMap(source: self.asObservable(), selector: selector)
+        return await FlatMap(source: self.asObservable(), selector: selector)
     }
 }
 
@@ -32,10 +32,10 @@ public extension ObservableType {
      - parameter selector: A transform function to apply to element that was observed while no observable is executing in parallel.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence that was received while no other sequence was being calculated.
      */
-    func flatMapFirst<Source: ObservableConvertibleType>(_ selector: @escaping (Element) throws -> Source)
+    func flatMapFirst<Source: ObservableConvertibleType>(_ selector: @escaping (Element) throws -> Source) async
         -> Observable<Source.Element>
     {
-        return FlatMapFirst(source: self.asObservable(), selector: selector)
+        return await FlatMapFirst(source: self.asObservable(), selector: selector)
     }
 }
 
@@ -47,8 +47,8 @@ public extension ObservableType where Element: ObservableConvertibleType {
 
      - returns: The observable sequence that merges the elements of the observable sequences.
      */
-    func merge() -> Observable<Element.Element> {
-        Merge(source: self.asObservable())
+    func merge() async -> Observable<Element.Element> {
+        await Merge(source: self.asObservable())
     }
 
     /**
@@ -59,10 +59,10 @@ public extension ObservableType where Element: ObservableConvertibleType {
      - parameter maxConcurrent: Maximum number of inner observable sequences being subscribed to concurrently.
      - returns: The observable sequence that merges the elements of the inner sequences.
      */
-    func merge(maxConcurrent: Int)
+    func merge(maxConcurrent: Int) async
         -> Observable<Element.Element>
     {
-        MergeLimited(source: self.asObservable(), maxConcurrent: maxConcurrent)
+        await MergeLimited(source: self.asObservable(), maxConcurrent: maxConcurrent)
     }
 }
 
@@ -74,8 +74,8 @@ public extension ObservableType where Element: ObservableConvertibleType {
 
      - returns: An observable sequence that contains the elements of each observed inner sequence, in sequential order.
      */
-    func concat() -> Observable<Element.Element> {
-        self.merge(maxConcurrent: 1)
+    func concat() async -> Observable<Element.Element> {
+        await self.merge(maxConcurrent: 1)
     }
 }
 
@@ -88,8 +88,8 @@ public extension ObservableType {
      - parameter sources: Collection of observable sequences to merge.
      - returns: The observable sequence that merges the elements of the observable sequences.
      */
-    static func merge<Collection: Swift.Collection>(_ sources: Collection) -> Observable<Element> where Collection.Element == Observable<Element> {
-        MergeArray(sources: Array(sources))
+    static func merge<Collection: Swift.Collection>(_ sources: Collection) async -> Observable<Element> where Collection.Element == Observable<Element> {
+        await MergeArray(sources: Array(sources))
     }
 
     /**
@@ -100,8 +100,8 @@ public extension ObservableType {
      - parameter sources: Array of observable sequences to merge.
      - returns: The observable sequence that merges the elements of the observable sequences.
      */
-    static func merge(_ sources: [Observable<Element>]) -> Observable<Element> {
-        MergeArray(sources: sources)
+    static func merge(_ sources: [Observable<Element>]) async -> Observable<Element> {
+        await MergeArray(sources: sources)
     }
 
     /**
@@ -112,8 +112,8 @@ public extension ObservableType {
      - parameter sources: Collection of observable sequences to merge.
      - returns: The observable sequence that merges the elements of the observable sequences.
      */
-    static func merge(_ sources: Observable<Element>...) -> Observable<Element> {
-        MergeArray(sources: sources)
+    static func merge(_ sources: Observable<Element>...) async -> Observable<Element> {
+        await MergeArray(sources: sources)
     }
 }
 
@@ -128,10 +128,10 @@ public extension ObservableType {
      - returns: An observable sequence that contains the elements of each observed inner sequence, in sequential order.
      */
 
-    func concatMap<Source: ObservableConvertibleType>(_ selector: @escaping (Element) throws -> Source)
+    func concatMap<Source: ObservableConvertibleType>(_ selector: @escaping (Element) throws -> Source) async
         -> Observable<Source.Element>
     {
-        return ConcatMap(source: self.asObservable(), selector: selector)
+        return await ConcatMap(source: self.asObservable(), selector: selector)
     }
 }
 
@@ -321,9 +321,10 @@ private final class MergeLimited<SourceSequence: ObservableConvertibleType>: Pro
     private let source: Observable<SourceSequence>
     private let maxConcurrent: Int
 
-    init(source: Observable<SourceSequence>, maxConcurrent: Int) {
+    init(source: Observable<SourceSequence>, maxConcurrent: Int) async {
         self.source = source
         self.maxConcurrent = maxConcurrent
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
@@ -336,7 +337,7 @@ private final class MergeLimited<SourceSequence: ObservableConvertibleType>: Pro
 // MARK: Merge
 
 private final class MergeBasicSink<Source: ObservableConvertibleType, Observer: ObserverType>: MergeSink<Source, Source, Observer> where Observer.Element == Source.Element {
-    override func performMap(_ element: Source) throws -> Source {
+    override func performMap(_ element: Source) async throws -> Source {
         element
     }
 }
@@ -344,7 +345,7 @@ private final class MergeBasicSink<Source: ObservableConvertibleType, Observer: 
 // MARK: flatMap
 
 private final class FlatMapSink<SourceElement, SourceSequence: ObservableConvertibleType, Observer: ObserverType>: MergeSink<SourceElement, SourceSequence, Observer> where Observer.Element == SourceSequence.Element {
-    typealias Selector = (SourceElement) throws -> SourceSequence
+    typealias Selector = (SourceElement) async throws -> SourceSequence
 
     private let selector: Selector
 
@@ -353,8 +354,8 @@ private final class FlatMapSink<SourceElement, SourceSequence: ObservableConvert
         await super.init(observer: observer, cancel: cancel)
     }
 
-    override func performMap(_ element: SourceElement) throws -> SourceSequence {
-        try self.selector(element)
+    override func performMap(_ element: SourceElement) async throws -> SourceSequence {
+        try await self.selector(element)
     }
 }
 
@@ -374,7 +375,7 @@ private final class FlatMapFirstSink<SourceElement, SourceSequence: ObservableCo
         await super.init(observer: observer, cancel: cancel)
     }
 
-    override func performMap(_ element: SourceElement) throws -> SourceSequence {
+    override func performMap(_ element: SourceElement) async throws -> SourceSequence {
         try self.selector(element)
     }
 }
@@ -436,7 +437,7 @@ private class MergeSink<SourceElement, SourceSequence: ObservableConvertibleType
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func performMap(_ element: SourceElement) throws -> SourceSequence {
+    func performMap(_ element: SourceElement) async throws -> SourceSequence {
         rxAbstractMethod()
     }
 
@@ -448,7 +449,7 @@ private class MergeSink<SourceElement, SourceSequence: ObservableConvertibleType
             }
 
             do {
-                let value = try self.performMap(element)
+                let value = try await self.performMap(element)
                 self.activeCount += 1
                 return value
             }
@@ -524,15 +525,16 @@ private class MergeSink<SourceElement, SourceSequence: ObservableConvertibleType
 // MARK: Producers
 
 private final class FlatMap<SourceElement, SourceSequence: ObservableConvertibleType>: Producer<SourceSequence.Element> {
-    typealias Selector = (SourceElement) throws -> SourceSequence
+    typealias Selector = (SourceElement) async throws -> SourceSequence
 
     private let source: Observable<SourceElement>
 
     private let selector: Selector
 
-    init(source: Observable<SourceElement>, selector: @escaping Selector) {
+    init(source: Observable<SourceElement>, selector: @escaping Selector) async {
         self.source = source
         self.selector = selector
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
@@ -549,9 +551,10 @@ private final class FlatMapFirst<SourceElement, SourceSequence: ObservableConver
 
     private let selector: Selector
 
-    init(source: Observable<SourceElement>, selector: @escaping Selector) {
+    init(source: Observable<SourceElement>, selector: @escaping Selector) async {
         self.source = source
         self.selector = selector
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
@@ -567,9 +570,10 @@ final class ConcatMap<SourceElement, SourceSequence: ObservableConvertibleType>:
     private let source: Observable<SourceElement>
     private let selector: Selector
 
-    init(source: Observable<SourceElement>, selector: @escaping Selector) {
+    init(source: Observable<SourceElement>, selector: @escaping Selector) async {
         self.source = source
         self.selector = selector
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
@@ -582,8 +586,9 @@ final class ConcatMap<SourceElement, SourceSequence: ObservableConvertibleType>:
 final class Merge<SourceSequence: ObservableConvertibleType>: Producer<SourceSequence.Element> {
     private let source: Observable<SourceSequence>
 
-    init(source: Observable<SourceSequence>) {
+    init(source: Observable<SourceSequence>) async {
         self.source = source
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
@@ -596,8 +601,9 @@ final class Merge<SourceSequence: ObservableConvertibleType>: Producer<SourceSeq
 private final class MergeArray<Element>: Producer<Element> {
     private let sources: [Observable<Element>]
 
-    init(sources: [Observable<Element>]) {
+    init(sources: [Observable<Element>]) async {
         self.sources = sources
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

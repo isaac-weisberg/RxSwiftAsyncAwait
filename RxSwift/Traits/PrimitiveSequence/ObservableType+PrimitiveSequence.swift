@@ -15,8 +15,8 @@ extension ObservableType {
 
      - returns: An observable sequence that emits a single element when the source Observable has completed, or throws an exception if more (or none) of them are emitted.
      */
-    public func asSingle() -> Single<Element> {
-        PrimitiveSequence(raw: AsSingle(source: self.asObservable()))
+    public func asSingle() async -> Single<Element> {
+        await PrimitiveSequence(raw: AsSingle(source: self.asObservable()))
     }
     
     /**
@@ -27,8 +27,8 @@ extension ObservableType {
      
      - returns: An observable sequence that emits a single element or nil if the source observable sequence completes without emitting any items.
      */
-    public func first() -> Single<Element?> {
-        PrimitiveSequence(raw: First(source: self.asObservable()))
+    public func first() async -> Single<Element?> {
+        await PrimitiveSequence(raw: First(source: self.asObservable()))
     }
 
     /**
@@ -39,8 +39,8 @@ extension ObservableType {
 
      - returns: An observable sequence that emits a single element, completes when the source Observable has completed, or throws an exception if more of them are emitted.
      */
-    public func asMaybe() -> Maybe<Element> {
-        PrimitiveSequence(raw: AsMaybe(source: self.asObservable()))
+    public func asMaybe() async -> Maybe<Element> {
+        await PrimitiveSequence(raw: AsMaybe(source: self.asObservable()))
     }
 }
 

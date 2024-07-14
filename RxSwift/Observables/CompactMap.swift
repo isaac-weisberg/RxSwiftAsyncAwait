@@ -14,10 +14,10 @@ public extension ObservableType {
      - returns: An observable sequence whose elements are the result of filtering the transform function for each element of the source.
 
      */
-    func compactMap<Result>(_ transform: @escaping (Element) throws -> Result?)
+    func compactMap<Result>(_ transform: @escaping (Element) throws -> Result?) async
         -> Observable<Result>
     {
-        CompactMap(source: self.asObservable(), transform: transform)
+        await CompactMap(source: self.asObservable(), transform: transform)
     }
 }
 
@@ -63,9 +63,10 @@ private final class CompactMap<SourceType, ResultType>: Producer<ResultType> {
 
     private let transform: Transform
 
-    init(source: Observable<SourceType>, transform: @escaping Transform) {
+    init(source: Observable<SourceType>, transform: @escaping Transform) async {
         self.source = source
         self.transform = transform
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {

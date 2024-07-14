@@ -12,8 +12,8 @@ public extension ObservableType {
      - seealso: [materialize operator on reactivex.io](http://reactivex.io/documentation/operators/materialize-dematerialize.html)
      - returns: An observable sequence that wraps events in an Event<E>. The returned Observable never errors, but it does complete after observing all of the events of the underlying Observable.
      */
-    func materialize() -> Observable<Event<Element>> {
-        Materialize(source: self.asObservable())
+    func materialize() async -> Observable<Event<Element>> {
+        await Materialize(source: self.asObservable())
     }
 }
 
@@ -30,8 +30,9 @@ private final class MaterializeSink<Element, Observer: ObserverType>: Sink<Obser
 private final class Materialize<T>: Producer<Event<T>> {
     private let source: Observable<T>
 
-    init(source: Observable<T>) {
+    init(source: Observable<T>) async {
         self.source = source
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

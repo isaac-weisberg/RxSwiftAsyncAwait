@@ -18,10 +18,10 @@ public extension ObservableType {
      - parameter accumulator: An accumulator function to be invoked on each element.
      - returns: An observable sequence containing the accumulated values.
      */
-    func scan<A>(into seed: A, accumulator: @escaping (inout A, Element) throws -> Void)
+    func scan<A>(into seed: A, accumulator: @escaping (inout A, Element) throws -> Void) async
         -> Observable<A>
     {
-        Scan(source: self.asObservable(), seed: seed, accumulator: accumulator)
+        await Scan(source: self.asObservable(), seed: seed, accumulator: accumulator)
     }
 
     /**
@@ -35,10 +35,10 @@ public extension ObservableType {
      - parameter accumulator: An accumulator function to be invoked on each element.
      - returns: An observable sequence containing the accumulated values.
      */
-    func scan<A>(_ seed: A, accumulator: @escaping (A, Element) throws -> A)
+    func scan<A>(_ seed: A, accumulator: @escaping (A, Element) throws -> A) async
         -> Observable<A>
     {
-        return Scan(source: self.asObservable(), seed: seed) { acc, element in
+        return await Scan(source: self.asObservable(), seed: seed) { acc, element in
             let currentAcc = acc
             acc = try accumulator(currentAcc, element)
         }

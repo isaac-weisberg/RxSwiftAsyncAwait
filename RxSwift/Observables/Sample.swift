@@ -21,10 +21,10 @@ public extension ObservableType {
      - parameter defaultValue: a value to return if there are no new elements between sampler ticks
      - returns: Sampled observable sequence.
      */
-    func sample<Source: ObservableType>(_ sampler: Source, defaultValue: Element? = nil)
+    func sample<Source: ObservableType>(_ sampler: Source, defaultValue: Element? = nil) async
         -> Observable<Element>
     {
-        return Sample(source: self.asObservable(), sampler: sampler.asObservable(), defaultValue: defaultValue)
+        return await Sample(source: self.asObservable(), sampler: sampler.asObservable(), defaultValue: defaultValue)
     }
 }
 

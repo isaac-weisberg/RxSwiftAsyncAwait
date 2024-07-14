@@ -51,7 +51,7 @@ final class SchedulePeriodicRecursive<State> {
             }
 
         case .dispatchStart:
-            self.state = self.action(self.state)
+            self.state = await self.action(self.state)
             // Start work and schedule check is this last batch of work
             if await decrement(self.pendingTickCount) > 1 {
                 // This gives priority to scheduler emulation, it's not perfect, but helps

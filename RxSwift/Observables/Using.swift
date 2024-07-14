@@ -16,8 +16,8 @@ public extension ObservableType {
      - parameter observableFactory: Factory function to obtain an observable sequence that depends on the obtained resource.
      - returns: An observable sequence whose lifetime controls the lifetime of the dependent resource object.
      */
-    static func using<Resource: Disposable>(_ resourceFactory: @escaping () throws -> Resource, observableFactory: @escaping (Resource) throws -> Observable<Element>) -> Observable<Element> {
-        Using(resourceFactory: resourceFactory, observableFactory: observableFactory)
+    static func using<Resource: Disposable>(_ resourceFactory: @escaping () throws -> Resource, observableFactory: @escaping (Resource) throws -> Observable<Element>) async -> Observable<Element> {
+        await Using(resourceFactory: resourceFactory, observableFactory: observableFactory)
     }
 }
 
@@ -75,9 +75,10 @@ private final class Using<SourceType, ResourceType: Disposable>: Producer<Source
     fileprivate let resourceFactory: ResourceFactory
     fileprivate let observableFactory: ObservableFactory
     
-    init(resourceFactory: @escaping ResourceFactory, observableFactory: @escaping ObservableFactory) {
+    init(resourceFactory: @escaping ResourceFactory, observableFactory: @escaping ObservableFactory) async {
         self.resourceFactory = resourceFactory
         self.observableFactory = observableFactory
+        await super.init()
     }
     
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

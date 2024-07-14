@@ -37,9 +37,9 @@ public protocol ObservableType: ObservableConvertibleType {
 extension ObservableType {
     
     /// Default implementation of converting `ObservableType` to `Observable`.
-    public func asObservable() -> Observable<Element> {
+    public func asObservable() async -> Observable<Element> {
         // temporary workaround
         //return Observable.create(subscribe: self.subscribe)
-        Observable.create { o in await self.subscribe(o) }
+        await Observable.create { o in await self.subscribe(o) }
     }
 }

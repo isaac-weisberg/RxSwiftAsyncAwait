@@ -15,8 +15,8 @@ public extension ObservableType {
      - parameter predicate: A function to test each element for a condition.
      - returns: An observable sequence that contains the elements from the input sequence starting at the first element in the linear series that does not pass the test specified by predicate.
      */
-    func skip(while predicate: @escaping (Element) throws -> Bool) -> Observable<Element> {
-        SkipWhile(source: self.asObservable(), predicate: predicate)
+    func skip(while predicate: @escaping (Element) throws -> Bool) async -> Observable<Element> {
+        await SkipWhile(source: self.asObservable(), predicate: predicate)
     }
 
     /**
@@ -28,8 +28,8 @@ public extension ObservableType {
      - returns: An observable sequence that contains the elements from the input sequence starting at the first element in the linear series that does not pass the test specified by predicate.
      */
     @available(*, deprecated, renamed: "skip(while:)")
-    func skipWhile(_ predicate: @escaping (Element) throws -> Bool) -> Observable<Element> {
-        SkipWhile(source: self.asObservable(), predicate: predicate)
+    func skipWhile(_ predicate: @escaping (Element) throws -> Bool) async -> Observable<Element> {
+        await SkipWhile(source: self.asObservable(), predicate: predicate)
     }
 }
 
@@ -74,9 +74,10 @@ private final class SkipWhile<Element>: Producer<Element> {
     private let source: Observable<Element>
     fileprivate let predicate: Predicate
 
-    init(source: Observable<Element>, predicate: @escaping Predicate) {
+    init(source: Observable<Element>, predicate: @escaping Predicate) async {
         self.source = source
         self.predicate = predicate
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

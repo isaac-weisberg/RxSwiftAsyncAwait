@@ -24,9 +24,10 @@ final class AddRef<Element>: Producer<Element> {
     private let source: Observable<Element>
     private let refCount: RefCountDisposable
 
-    init(source: Observable<Element>, refCount: RefCountDisposable) {
+    init(source: Observable<Element>, refCount: RefCountDisposable) async {
         self.source = source
         self.refCount = refCount
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

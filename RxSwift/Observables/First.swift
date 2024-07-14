@@ -29,8 +29,9 @@ private final class FirstSink<Element, Observer: ObserverType>: Sink<Observer>, 
 final class First<Element>: Producer<Element?> {
     private let source: Observable<Element>
 
-    init(source: Observable<Element>) {
+    init(source: Observable<Element>) async {
         self.source = source
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element? {

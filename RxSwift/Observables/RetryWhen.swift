@@ -16,10 +16,10 @@ public extension ObservableType {
      - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
-    func retry<TriggerObservable: ObservableType, Error: Swift.Error>(when notificationHandler: @escaping (Observable<Error>) -> TriggerObservable)
+    func retry<TriggerObservable: ObservableType, Error: Swift.Error>(when notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async
         -> Observable<Element>
     {
-        RetryWhenSequence(sources: InfiniteSequence(repeatedValue: self.asObservable()), notificationHandler: notificationHandler)
+        await RetryWhenSequence(sources: InfiniteSequence(repeatedValue: self.asObservable()), notificationHandler: notificationHandler)
     }
 
     /**
@@ -32,10 +32,10 @@ public extension ObservableType {
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
     @available(*, deprecated, renamed: "retry(when:)")
-    func retryWhen<TriggerObservable: ObservableType, Error: Swift.Error>(_ notificationHandler: @escaping (Observable<Error>) -> TriggerObservable)
+    func retryWhen<TriggerObservable: ObservableType, Error: Swift.Error>(_ notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async
         -> Observable<Element>
     {
-        self.retry(when: notificationHandler)
+        await self.retry(when: notificationHandler)
     }
 
     /**
@@ -47,10 +47,10 @@ public extension ObservableType {
      - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
-    func retry<TriggerObservable: ObservableType>(when notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable)
+    func retry<TriggerObservable: ObservableType>(when notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable) async
         -> Observable<Element>
     {
-        RetryWhenSequence(sources: InfiniteSequence(repeatedValue: self.asObservable()), notificationHandler: notificationHandler)
+        await RetryWhenSequence(sources: InfiniteSequence(repeatedValue: self.asObservable()), notificationHandler: notificationHandler)
     }
 
     /**
@@ -63,10 +63,10 @@ public extension ObservableType {
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
     @available(*, deprecated, renamed: "retry(when:)")
-    func retryWhen<TriggerObservable: ObservableType>(_ notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable)
+    func retryWhen<TriggerObservable: ObservableType>(_ notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable) async
         -> Observable<Element>
     {
-        RetryWhenSequence(sources: InfiniteSequence(repeatedValue: self.asObservable()), notificationHandler: notificationHandler)
+        await RetryWhenSequence(sources: InfiniteSequence(repeatedValue: self.asObservable()), notificationHandler: notificationHandler)
     }
 }
 
@@ -166,7 +166,7 @@ private final class RetryWhenSequenceSink<Sequence: Swift.Sequence, Observer: Ob
         self.notifier = await PublishSubject<TriggerObservable.Element>()
         self.lock = await RecursiveLock()
         self.parent = parent
-        self.handler = parent.notificationHandler(self.errorSubject).asObservable()
+        self.handler = await parent.notificationHandler(self.errorSubject).asObservable()
         await super.init(observer: observer, cancel: cancel)
     }
 
@@ -209,9 +209,10 @@ private final class RetryWhenSequence<Sequence: Swift.Sequence, TriggerObservabl
     private let sources: Sequence
     fileprivate let notificationHandler: (Observable<Error>) -> TriggerObservable
 
-    init(sources: Sequence, notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) {
+    init(sources: Sequence, notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async {
         self.sources = sources
         self.notificationHandler = notificationHandler
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {

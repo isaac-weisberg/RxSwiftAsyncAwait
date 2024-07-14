@@ -16,10 +16,10 @@ public extension ObservableType where Element: RxAbstractInteger {
      - parameter scheduler: Scheduler to run the timer on.
      - returns: An observable sequence that produces a value after each period.
      */
-    static func interval(_ period: RxTimeInterval, scheduler: SchedulerType)
+    static func interval(_ period: RxTimeInterval, scheduler: SchedulerType) async
         -> Observable<Element>
     {
-        return Timer(
+        return await Timer(
             dueTime: period,
             period: period,
             scheduler: scheduler
@@ -38,10 +38,10 @@ public extension ObservableType where Element: RxAbstractInteger {
      - parameter scheduler: Scheduler to run timers on.
      - returns: An observable sequence that produces a value after due time has elapsed and then each period.
      */
-    static func timer(_ dueTime: RxTimeInterval, period: RxTimeInterval? = nil, scheduler: SchedulerType)
+    static func timer(_ dueTime: RxTimeInterval, period: RxTimeInterval? = nil, scheduler: SchedulerType) async
         -> Observable<Element>
     {
-        return Timer(
+        return await Timer(
             dueTime: dueTime,
             period: period,
             scheduler: scheduler

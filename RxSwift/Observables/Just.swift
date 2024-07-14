@@ -15,8 +15,8 @@ public extension ObservableType {
      - parameter element: Single element in the resulting observable sequence.
      - returns: An observable sequence containing the single specified element.
      */
-    static func just(_ element: Element) -> Observable<Element> {
-        Just(element: element)
+    static func just(_ element: Element) async -> Observable<Element> {
+        await Just(element: element)
     }
 
     /**
@@ -28,8 +28,8 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to send the single element on.
      - returns: An observable sequence containing the single specified element.
      */
-    static func just(_ element: Element, scheduler: ImmediateSchedulerType) -> Observable<Element> {
-        JustScheduled(element: element, scheduler: scheduler)
+    static func just(_ element: Element, scheduler: ImmediateSchedulerType) async -> Observable<Element> {
+        await JustScheduled(element: element, scheduler: scheduler)
     }
 }
 
@@ -60,9 +60,10 @@ private final class JustScheduled<Element>: Producer<Element> {
     fileprivate let scheduler: ImmediateSchedulerType
     fileprivate let element: Element
 
-    init(element: Element, scheduler: ImmediateSchedulerType) {
+    init(element: Element, scheduler: ImmediateSchedulerType) async {
         self.scheduler = scheduler
         self.element = element
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
@@ -75,8 +76,9 @@ private final class JustScheduled<Element>: Producer<Element> {
 private final class Just<Element>: Producer<Element> {
     private let element: Element
 
-    init(element: Element) {
+    init(element: Element) async {
         self.element = element
+        await super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {

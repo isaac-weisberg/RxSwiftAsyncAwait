@@ -21,10 +21,10 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run the throttle timers on.
      - returns: The throttled sequence.
      */
-    func throttle(_ dueTime: RxTimeInterval, latest: Bool = true, scheduler: SchedulerType)
+    func throttle(_ dueTime: RxTimeInterval, latest: Bool = true, scheduler: SchedulerType) async
         -> Observable<Element>
     {
-        Throttle(source: self.asObservable(), dueTime: dueTime, latest: latest, scheduler: scheduler)
+        await Throttle(source: self.asObservable(), dueTime: dueTime, latest: latest, scheduler: scheduler)
     }
 }
 
@@ -147,11 +147,12 @@ private final class Throttle<Element>: Producer<Element> {
     fileprivate let latest: Bool
     fileprivate let scheduler: SchedulerType
 
-    init(source: Observable<Element>, dueTime: RxTimeInterval, latest: Bool, scheduler: SchedulerType) {
+    init(source: Observable<Element>, dueTime: RxTimeInterval, latest: Bool, scheduler: SchedulerType) async {
         self.source = source
         self.dueTime = dueTime
         self.latest = latest
         self.scheduler = scheduler
+        await super.init()
     }
 
     override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
