@@ -16,9 +16,9 @@ extension InfallibleType {
      - parameter trimOutput: Should output be trimmed to max 40 characters.
      - returns: An Infallible sequence whose events are printed to standard output.
      */
-    public func debug(_ identifier: String? = nil, trimOutput: Bool = false, file: String = #file, line: UInt = #line, function: String = #function)
+    public func debug(_ identifier: String? = nil, trimOutput: Bool = false, file: String = #file, line: UInt = #line, function: String = #function) async
         -> Infallible<Element> {
-        Infallible(
+            await Infallible(
             asObservable()
             .debug(identifier, trimOutput: trimOutput, file: file, line: line, function: function)
         )

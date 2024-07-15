@@ -14,7 +14,7 @@ public extension ObservableType {
      - returns: An observable sequence whose elements are the result of filtering the transform function for each element of the source.
 
      */
-    func compactMap<Result>(_ transform: @escaping (Element) throws -> Result?) async
+    func compactMap<Result>(_ transform: @escaping (Element) async throws -> Result?) async
         -> Observable<Result>
     {
         await CompactMap(source: self.asObservable(), transform: transform)
@@ -22,7 +22,7 @@ public extension ObservableType {
 }
 
 private final class CompactMapSink<SourceType, Observer: ObserverType>: Sink<Observer>, ObserverType {
-    typealias Transform = (SourceType) throws -> ResultType?
+    typealias Transform = (SourceType) async throws -> ResultType?
 
     typealias ResultType = Observer.Element
     typealias Element = SourceType
@@ -38,7 +38,7 @@ private final class CompactMapSink<SourceType, Observer: ObserverType>: Sink<Obs
         switch event {
         case .next(let element):
             do {
-                if let mappedElement = try self.transform(element) {
+                if let mappedElement = try await self.transform(element) {
                     await self.forwardOn(.next(mappedElement))
                 }
             }
@@ -57,7 +57,7 @@ private final class CompactMapSink<SourceType, Observer: ObserverType>: Sink<Obs
 }
 
 private final class CompactMap<SourceType, ResultType>: Producer<ResultType> {
-    typealias Transform = (SourceType) throws -> ResultType?
+    typealias Transform = (SourceType) async throws -> ResultType?
 
     private let source: Observable<SourceType>
 

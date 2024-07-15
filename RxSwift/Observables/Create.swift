@@ -35,7 +35,9 @@ private final class AnonymousObservableSink<Observer: ObserverType>: Sink<Observ
 
     override init(observer: Observer, cancel: Cancelable) async {
         self.isStopped = await AtomicInt(0)
-        self.synchronizationTracker = await SynchronizationTracker()
+        #if DEBUG
+            self.synchronizationTracker = await SynchronizationTracker()
+        #endif
         await super.init(observer: observer, cancel: cancel)
     }
 
