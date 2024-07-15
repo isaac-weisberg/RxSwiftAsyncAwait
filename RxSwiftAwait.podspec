@@ -1,5 +1,5 @@
 Pod::Spec.new do |s|
-  s.name             = "RxSwift"
+  s.name             = "RxSwiftAwait"
   s.version          = "6.7.1"
   s.summary          = "RxSwift is a Swift implementation of Reactive Extensions"
   s.description      = <<-DESC
@@ -27,10 +27,10 @@ gitDiff().grep("bug").less          // sequences of swift objects
 
   s.requires_arc          = true
 
-  s.ios.deployment_target = '9.0'
-  s.osx.deployment_target = '10.10'
-  s.watchos.deployment_target = '3.0'
-  s.tvos.deployment_target = '9.0'
+  s.ios.deployment_target = '13.0'
+  # s.osx.deployment_target = '10.10'
+  # s.watchos.deployment_target = '3.0'
+  # s.tvos.deployment_target = '9.0'
 
   s.source_files          = 'RxSwift/**/*.swift', 'Platform/**/*.swift'
   s.exclude_files         = 'RxSwift/Platform/**/*.swift'
