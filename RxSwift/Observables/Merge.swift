@@ -32,7 +32,7 @@ public extension ObservableType {
      - parameter selector: A transform function to apply to element that was observed while no observable is executing in parallel.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence that was received while no other sequence was being calculated.
      */
-    func flatMapFirst<Source: ObservableConvertibleType>(_ selector: @escaping (Element) throws -> Source) async
+    func flatMapFirst<Source: ObservableConvertibleType>(_ selector: @escaping (Element) async throws -> Source) async
         -> Observable<Source.Element>
     {
         return await FlatMapFirst(source: self.asObservable(), selector: selector)
@@ -362,7 +362,7 @@ private final class FlatMapSink<SourceElement, SourceSequence: ObservableConvert
 // MARK: FlatMapFirst
 
 private final class FlatMapFirstSink<SourceElement, SourceSequence: ObservableConvertibleType, Observer: ObserverType>: MergeSink<SourceElement, SourceSequence, Observer> where Observer.Element == SourceSequence.Element {
-    typealias Selector = (SourceElement) throws -> SourceSequence
+    typealias Selector = (SourceElement) async throws -> SourceSequence
 
     private let selector: Selector
 
@@ -376,7 +376,7 @@ private final class FlatMapFirstSink<SourceElement, SourceSequence: ObservableCo
     }
 
     override func performMap(_ element: SourceElement) async throws -> SourceSequence {
-        try self.selector(element)
+        try await self.selector(element)
     }
 }
 
@@ -545,7 +545,7 @@ private final class FlatMap<SourceElement, SourceSequence: ObservableConvertible
 }
 
 private final class FlatMapFirst<SourceElement, SourceSequence: ObservableConvertibleType>: Producer<SourceSequence.Element> {
-    typealias Selector = (SourceElement) throws -> SourceSequence
+    typealias Selector = (SourceElement) async throws -> SourceSequence
 
     private let source: Observable<SourceElement>
 

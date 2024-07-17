@@ -26,14 +26,21 @@ public final actor AsyncAwaitLock {
     }
     
     public func performLocked<R>(_ work: @escaping () async -> R) async -> R {
-        let theActualTask: Task<R, Never> = Task { [self] in
-            if let latestTask {
+        let theActualTask: Task<R, Never>
+        if let latestTask {
+            theActualTask = Task {
                 _ = await latestTask.value
+                
+                let result = await work()
+                
+                return result
             }
-            
-            let result = await work()
-            
-            return result
+        } else {
+            theActualTask = Task {
+                let result = await work()
+                
+                return result
+            }
         }
         
         let voidTask = Task<Void, Never> {
@@ -48,7 +55,9 @@ public final actor AsyncAwaitLock {
         }
         latestTask = voidTask
         
-        return await theActualTask.value
+        let actualTaskValue = await theActualTask.value
+        
+        return actualTaskValue
     }
     
     public func performLockedThrowing<R>(_ work: @escaping () async throws -> R) async throws -> R {

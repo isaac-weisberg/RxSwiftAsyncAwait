@@ -27,12 +27,28 @@ public extension Disposable {
 
  In case explicit disposal is necessary, there is also `CompositeDisposable`.
  */
-public final class DisposeBag: DisposeBase {
-    private var lock: SpinLock
+
+public final class DisposeBag {
+    let actualDisposeBag: DisposeBagUnderThehood
+    
+    init() async {
+        actualDisposeBag = await DisposeBagUnderThehood()
+    }
+    
+    deinit {
+        Task { [actualDisposeBag] in
+            await actualDisposeBag.dispose()
+        }
+    }
+}
+
+
+public final class DisposeBagUnderThehood: DisposeBase {
+    fileprivate var lock: SpinLock
 
     // state
-    private var disposables = [Disposable]()
-    private var isDisposed = false
+    fileprivate var disposables = [Disposable]()
+    fileprivate var isDisposed = false
 
     /// Constructs new empty dispose bag.
     override public init() async {
@@ -60,7 +76,7 @@ public final class DisposeBag: DisposeBase {
     }
 
     /// This is internal on purpose, take a look at `CompositeDisposable` instead.
-    private func dispose() async {
+    fileprivate func dispose() async {
         let oldDisposables = await self._dispose()
 
         for disposable in oldDisposables {
@@ -78,31 +94,25 @@ public final class DisposeBag: DisposeBase {
             return disposables
         }
     }
-
-    deinit {
-        Task {
-            await self.dispose()
-        }
-    }
 }
 
 public extension DisposeBag {
     /// Convenience init allows a list of disposables to be gathered for disposal.
-    convenience init(disposing disposables: Disposable...) {
-        self.init()
-        self.disposables += disposables
+    convenience init(disposing disposables: Disposable...) async {
+        await self.init()
+        self.actualDisposeBag.disposables += disposables
     }
 
     /// Convenience init which utilizes a function builder to let you pass in a list of
     /// disposables to make a DisposeBag of.
-    convenience init(@DisposableBuilder builder: () -> [Disposable]) {
-        self.init(disposing: builder())
+    convenience init(@DisposableBuilder builder: () -> [Disposable]) async {
+        await self.init(disposing: builder())
     }
 
     /// Convenience init allows an array of disposables to be gathered for disposal.
-    convenience init(disposing disposables: [Disposable]) {
-        self.init()
-        self.disposables += disposables
+    convenience init(disposing disposables: [Disposable]) async {
+        await self.init()
+        self.actualDisposeBag.disposables += disposables
     }
 
     /// Convenience function allows a list of disposables to be gathered for disposal.
@@ -117,13 +127,13 @@ public extension DisposeBag {
 
     /// Convenience function allows an array of disposables to be gathered for disposal.
     func insert(_ disposables: [Disposable]) async {
-        await self.lock.performLocked {
-            if self.isDisposed {
+        await self.actualDisposeBag.lock.performLocked {
+            if self.actualDisposeBag.isDisposed {
                 for disposable in disposables {
                     await disposable.dispose()
                 }
             } else {
-                self.disposables += disposables
+                self.actualDisposeBag.disposables += disposables
             }
         }
     }
