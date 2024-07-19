@@ -192,7 +192,7 @@ private final class ObserveOnSerialDispatchQueueSink<Observer: ObserverType>: Ob
 
     let cancel: Cancelable
 
-    var cachedScheduleLambda: (((sink: ObserveOnSerialDispatchQueueSink<Observer>, event: Event<Element>, c: C)) async -> Disposable)!
+    var cachedScheduleLambda: ((C, (sink: ObserveOnSerialDispatchQueueSink<Observer>, event: Event<Element>)) async -> Disposable)!
 
     init(scheduler: SerialDispatchQueueScheduler, observer: Observer, cancel: Cancelable) async {
         self.scheduler = scheduler
@@ -200,10 +200,10 @@ private final class ObserveOnSerialDispatchQueueSink<Observer: ObserverType>: Ob
         self.cancel = cancel
         await super.init()
 
-        self.cachedScheduleLambda = { pair in
+        self.cachedScheduleLambda = { c, pair in
             guard await !cancel.isDisposed() else { return Disposables.create() }
 
-            await pair.sink.observer.on(pair.event, pair.c.call())
+            await pair.sink.observer.on(pair.event, c.call())
 
             if pair.event.isStopEvent {
                 await pair.sink.dispose()
@@ -214,7 +214,7 @@ private final class ObserveOnSerialDispatchQueueSink<Observer: ObserverType>: Ob
     }
 
     override func onCore(_ event: Event<Element>, _ c: C) async {
-        _ = await self.scheduler.schedule((self, event, c.call()), action: self.cachedScheduleLambda!)
+        _ = await self.scheduler.schedule((self, event), c.call(), action: self.cachedScheduleLambda!)
     }
 
     override func dispose() async {

@@ -69,8 +69,8 @@ final class CombineLatestSink2_<E1, E2, Observer: ObserverType> : CombineLatestS
         let observer1 = CombineLatestObserver(lock: self.lock, parent: self, index: 0, setLatestValue: { (e: E1) -> Void in self.latestElement1 = e }, this: subscription1)
         let observer2 = CombineLatestObserver(lock: self.lock, parent: self, index: 1, setLatestValue: { (e: E2) -> Void in self.latestElement2 = e }, this: subscription2)
 
-         await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
+         await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+         await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
 
         return await Disposables.create([
                 subscription1,
@@ -101,7 +101,7 @@ final class CombineLatest2<E1, E2, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink2_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -171,9 +171,9 @@ final class CombineLatestSink3_<E1, E2, E3, Observer: ObserverType> : CombineLat
         let observer2 = CombineLatestObserver(lock: self.lock, parent: self, index: 1, setLatestValue: { (e: E2) -> Void in self.latestElement2 = e }, this: subscription2)
         let observer3 = CombineLatestObserver(lock: self.lock, parent: self, index: 2, setLatestValue: { (e: E3) -> Void in self.latestElement3 = e }, this: subscription3)
 
-         await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
+         await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+         await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+         await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
 
         return await Disposables.create([
                 subscription1,
@@ -207,7 +207,7 @@ final class CombineLatest3<E1, E2, E3, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink3_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -280,10 +280,10 @@ final class CombineLatestSink4_<E1, E2, E3, E4, Observer: ObserverType> : Combin
         let observer3 = CombineLatestObserver(lock: self.lock, parent: self, index: 2, setLatestValue: { (e: E3) -> Void in self.latestElement3 = e }, this: subscription3)
         let observer4 = CombineLatestObserver(lock: self.lock, parent: self, index: 3, setLatestValue: { (e: E4) -> Void in self.latestElement4 = e }, this: subscription4)
 
-         await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-         await subscription4.setDisposable(self.parent.source4.subscribe(observer4))
+         await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+         await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+         await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
+         await subscription4.setDisposable(self.parent.source4.subscribe(c.call(), observer4))
 
         return await Disposables.create([
                 subscription1,
@@ -320,7 +320,7 @@ final class CombineLatest4<E1, E2, E3, E4, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink4_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -396,11 +396,11 @@ final class CombineLatestSink5_<E1, E2, E3, E4, E5, Observer: ObserverType> : Co
         let observer4 = CombineLatestObserver(lock: self.lock, parent: self, index: 3, setLatestValue: { (e: E4) -> Void in self.latestElement4 = e }, this: subscription4)
         let observer5 = CombineLatestObserver(lock: self.lock, parent: self, index: 4, setLatestValue: { (e: E5) -> Void in self.latestElement5 = e }, this: subscription5)
 
-         await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-         await subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-         await subscription5.setDisposable(self.parent.source5.subscribe(observer5))
+         await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+         await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+         await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
+         await subscription4.setDisposable(self.parent.source4.subscribe(c.call(), observer4))
+         await subscription5.setDisposable(self.parent.source5.subscribe(c.call(), observer5))
 
         return await Disposables.create([
                 subscription1,
@@ -440,7 +440,7 @@ final class CombineLatest5<E1, E2, E3, E4, E5, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink5_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -519,12 +519,12 @@ final class CombineLatestSink6_<E1, E2, E3, E4, E5, E6, Observer: ObserverType> 
         let observer5 = CombineLatestObserver(lock: self.lock, parent: self, index: 4, setLatestValue: { (e: E5) -> Void in self.latestElement5 = e }, this: subscription5)
         let observer6 = CombineLatestObserver(lock: self.lock, parent: self, index: 5, setLatestValue: { (e: E6) -> Void in self.latestElement6 = e }, this: subscription6)
 
-         await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-         await subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-         await subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-         await subscription6.setDisposable(self.parent.source6.subscribe(observer6))
+         await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+         await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+         await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
+         await subscription4.setDisposable(self.parent.source4.subscribe(c.call(), observer4))
+         await subscription5.setDisposable(self.parent.source5.subscribe(c.call(), observer5))
+         await subscription6.setDisposable(self.parent.source6.subscribe(c.call(), observer6))
 
         return await Disposables.create([
                 subscription1,
@@ -567,7 +567,7 @@ final class CombineLatest6<E1, E2, E3, E4, E5, E6, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink6_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -649,13 +649,13 @@ final class CombineLatestSink7_<E1, E2, E3, E4, E5, E6, E7, Observer: ObserverTy
         let observer6 = CombineLatestObserver(lock: self.lock, parent: self, index: 5, setLatestValue: { (e: E6) -> Void in self.latestElement6 = e }, this: subscription6)
         let observer7 = CombineLatestObserver(lock: self.lock, parent: self, index: 6, setLatestValue: { (e: E7) -> Void in self.latestElement7 = e }, this: subscription7)
 
-         await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-         await subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-         await subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-         await subscription6.setDisposable(self.parent.source6.subscribe(observer6))
-         await subscription7.setDisposable(self.parent.source7.subscribe(observer7))
+         await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+         await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+         await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
+         await subscription4.setDisposable(self.parent.source4.subscribe(c.call(), observer4))
+         await subscription5.setDisposable(self.parent.source5.subscribe(c.call(), observer5))
+         await subscription6.setDisposable(self.parent.source6.subscribe(c.call(), observer6))
+         await subscription7.setDisposable(self.parent.source7.subscribe(c.call(), observer7))
 
         return await Disposables.create([
                 subscription1,
@@ -701,7 +701,7 @@ final class CombineLatest7<E1, E2, E3, E4, E5, E6, E7, Result> : Producer<Result
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink7_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -786,14 +786,14 @@ final class CombineLatestSink8_<E1, E2, E3, E4, E5, E6, E7, E8, Observer: Observ
         let observer7 = CombineLatestObserver(lock: self.lock, parent: self, index: 6, setLatestValue: { (e: E7) -> Void in self.latestElement7 = e }, this: subscription7)
         let observer8 = CombineLatestObserver(lock: self.lock, parent: self, index: 7, setLatestValue: { (e: E8) -> Void in self.latestElement8 = e }, this: subscription8)
 
-         await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-         await subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-         await subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-         await subscription6.setDisposable(self.parent.source6.subscribe(observer6))
-         await subscription7.setDisposable(self.parent.source7.subscribe(observer7))
-         await subscription8.setDisposable(self.parent.source8.subscribe(observer8))
+         await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+         await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+         await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
+         await subscription4.setDisposable(self.parent.source4.subscribe(c.call(), observer4))
+         await subscription5.setDisposable(self.parent.source5.subscribe(c.call(), observer5))
+         await subscription6.setDisposable(self.parent.source6.subscribe(c.call(), observer6))
+         await subscription7.setDisposable(self.parent.source7.subscribe(c.call(), observer7))
+         await subscription8.setDisposable(self.parent.source8.subscribe(c.call(), observer8))
 
         return await Disposables.create([
                 subscription1,
@@ -842,7 +842,7 @@ final class CombineLatest8<E1, E2, E3, E4, E5, E6, E7, E8, Result> : Producer<Re
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink8_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }

@@ -10,7 +10,7 @@
 ///
 /// It represents a push style sequence.
 
-public typealias RxObservable<Element> = RxSwiftAwait.Observable<Element>
+public typealias RxObservable<Element> = Observable<Element>
 
 public class Observable<Element>: ObservableType {
     init() async {

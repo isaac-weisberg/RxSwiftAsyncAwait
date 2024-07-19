@@ -79,8 +79,8 @@ final class ZipSink2_<E1, E2, Observer: ObserverType> : ZipSink<Observer> {
         let observer1 = ZipObserver(lock: self.lock, parent: self, index: 0, setNextValue: { self.values1.enqueue($0) }, this: subscription1)
         let observer2 = ZipObserver(lock: self.lock, parent: self, index: 1, setNextValue: { self.values2.enqueue($0) }, this: subscription2)
 
-        await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
+        await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+        await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
 
         return await Disposables.create([
            subscription1,
@@ -111,7 +111,7 @@ final class Zip2<E1, E2, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink2_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -192,9 +192,9 @@ final class ZipSink3_<E1, E2, E3, Observer: ObserverType> : ZipSink<Observer> {
         let observer2 = ZipObserver(lock: self.lock, parent: self, index: 1, setNextValue: { self.values2.enqueue($0) }, this: subscription2)
         let observer3 = ZipObserver(lock: self.lock, parent: self, index: 2, setNextValue: { self.values3.enqueue($0) }, this: subscription3)
 
-        await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
+        await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+        await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+        await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
 
         return await Disposables.create([
            subscription1,
@@ -228,7 +228,7 @@ final class Zip3<E1, E2, E3, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink3_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -313,10 +313,10 @@ final class ZipSink4_<E1, E2, E3, E4, Observer: ObserverType> : ZipSink<Observer
         let observer3 = ZipObserver(lock: self.lock, parent: self, index: 2, setNextValue: { self.values3.enqueue($0) }, this: subscription3)
         let observer4 = ZipObserver(lock: self.lock, parent: self, index: 3, setNextValue: { self.values4.enqueue($0) }, this: subscription4)
 
-        await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-        await subscription4.setDisposable(self.parent.source4.subscribe(observer4))
+        await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+        await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+        await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
+        await subscription4.setDisposable(self.parent.source4.subscribe(c.call(), observer4))
 
         return await Disposables.create([
            subscription1,
@@ -353,7 +353,7 @@ final class Zip4<E1, E2, E3, E4, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink4_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -442,11 +442,11 @@ final class ZipSink5_<E1, E2, E3, E4, E5, Observer: ObserverType> : ZipSink<Obse
         let observer4 = ZipObserver(lock: self.lock, parent: self, index: 3, setNextValue: { self.values4.enqueue($0) }, this: subscription4)
         let observer5 = ZipObserver(lock: self.lock, parent: self, index: 4, setNextValue: { self.values5.enqueue($0) }, this: subscription5)
 
-        await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-        await subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-        await subscription5.setDisposable(self.parent.source5.subscribe(observer5))
+        await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+        await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+        await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
+        await subscription4.setDisposable(self.parent.source4.subscribe(c.call(), observer4))
+        await subscription5.setDisposable(self.parent.source5.subscribe(c.call(), observer5))
 
         return await Disposables.create([
            subscription1,
@@ -486,7 +486,7 @@ final class Zip5<E1, E2, E3, E4, E5, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink5_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -579,12 +579,12 @@ final class ZipSink6_<E1, E2, E3, E4, E5, E6, Observer: ObserverType> : ZipSink<
         let observer5 = ZipObserver(lock: self.lock, parent: self, index: 4, setNextValue: { self.values5.enqueue($0) }, this: subscription5)
         let observer6 = ZipObserver(lock: self.lock, parent: self, index: 5, setNextValue: { self.values6.enqueue($0) }, this: subscription6)
 
-        await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-        await subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-        await subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-        await subscription6.setDisposable(self.parent.source6.subscribe(observer6))
+        await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+        await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+        await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
+        await subscription4.setDisposable(self.parent.source4.subscribe(c.call(), observer4))
+        await subscription5.setDisposable(self.parent.source5.subscribe(c.call(), observer5))
+        await subscription6.setDisposable(self.parent.source6.subscribe(c.call(), observer6))
 
         return await Disposables.create([
            subscription1,
@@ -627,7 +627,7 @@ final class Zip6<E1, E2, E3, E4, E5, E6, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink6_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -724,13 +724,13 @@ final class ZipSink7_<E1, E2, E3, E4, E5, E6, E7, Observer: ObserverType> : ZipS
         let observer6 = ZipObserver(lock: self.lock, parent: self, index: 5, setNextValue: { self.values6.enqueue($0) }, this: subscription6)
         let observer7 = ZipObserver(lock: self.lock, parent: self, index: 6, setNextValue: { self.values7.enqueue($0) }, this: subscription7)
 
-        await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-        await subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-        await subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-        await subscription6.setDisposable(self.parent.source6.subscribe(observer6))
-        await subscription7.setDisposable(self.parent.source7.subscribe(observer7))
+        await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+        await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+        await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
+        await subscription4.setDisposable(self.parent.source4.subscribe(c.call(), observer4))
+        await subscription5.setDisposable(self.parent.source5.subscribe(c.call(), observer5))
+        await subscription6.setDisposable(self.parent.source6.subscribe(c.call(), observer6))
+        await subscription7.setDisposable(self.parent.source7.subscribe(c.call(), observer7))
 
         return await Disposables.create([
            subscription1,
@@ -776,7 +776,7 @@ final class Zip7<E1, E2, E3, E4, E5, E6, E7, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink7_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -877,14 +877,14 @@ final class ZipSink8_<E1, E2, E3, E4, E5, E6, E7, E8, Observer: ObserverType> : 
         let observer7 = ZipObserver(lock: self.lock, parent: self, index: 6, setNextValue: { self.values7.enqueue($0) }, this: subscription7)
         let observer8 = ZipObserver(lock: self.lock, parent: self, index: 7, setNextValue: { self.values8.enqueue($0) }, this: subscription8)
 
-        await subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        await subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        await subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-        await subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-        await subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-        await subscription6.setDisposable(self.parent.source6.subscribe(observer6))
-        await subscription7.setDisposable(self.parent.source7.subscribe(observer7))
-        await subscription8.setDisposable(self.parent.source8.subscribe(observer8))
+        await subscription1.setDisposable(self.parent.source1.subscribe(c.call(), observer1))
+        await subscription2.setDisposable(self.parent.source2.subscribe(c.call(), observer2))
+        await subscription3.setDisposable(self.parent.source3.subscribe(c.call(), observer3))
+        await subscription4.setDisposable(self.parent.source4.subscribe(c.call(), observer4))
+        await subscription5.setDisposable(self.parent.source5.subscribe(c.call(), observer5))
+        await subscription6.setDisposable(self.parent.source6.subscribe(c.call(), observer6))
+        await subscription7.setDisposable(self.parent.source7.subscribe(c.call(), observer7))
+        await subscription8.setDisposable(self.parent.source8.subscribe(c.call(), observer8))
 
         return await Disposables.create([
            subscription1,
@@ -933,7 +933,7 @@ final class Zip8<E1, E2, E3, E4, E5, E6, E7, E8, Result> : Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink8_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }

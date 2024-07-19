@@ -62,7 +62,7 @@ final class CombineLatestSink<%= i %>_<<%= (Array(1...i).map { "E\($0)" }).joine
         await super.init(arity: <%= i %>, observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
 <%= (Array(1...i).map {
 "        let subscription\($0) = await SingleAssignmentDisposable()"
 }).joined(separator: "\n") %>
@@ -72,7 +72,7 @@ final class CombineLatestSink<%= i %>_<<%= (Array(1...i).map { "E\($0)" }).joine
 }).joined(separator: "\n") %>
 
 <%= (Array(1...i).map {
-"         await subscription\($0).setDisposable(self.parent.source\($0).subscribe(observer\($0)))"
+"         await subscription\($0).setDisposable(self.parent.source\($0).subscribe(c.call(), observer\($0)))"
 }).joined(separator: "\n") %>
 
         return await Disposables.create([
@@ -103,9 +103,9 @@ final class CombineLatest<%= i %><<%= (Array(1...i).map { "E\($0)" }).joined(sep
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink<%= i %>_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
