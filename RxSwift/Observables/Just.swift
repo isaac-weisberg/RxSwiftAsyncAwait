@@ -43,12 +43,12 @@ private final class JustScheduledSink<Observer: ObserverType>: Sink<Observer> {
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let scheduler = self.parent.scheduler
-        return await scheduler.schedule(self.parent.element) { element in
-            await self.forwardOn(.next(element))
-            return await scheduler.schedule(()) { _ in
-                await self.forwardOn(.completed)
+        return await scheduler.schedule(self.parent.element, c.call()) { c, element in
+            await self.forwardOn(.next(element), c.call())
+            return await scheduler.schedule((), c.call()) { c, _ in
+                await self.forwardOn(.completed, c.call())
                 await self.dispose()
                 return Disposables.create()
             }
@@ -66,9 +66,9 @@ private final class JustScheduled<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await JustScheduledSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -81,9 +81,9 @@ private final class Just<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
-        await observer.on(.next(self.element))
-        await observer.on(.completed)
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await observer.on(.next(self.element), c.call())
+        await observer.on(.completed, c.call())
         return Disposables.create()
     }
 }

@@ -7,6 +7,7 @@
 //
 
 protocol Lock {
+    func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R
     func performLocked<R>(_ work: @escaping () async -> R) async -> R
 }
 

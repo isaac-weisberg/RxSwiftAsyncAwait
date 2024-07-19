@@ -63,18 +63,18 @@ private final class TimeoutSink<Observer: ObserverType>: Sink<Observer>, LockOwn
         await super.init(observer: observer, cancel: cancel)
     }
     
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let original = await SingleAssignmentDisposable()
         await self.subscription.setDisposable(original)
         
-        await self.createTimeoutTimer()
+        await self.createTimeoutTimer(c.call())
         
-        await original.setDisposable(self.parent.source.subscribe(self))
+        await original.setDisposable(self.parent.source.subscribe(c.call(), self))
         
         return await Disposables.create(self.subscription, self.timerD)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
             var onNextWins = false
@@ -87,8 +87,8 @@ private final class TimeoutSink<Observer: ObserverType>: Sink<Observer>, LockOwn
             }
             
             if onNextWins {
-                await self.forwardOn(event)
-                await self.createTimeoutTimer()
+                await self.forwardOn(event, c.call())
+                await self.createTimeoutTimer(c.call())
             }
         case .error, .completed:
             var onEventWins = false
@@ -101,13 +101,13 @@ private final class TimeoutSink<Observer: ObserverType>: Sink<Observer>, LockOwn
             }
             
             if onEventWins {
-                await self.forwardOn(event)
+                await self.forwardOn(event, c.call())
                 await self.dispose()
             }
         }
     }
     
-    private func createTimeoutTimer() async {
+    private func createTimeoutTimer(_ c: C) async {
         if await self.timerD.isDisposed() {
             return
         }
@@ -115,7 +115,7 @@ private final class TimeoutSink<Observer: ObserverType>: Sink<Observer>, LockOwn
         let nextTimer = await SingleAssignmentDisposable()
         await self.timerD.setDisposable(nextTimer)
         
-        let disposeSchedule = await self.parent.scheduler.scheduleRelative(self.id, dueTime: self.parent.dueTime) { state in
+        let disposeSchedule = await self.parent.scheduler.scheduleRelative(self.id, c.call(), dueTime: self.parent.dueTime) { c, state in
             
             var timerWins = false
             
@@ -125,7 +125,7 @@ private final class TimeoutSink<Observer: ObserverType>: Sink<Observer>, LockOwn
             }
             
             if timerWins {
-                await self.subscription.setDisposable(self.parent.other.subscribe(self.forwarder()))
+                await self.subscription.setDisposable(self.parent.other.subscribe(c.call(), self.forwarder()))
             }
             
             return Disposables.create()
@@ -149,9 +149,9 @@ private final class Timeout<Element>: Producer<Element> {
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await TimeoutSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

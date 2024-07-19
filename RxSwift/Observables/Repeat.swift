@@ -31,9 +31,9 @@ private final class RepeatElement<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await RepeatElementSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
 
         return (sink: sink, subscription: subscription)
     }
@@ -49,9 +49,9 @@ private final class RepeatElementSink<Observer: ObserverType>: Sink<Observer> {
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
-        return await self.parent.scheduler.scheduleRecursive(self.parent.element) { e, recurse in
-            await self.forwardOn(.next(e))
+    func run(_ c: C) async -> Disposable {
+        return await self.parent.scheduler.scheduleRecursive(self.parent.element, c.call()) { e, c, recurse in
+            await self.forwardOn(.next(e), c.call())
             await recurse(e)
         }
     }

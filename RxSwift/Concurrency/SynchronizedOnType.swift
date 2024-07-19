@@ -7,13 +7,14 @@
 //
 
 protocol SynchronizedOnType: AnyObject, ObserverType, Lock {
-    func synchronized_on(_ event: Event<Element>) async
+    func synchronized_on(_ event: Event<Element>, _ c: C) async
 }
 
 extension SynchronizedOnType {
-    func synchronizedOn(_ event: Event<Element>) async {
-        await performLocked {
-            await self.synchronized_on(event)
+    func synchronizedOn(_ event: Event<Element>, _ c: C) async {
+        await performLocked(c.call()) { c in
+            print("ASDF will synch on \(self)")
+            await self.synchronized_on(event, c.call())
         }
     }
 }

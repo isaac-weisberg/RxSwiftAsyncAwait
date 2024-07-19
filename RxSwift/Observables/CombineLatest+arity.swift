@@ -62,7 +62,7 @@ final class CombineLatestSink2_<E1, E2, Observer: ObserverType> : CombineLatestS
         await super.init(arity: 2, observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
 
@@ -99,9 +99,9 @@ final class CombineLatest2<E1, E2, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink2_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -162,7 +162,7 @@ final class CombineLatestSink3_<E1, E2, E3, Observer: ObserverType> : CombineLat
         await super.init(arity: 3, observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -205,9 +205,9 @@ final class CombineLatest3<E1, E2, E3, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink3_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -269,7 +269,7 @@ final class CombineLatestSink4_<E1, E2, E3, E4, Observer: ObserverType> : Combin
         await super.init(arity: 4, observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -318,9 +318,9 @@ final class CombineLatest4<E1, E2, E3, E4, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink4_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -383,7 +383,7 @@ final class CombineLatestSink5_<E1, E2, E3, E4, E5, Observer: ObserverType> : Co
         await super.init(arity: 5, observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -438,9 +438,9 @@ final class CombineLatest5<E1, E2, E3, E4, E5, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink5_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -504,7 +504,7 @@ final class CombineLatestSink6_<E1, E2, E3, E4, E5, E6, Observer: ObserverType> 
         await super.init(arity: 6, observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -565,9 +565,9 @@ final class CombineLatest6<E1, E2, E3, E4, E5, E6, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink6_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -632,7 +632,7 @@ final class CombineLatestSink7_<E1, E2, E3, E4, E5, E6, E7, Observer: ObserverTy
         await super.init(arity: 7, observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -699,9 +699,9 @@ final class CombineLatest7<E1, E2, E3, E4, E5, E6, E7, Result> : Producer<Result
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink7_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -767,7 +767,7 @@ final class CombineLatestSink8_<E1, E2, E3, E4, E5, E6, E7, E8, Observer: Observ
         await super.init(arity: 8, observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -840,9 +840,9 @@ final class CombineLatest8<E1, E2, E3, E4, E5, E6, E7, E8, Result> : Producer<Re
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestSink8_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

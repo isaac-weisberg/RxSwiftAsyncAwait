@@ -180,9 +180,9 @@ private final class ShareReplay1WhileConnectedConnection<Element>:
         #endif
     }
 
-    final func on(_ event: Event<Element>) async {
+    final func on(_ event: Event<Element>, _ c: C) async {
         let observers = await self.lock.performLocked { self.synchronized_on(event) }
-        await dispatch(observers, event)
+        await dispatch(observers, event, c.call())
     }
 
     private final func synchronized_on(_ event: Event<Element>) -> Observers {
@@ -202,13 +202,13 @@ private final class ShareReplay1WhileConnectedConnection<Element>:
     }
 
     final func connect() async {
-        await self.subscription.setDisposable(self.parent.source.subscribe(self))
+        await self.subscription.setDisposable(self.parent.source.subscribe(C(), self))
     }
 
-    final func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+    final func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
         await self.lock.performLocked {
             if let element = self.element {
-                await observer.on(.next(element))
+                await observer.on(.next(element), c.call())
             }
 
             let disposeKey = self.observers.insert(observer.on)
@@ -273,12 +273,12 @@ private final class ShareReplay1WhileConnected<Element>:
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
         let (connection, count, disposable) = await self.lock.performLocked {
             let connection = await self.synchronized_subscribe(observer)
             let count = connection.observers.count
 
-            let disposable = await connection.synchronized_subscribe(observer)
+            let disposable = await connection.synchronized_subscribe(c.call(), observer)
             return (connection, count, disposable)
         }
 
@@ -332,9 +332,9 @@ private final class ShareWhileConnectedConnection<Element>:
         #endif
     }
 
-    final func on(_ event: Event<Element>) async {
+    final func on(_ event: Event<Element>, _ c: C) async {
         let observers = await self.lock.performLocked { self.synchronized_on(event) }
-        await dispatch(observers, event)
+        await dispatch(observers, event, c.call())
     }
 
     private final func synchronized_on(_ event: Event<Element>) -> Observers {
@@ -353,7 +353,7 @@ private final class ShareWhileConnectedConnection<Element>:
     }
 
     final func connect() async {
-        await self.subscription.setDisposable(self.parent.source.subscribe(self))
+        await self.subscription.setDisposable(self.parent.source.subscribe(C(), self))
     }
 
     final func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
@@ -420,7 +420,7 @@ private final class ShareWhileConnected<Element>:
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
         let (connection, count, disposable) = await lock.performLocked {
             let connection = await self.synchronized_subscribe(observer)
             let count = connection.observers.count

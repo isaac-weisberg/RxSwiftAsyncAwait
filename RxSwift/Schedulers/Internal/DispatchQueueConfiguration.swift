@@ -15,7 +15,7 @@ struct DispatchQueueConfiguration {
 }
 
 extension DispatchQueueConfiguration {
-    func schedule<StateType>(_ state: StateType, action: @escaping (StateType) async -> Disposable) async -> Disposable {
+    func schedule<StateType>(_ state: StateType, _ c: C, action: @escaping (C, StateType) async -> Disposable) async -> Disposable {
         let cancel = await SingleAssignmentDisposable()
 
         self.queue.async {
@@ -24,14 +24,14 @@ extension DispatchQueueConfiguration {
                     return
                 }
 
-                await cancel.setDisposable(action(state))
+                await cancel.setDisposable(action(c.call(), state))
             }
         }
 
         return cancel
     }
 
-    func scheduleRelative<StateType>(_ state: StateType, dueTime: RxTimeInterval, action: @escaping (StateType) async -> Disposable) async -> Disposable {
+    func scheduleRelative<StateType>(_ state: StateType, _ c: C, dueTime: RxTimeInterval, action: @escaping (C, StateType) async -> Disposable) async -> Disposable {
         let deadline = DispatchTime.now() + dueTime
 
         let compositeDisposable = await CompositeDisposable()
@@ -56,7 +56,7 @@ extension DispatchQueueConfiguration {
                 if await compositeDisposable.isDisposed() {
                     return
                 }
-                _ = await compositeDisposable.insert(action(state))
+                _ = await compositeDisposable.insert(action(c.call(), state))
                 await cancelTimer.dispose()
             }
         })
@@ -67,7 +67,7 @@ extension DispatchQueueConfiguration {
         return compositeDisposable
     }
 
-    func schedulePeriodic<StateType>(_ state: StateType, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (StateType) -> StateType) async -> Disposable {
+    func schedulePeriodic<StateType>(_ state: StateType, _ c: C, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (C, StateType) -> StateType) async -> Disposable {
         let initial = DispatchTime.now() + startAfter
 
         var timerState = state

@@ -16,4 +16,10 @@ extension LockOwnerType {
             await work()
         }
     }
+    
+    func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R {
+        await lock.performLocked(c.call()) { c in
+            await work(c.call())
+        }
+    }
 }

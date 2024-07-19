@@ -57,15 +57,15 @@ private final class ObservableSequenceSink<Sequence: Swift.Sequence, Observer: O
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
-        return await self.parent.scheduler.scheduleRecursive(self.parent.elements.makeIterator()) { iterator, recurse in
+    func run(_ c: C) async -> Disposable {
+        return await self.parent.scheduler.scheduleRecursive(self.parent.elements.makeIterator(), c.call()) { iterator, c, recurse in
             var mutableIterator = iterator
             if let next = mutableIterator.next() {
-                await self.forwardOn(.next(next))
+                await self.forwardOn(.next(next), c.call())
                 await recurse(mutableIterator)
             }
             else {
-                await self.forwardOn(.completed)
+                await self.forwardOn(.completed, c.call())
                 await self.dispose()
             }
         }
@@ -82,9 +82,9 @@ private final class ObservableSequence<Sequence: Swift.Sequence>: Producer<Seque
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await ObservableSequenceSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

@@ -32,9 +32,9 @@ private final class GroupedObservableImpl<Element>: Observable<Element> {
         await super.init()
     }
 
-    override public func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+    override public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
         let release = await self.refCount.retain()
-        let subscription = await self.subject.subscribe(observer)
+        let subscription = await self.subject.subscribe(c.call(), observer)
         return await Disposables.create(release, subscription)
     }
 }
@@ -58,17 +58,17 @@ private final class GroupBySink<Key: Hashable, Element, Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         self.refCountDisposable = await RefCountDisposable(disposable: self.subscription)
 
-        await self.subscription.setDisposable(self.parent.source.subscribe(self))
+        await self.subscription.setDisposable(self.parent.source.subscribe(c.call(), self))
 
         return self.refCountDisposable
     }
 
     private func onGroupEvent(key: Key, value: Element) async {
         if let writer = self.groupedSubjectTable[key] {
-            await writer.on(.next(value))
+            await writer.on(.next(value), C())
         } else {
             let writer = await PublishSubject<Element>()
             self.groupedSubjectTable[key] = writer
@@ -78,12 +78,12 @@ private final class GroupBySink<Key: Hashable, Element, Observer: ObserverType>:
                 source: GroupedObservableImpl(subject: writer, refCount: refCountDisposable)
             )
 
-            await self.forwardOn(.next(group))
-            await writer.on(.next(value))
+            await self.forwardOn(.next(group), C())
+            await writer.on(.next(value), C())
         }
     }
 
-    final func on(_ event: Event<Element>) async {
+    final func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case let .next(value):
             do {
@@ -97,7 +97,7 @@ private final class GroupBySink<Key: Hashable, Element, Observer: ObserverType>:
             await self.error(e)
         case .completed:
             await self.forwardOnGroups(event: .completed)
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.subscription.dispose()
             await self.dispose()
         }
@@ -105,14 +105,14 @@ private final class GroupBySink<Key: Hashable, Element, Observer: ObserverType>:
 
     final func error(_ error: Swift.Error) async {
         await self.forwardOnGroups(event: .error(error))
-        await self.forwardOn(.error(error))
+        await self.forwardOn(.error(error), C())
         await self.subscription.dispose()
         await self.dispose()
     }
 
     final func forwardOnGroups(event: Event<Element>) async {
         for writer in self.groupedSubjectTable.values {
-            await writer.on(event)
+            await writer.on(event, C())
         }
     }
 }
@@ -129,8 +129,8 @@ private final class GroupBy<Key: Hashable, Element>: Producer<GroupedObservable<
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == GroupedObservable<Key, Element> {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == GroupedObservable<Key, Element> {
         let sink = await GroupBySink(parent: self, observer: observer, cancel: cancel)
-        return (sink: sink, subscription: await sink.run())
+        return (sink: sink, subscription: await sink.run(C()))
     }
 }

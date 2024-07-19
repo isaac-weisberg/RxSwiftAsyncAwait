@@ -32,7 +32,7 @@ public class OperationQueueScheduler: ImmediateSchedulerType {
      - parameter action: Action to execute recursively. The last parameter passed to the action is used to trigger recursive scheduling of the action, passing in recursive invocation state.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    public func schedule<StateType>(_ state: StateType, action: @escaping (StateType) async -> Disposable) async -> Disposable {
+    public func schedule<StateType>(_ state: StateType, _ c: C, action: @escaping (C, StateType) async -> Disposable) async -> Disposable {
         let cancel = await SingleAssignmentDisposable()
 
         let operation = BlockOperation {
@@ -41,7 +41,7 @@ public class OperationQueueScheduler: ImmediateSchedulerType {
                     return
                 }
 
-                await cancel.setDisposable(action(state))
+                await cancel.setDisposable(action(c.call(), state))
             }
         }
 

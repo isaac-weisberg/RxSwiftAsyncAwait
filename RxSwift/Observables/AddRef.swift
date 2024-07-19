@@ -9,12 +9,12 @@
 final class AddRefSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
     typealias Element = Observer.Element
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
         case .completed, .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         }
     }
@@ -30,10 +30,10 @@ final class AddRef<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let releaseDisposable = await self.refCount.retain()
         let sink = await AddRefSink(observer: observer, cancel: cancel)
-        let subscription = await Disposables.create(releaseDisposable, await self.source.subscribe(sink))
+        let subscription = await Disposables.create(releaseDisposable, await self.source.subscribe(C(), sink))
 
         return (sink: sink, subscription: subscription)
     }

@@ -47,24 +47,24 @@ private final class SamplerSink<Observer: ObserverType, SampleType>:
         self.parent = parent
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next, .completed:
             if let element = parent.element ?? self.parent.defaultValue {
                 self.parent.element = nil
-                await self.parent.forwardOn(.next(element))
+                await self.parent.forwardOn(.next(element), c.call())
             }
 
             if self.parent.atEnd {
-                await self.parent.forwardOn(.completed)
+                await self.parent.forwardOn(.completed, c.call())
                 await self.parent.dispose()
             }
         case .error(let e):
-            await self.parent.forwardOn(.error(e))
+            await self.parent.forwardOn(.error(e), c.call())
             await self.parent.dispose()
         }
     }
@@ -98,23 +98,23 @@ private final class SampleSequenceSink<Observer: ObserverType, SampleType>:
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
-        await self.sourceSubscription.setDisposable(self.parent.source.subscribe(self))
-        let samplerSubscription = await self.parent.sampler.subscribe(SamplerSink(parent: self))
+    func run(_ c: C) async -> Disposable {
+        await self.sourceSubscription.setDisposable(self.parent.source.subscribe(c.call(), self))
+        let samplerSubscription = await self.parent.sampler.subscribe(c.call(), SamplerSink(parent: self))
 
         return await Disposables.create(self.sourceSubscription, samplerSubscription)
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
             self.element = element
         case .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .completed:
             self.atEnd = true
@@ -135,9 +135,9 @@ private final class Sample<Element, SampleType>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await SampleSequenceSink(parent: self, observer: observer, cancel: cancel, defaultValue: self.defaultValue)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

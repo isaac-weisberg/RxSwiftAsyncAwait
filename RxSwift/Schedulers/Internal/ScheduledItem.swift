@@ -10,7 +10,7 @@ struct ScheduledItem<T>:
     ScheduledItemType,
     InvocableType
 {
-    typealias Action = (T) async -> Disposable
+    typealias Action = (C, T) async -> Disposable
 
     private let action: Action
     private let state: T
@@ -27,8 +27,8 @@ struct ScheduledItem<T>:
         self.state = state
     }
 
-    func invoke() async {
-        await self.disposable.setDisposable(self.action(self.state))
+    func invoke(_ c: C) async {
+        await self.disposable.setDisposable(self.action(c.call(), self.state))
     }
 
     func dispose() async {

@@ -48,21 +48,21 @@ private final class FilterSink<Observer: ObserverType>: Sink<Observer>, Observer
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
             do {
                 let satisfies = try await self.predicate(value)
                 if satisfies {
-                    await self.forwardOn(.next(value))
+                    await self.forwardOn(.next(value), c.call())
                 }
             }
             catch let e {
-                await self.forwardOn(.error(e))
+                await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
         case .completed, .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         }
     }
@@ -80,9 +80,9 @@ private final class Filter<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await FilterSink(predicate: self.predicate, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

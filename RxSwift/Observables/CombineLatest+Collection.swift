@@ -68,7 +68,7 @@ final class CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         await super.init(observer: observer, cancel: cancel)
     }
     
-    func on(_ event: Event<SourceElement>, atIndex: Int) async {
+    func on(_ c: C, _ event: Event<SourceElement>, atIndex: Int) async {
         await self.lock.performLocked {
             switch event {
             case .next(let element):
@@ -81,7 +81,7 @@ final class CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
                 if self.numberOfValues < self.parent.count {
                     let numberOfOthersThatAreDone = self.numberOfDone - (self.isDone[atIndex] ? 1 : 0)
                     if numberOfOthersThatAreDone == self.parent.count - 1 {
-                        await self.forwardOn(.completed)
+                        await self.forwardOn(.completed, c.call())
                         await self.dispose()
                     }
                     return
@@ -89,15 +89,15 @@ final class CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
                 
                 do {
                     let result = try self.parent.resultSelector(self.values.map { $0! })
-                    await self.forwardOn(.next(result))
+                    await self.forwardOn(.next(result), c.call())
                 }
                 catch {
-                    await self.forwardOn(.error(error))
+                    await self.forwardOn(.error(error), c.call())
                     await self.dispose()
                 }
                 
             case .error(let error):
-                await self.forwardOn(.error(error))
+                await self.forwardOn(.error(error), c.call())
                 await self.dispose()
 
             case .completed:
@@ -109,7 +109,7 @@ final class CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
                 self.numberOfDone += 1
                 
                 if self.numberOfDone == self.parent.count {
-                    await self.forwardOn(.completed)
+                    await self.forwardOn(.completed, c.call())
                     await self.dispose()
                 }
                 else {
@@ -119,13 +119,13 @@ final class CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         }
     }
     
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         var j = 0
         for i in self.parent.sources {
             let index = j
             let source = await i.asObservable()
-            let disposable = await source.subscribe(AnyObserver { event in
-                await self.on(event, atIndex: index)
+            let disposable = await source.subscribe(c.call(), AnyObserver { c, event in
+                await self.on(c.call(), event, atIndex: index)
             })
 
             await self.subscriptions[j].setDisposable(disposable)
@@ -136,12 +136,12 @@ final class CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         if self.parent.sources.isEmpty {
             do {
                 let result = try self.parent.resultSelector([])
-                await self.forwardOn(.next(result))
-                await self.forwardOn(.completed)
+                await self.forwardOn(.next(result), c.call())
+                await self.forwardOn(.completed, c.call())
                 await self.dispose()
             }
             catch {
-                await self.forwardOn(.error(error))
+                await self.forwardOn(.error(error), c.call())
                 await self.dispose()
             }
         }
@@ -164,9 +164,9 @@ final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: P
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

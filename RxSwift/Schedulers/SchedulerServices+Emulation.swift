@@ -12,7 +12,7 @@ enum SchedulePeriodicRecursiveCommand {
 }
 
 final class SchedulePeriodicRecursive<State> {
-    typealias RecursiveAction = (State) async -> State
+    typealias RecursiveAction = (C, State) async -> State
     typealias RecursiveScheduler = AnyRecursiveScheduler<SchedulePeriodicRecursiveCommand>
 
     private let scheduler: SchedulerType
@@ -32,30 +32,32 @@ final class SchedulePeriodicRecursive<State> {
         self.state = state
     }
 
-    func start() async -> Disposable {
-        await self.scheduler.scheduleRecursive(SchedulePeriodicRecursiveCommand.tick, dueTime: self.startAfter, action: self.tick)
+    func start(_ c: C) async -> Disposable {
+        await self.scheduler.scheduleRecursive(SchedulePeriodicRecursiveCommand.tick, c.call(), dueTime: self.startAfter, action: self.tick)
     }
 
-    func tick(_ command: SchedulePeriodicRecursiveCommand, scheduler: RecursiveScheduler) async {
+    func tick(_ command: SchedulePeriodicRecursiveCommand, _ c: C, scheduler: RecursiveScheduler) async {
         // Tries to emulate periodic scheduling as best as possible.
         // The problem that could arise is if handling periodic ticks take too long, or
         // tick interval is short.
         switch command {
         case .tick:
-            await scheduler.schedule(.tick, dueTime: self.period)
+            await scheduler.schedule(.tick, c.call(), dueTime: self.period)
 
             // The idea is that if on tick there wasn't any item enqueued, schedule to perform work immediately.
             // Else work will be scheduled after previous enqueued work completes.
             if await increment(self.pendingTickCount) == 0 {
-                await self.tick(.dispatchStart, scheduler: scheduler)
+                await self.tick(.dispatchStart, c.call(), scheduler: scheduler)
             }
 
         case .dispatchStart:
-            self.state = await self.action(self.state)
+            print("ASDF will action")
+            self.state = await self.action(c.call(), self.state)
+            print("ASDF did end action")
             // Start work and schedule check is this last batch of work
             if await decrement(self.pendingTickCount) > 1 {
                 // This gives priority to scheduler emulation, it's not perfect, but helps
-                await scheduler.schedule(SchedulePeriodicRecursiveCommand.dispatchStart)
+                await scheduler.schedule(SchedulePeriodicRecursiveCommand.dispatchStart, c.call())
             }
         }
     }

@@ -138,8 +138,8 @@ private final class CatchSinkProxy<Observer: ObserverType>: ObserverType {
         self.parent = parent
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.parent.forwardOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.parent.forwardOn(event, c.call())
 
         switch event {
         case .next:
@@ -163,20 +163,20 @@ private final class CatchSink<Observer: ObserverType>: Sink<Observer>, ObserverT
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let d1 = await SingleAssignmentDisposable()
         await self.subscription.setDisposable(d1)
-        await d1.setDisposable(self.parent.source.subscribe(self))
+        await d1.setDisposable(self.parent.source.subscribe(c.call(), self))
 
         return self.subscription
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
         case .completed:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .error(let error):
             do {
@@ -184,10 +184,10 @@ private final class CatchSink<Observer: ObserverType>: Sink<Observer>, ObserverT
 
                 let observer = CatchSinkProxy(parent: self)
 
-                await self.subscription.setDisposable(catchSequence.subscribe(observer))
+                await self.subscription.setDisposable(catchSequence.subscribe(c.call(), observer))
             }
             catch let e {
-                await self.forwardOn(.error(e))
+                await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
         }
@@ -206,9 +206,9 @@ private final class Catch<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await CatchSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -228,35 +228,35 @@ private final class CatchSequenceSink<Sequence: Swift.Sequence, Observer: Observ
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
         case .error(let error):
             self.lastError = error
-            await self.schedule(.moveNext)
+            await self.schedule(c.call(), .moveNext)
         case .completed:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         }
     }
 
-    override func subscribeToNext(_ source: Observable<Element>) async -> Disposable {
-        await source.subscribe(self)
+    override func subscribeToNext(_ c: C, _ source: Observable<Element>) async -> Disposable {
+        await source.subscribe(c.call(), self)
     }
 
-    override func done() async {
+    override func done(_ c: C) async {
         if let lastError = self.lastError {
-            await self.forwardOn(.error(lastError))
+            await self.forwardOn(.error(lastError), c.call())
         }
         else {
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
         }
 
         await self.dispose()
     }
 
-    override func extract(_ observable: Observable<Element>) -> SequenceGenerator? {
+    override func extract(_ c: C, _ observable: Observable<Element>) -> SequenceGenerator? {
         if let onError = observable as? CatchSequence<Sequence> {
             return (onError.sources.makeIterator(), nil)
         }
@@ -276,9 +276,9 @@ private final class CatchSequence<Sequence: Swift.Sequence>: Producer<Sequence.E
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await CatchSequenceSink<Sequence, Observer>(observer: observer, cancel: cancel)
-        let subscription = await sink.run((self.sources.makeIterator(), nil))
+        let subscription = await sink.run(c.call(), (self.sources.makeIterator(), nil))
         return (sink: sink, subscription: subscription)
     }
 }

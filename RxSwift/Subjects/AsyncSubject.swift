@@ -60,20 +60,20 @@ public final class AsyncSubject<Element>:
     /// Notifies all subscribed observers about next event.
     ///
     /// - parameter event: Event to send to the observers.
-    public func on(_ event: Event<Element>) async {
+    public func on(_ event: Event<Element>, _ c: C) async {
         #if DEBUG
             await self.synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
         await scope {
-            let (observers, event) = await self.synchronized_on(event)
+            let (observers, event) = await self.synchronized_on(event, c.call())
             switch event {
             case .next:
-                await dispatch(observers, event)
-                await dispatch(observers, .completed)
+                await dispatch(observers, event, c.call())
+                await dispatch(observers, .completed, c.call())
             case .completed:
-                await dispatch(observers, event)
+                await dispatch(observers, event, c.call())
             case .error:
-                await dispatch(observers, event)
+                await dispatch(observers, event, c.call())
             }
         }
         #if DEBUG
@@ -81,7 +81,7 @@ public final class AsyncSubject<Element>:
         #endif
     }
 
-    func synchronized_on(_ event: Event<Element>) async -> (Observers, Event<Element>) {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async -> (Observers, Event<Element>) {
         await self.lock.performLocked {
             if self.isStopped {
                 return (Observers(), .completed)
@@ -119,20 +119,20 @@ public final class AsyncSubject<Element>:
     ///
     /// - parameter observer: Observer to subscribe to the subject.
     /// - returns: Disposable object that can be used to unsubscribe the observer from the subject.
-    override public func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
-        await self.lock.performLocked { await self.synchronized_subscribe(observer) }
+    override public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await self.lock.performLocked { await self.synchronized_subscribe(c.call(), observer) }
     }
 
-    func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+    func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
         if let stoppedEvent = self.stoppedEvent {
             switch stoppedEvent {
             case .next:
-                await observer.on(stoppedEvent)
-                await observer.on(.completed)
+                await observer.on(stoppedEvent, c.call())
+                await observer.on(.completed, c.call())
             case .completed:
-                await observer.on(stoppedEvent)
+                await observer.on(stoppedEvent, c.call())
             case .error:
-                await observer.on(stoppedEvent)
+                await observer.on(stoppedEvent, c.call())
             }
             return Disposables.create()
         }

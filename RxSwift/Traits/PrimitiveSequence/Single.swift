@@ -28,14 +28,14 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
     static func create(subscribe: @escaping (@escaping SingleObserver) async -> Disposable) async -> Single<Element> {
-        let source = await Observable<Element>.create { observer in
+        let source = await Observable<Element>.create { c, observer in
             await subscribe { event in
                 switch event {
                 case .success(let element):
-                    await observer.on(.next(element))
-                    await observer.on(.completed)
+                    await observer.on(.next(element), c.call())
+                    await observer.on(.completed, c.call())
                 case .failure(let error):
-                    await observer.on(.error(error))
+                    await observer.on(.error(error), c.call())
                 }
             }
         }
@@ -48,9 +48,9 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
 
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
-    func subscribe(_ observer: @escaping (SingleEvent<Element>) async -> Void) async -> Disposable {
+    func subscribe(_ c: C, _ observer: @escaping (SingleEvent<Element>) async -> Void) async -> Disposable {
         var stopped = false
-        return await self.primitiveSequence.asObservable().subscribe { event in
+        return await self.primitiveSequence.asObservable().subscribe(c.call()) { c, event in
             if stopped { return }
             stopped = true
 
@@ -64,23 +64,23 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
             }
         }
     }
-
-    /**
-     Subscribes a success handler, and an error handler for this sequence.
-
-     - parameter onSuccess: Action to invoke for each element in the observable sequence.
-     - parameter onError: Action to invoke upon errored termination of the observable sequence.
-     - parameter onDisposed: Action to invoke upon any type of termination of sequence (if the sequence has
-     gracefully completed, errored, or if the generation is canceled by disposing subscription).
-     - returns: Subscription object used to unsubscribe from the observable sequence.
-     */
-    @available(*, deprecated, renamed: "subscribe(onSuccess:onFailure:onDisposed:)")
-    func subscribe(onSuccess: ((Element) -> Void)? = nil,
-                   onError: @escaping ((Swift.Error) -> Void),
-                   onDisposed: (() -> Void)? = nil) async -> Disposable
-    {
-        await self.subscribe(onSuccess: onSuccess, onFailure: onError, onDisposed: onDisposed)
-    }
+//
+//    /**
+//     Subscribes a success handler, and an error handler for this sequence.
+//
+//     - parameter onSuccess: Action to invoke for each element in the observable sequence.
+//     - parameter onError: Action to invoke upon errored termination of the observable sequence.
+//     - parameter onDisposed: Action to invoke upon any type of termination of sequence (if the sequence has
+//     gracefully completed, errored, or if the generation is canceled by disposing subscription).
+//     - returns: Subscription object used to unsubscribe from the observable sequence.
+//     */
+//    @available(*, deprecated, renamed: "subscribe(onSuccess:onFailure:onDisposed:)")
+//    func subscribe(onSuccess: ((Element) -> Void)? = nil,
+//                   onError: @escaping ((Swift.Error) -> Void),
+//                   onDisposed: (() -> Void)? = nil) async -> Disposable
+//    {
+//        await self.subscribe(onSuccess: onSuccess, onFailure: onError, onDisposed: onDisposed)
+//    }
 
     /**
      Subscribes a success handler, and an error handler for this sequence.
@@ -97,12 +97,14 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
     func subscribe<Object: AnyObject>(
+        _ c: C,
         with object: Object,
         onSuccess: ((Object, Element) -> Void)? = nil,
         onFailure: ((Object, Swift.Error) -> Void)? = nil,
         onDisposed: ((Object) -> Void)? = nil
     ) async -> Disposable {
         await self.subscribe(
+            c.call(),
             onSuccess: { [weak object] in
                 guard let object = object else { return }
                 onSuccess?(object, $0)
@@ -127,7 +129,9 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe(onSuccess: ((Element) -> Void)? = nil,
+    func subscribe(
+        _ c: C,
+        onSuccess: ((Element) -> Void)? = nil,
                    onFailure: ((Swift.Error) -> Void)? = nil,
                    onDisposed: (() -> Void)? = nil) async -> Disposable
     {
@@ -160,7 +164,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
         }
 
         return await Disposables.create(
-            self.primitiveSequence.subscribe(observer),
+            self.primitiveSequence.subscribe(c.call(), observer),
             disposable
         )
     }

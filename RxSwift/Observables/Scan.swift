@@ -58,22 +58,22 @@ private final class ScanSink<Element, Observer: ObserverType>: Sink<Observer>, O
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
             do {
                 try await self.parent.accumulator(&self.accumulate, element)
-                await self.forwardOn(.next(self.accumulate))
+                await self.forwardOn(.next(self.accumulate), c.call())
             }
             catch {
-                await self.forwardOn(.error(error))
+                await self.forwardOn(.error(error), c.call())
                 await self.dispose()
             }
         case .error(let error):
-            await self.forwardOn(.error(error))
+            await self.forwardOn(.error(error), c.call())
             await self.dispose()
         case .completed:
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         }
     }
@@ -93,9 +93,9 @@ private final class Scan<Element, Accumulate>: Producer<Accumulate> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Accumulate {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Accumulate {
         let sink = await ScanSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

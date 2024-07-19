@@ -39,6 +39,12 @@ final class AsyncLock<I: InvocableType>:
             await work()
         }
     }
+    
+    func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R {
+        await self._lock.performLocked(c.call()) { c in
+            await work(c.call())
+        }
+    }
 
     private func enqueue(_ action: I) async -> I? {
         return await self.performLocked {
@@ -69,11 +75,11 @@ final class AsyncLock<I: InvocableType>:
         }
     }
 
-    func invoke(_ action: I) async {
+    func invoke(_ c: C, _ action: I) async {
         let firstEnqueuedAction = await self.enqueue(action)
 
         if let firstEnqueuedAction = firstEnqueuedAction {
-            await firstEnqueuedAction.invoke()
+            await firstEnqueuedAction.invoke(c.call())
         }
         else {
             // action is enqueued, it's somebody else's concern now
@@ -84,7 +90,7 @@ final class AsyncLock<I: InvocableType>:
             let nextAction = await self.dequeue()
 
             if let nextAction = nextAction {
-                await nextAction.invoke()
+                await nextAction.invoke(c.call())
             }
             else {
                 return

@@ -42,9 +42,9 @@ public final class ConcurrentMainScheduler: SchedulerType {
      - parameter action: Action to be executed.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    public func schedule<StateType>(_ state: StateType, action: @escaping (StateType) async -> Disposable) async -> Disposable {
+    public func schedule<StateType>(_ state: StateType, _ c: C, action: @escaping (C, StateType) async -> Disposable) async -> Disposable {
         if DispatchQueue.isMain {
-            return await action(state)
+            return await action(c.call(), state)
         }
 
         let cancel = await SingleAssignmentDisposable()
@@ -55,7 +55,7 @@ public final class ConcurrentMainScheduler: SchedulerType {
                     return
                 }
 
-                await cancel.setDisposable(action(state))
+                await cancel.setDisposable(action(c.call(), state))
             }
         }
 
@@ -70,8 +70,8 @@ public final class ConcurrentMainScheduler: SchedulerType {
      - parameter action: Action to be executed.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    public final func scheduleRelative<StateType>(_ state: StateType, dueTime: RxTimeInterval, action: @escaping (StateType) async -> Disposable) async -> Disposable {
-        await self.mainScheduler.scheduleRelative(state, dueTime: dueTime, action: action)
+    public final func scheduleRelative<StateType>(_ state: StateType, _ c: C, dueTime: RxTimeInterval, action: @escaping (C, StateType) async -> Disposable) async -> Disposable {
+        await self.mainScheduler.scheduleRelative(state, c.call(), dueTime: dueTime, action: action)
     }
 
     /**
@@ -83,7 +83,7 @@ public final class ConcurrentMainScheduler: SchedulerType {
      - parameter action: Action to be executed.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    public func schedulePeriodic<StateType>(_ state: StateType, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (StateType) async -> StateType) async -> Disposable {
-        await self.mainScheduler.schedulePeriodic(state, startAfter: startAfter, period: period, action: action)
+    public func schedulePeriodic<StateType>(_ state: StateType, _ c: C, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (C, StateType) async -> StateType) async -> Disposable {
+        await self.mainScheduler.schedulePeriodic(state, c.call(), startAfter: startAfter, period: period, action: action)
     }
 }

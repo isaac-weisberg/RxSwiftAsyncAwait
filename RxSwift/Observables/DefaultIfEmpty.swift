@@ -30,19 +30,19 @@ private final class DefaultIfEmptySink<Observer: ObserverType>: Sink<Observer>, 
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
             self.isEmpty = false
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
         case .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .completed:
             if self.isEmpty {
-                await self.forwardOn(.next(self.default))
+                await self.forwardOn(.next(self.default), c.call())
             }
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         }
     }
@@ -58,9 +58,9 @@ private final class DefaultIfEmpty<SourceType>: Producer<SourceType> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceType {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceType {
         let sink = await DefaultIfEmptySink(default: self.default, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

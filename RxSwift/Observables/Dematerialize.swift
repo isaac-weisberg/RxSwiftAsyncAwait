@@ -18,18 +18,18 @@ public extension ObservableType where Element: EventConvertible {
 }
 
 private final class DematerializeSink<T: EventConvertible, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == T.Element {
-    fileprivate func on(_ event: Event<T>) async {
+    fileprivate func on(_ event: Event<T>, _ c: C) async {
         switch event {
         case .next(let element):
-            await self.forwardOn(element.event)
+            await self.forwardOn(element.event, c.call())
             if element.event.isStopEvent {
                 await self.dispose()
             }
         case .completed:
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         case .error(let error):
-            await self.forwardOn(.error(error))
+            await self.forwardOn(.error(error), c.call())
             await self.dispose()
         }
     }
@@ -43,9 +43,9 @@ private final class Dematerialize<T: EventConvertible>: Producer<T.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == T.Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == T.Element {
         let sink = await DematerializeSink<T, Observer>(observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

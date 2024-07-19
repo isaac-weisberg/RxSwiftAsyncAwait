@@ -58,18 +58,18 @@ public final class PublishSubject<Element>:
     /// Notifies all subscribed observers about next event.
     ///
     /// - parameter event: Event to send to the observers.
-    public func on(_ event: Event<Element>) async {
+    public func on(_ event: Event<Element>, _ c: C) async {
         #if DEBUG
             await self.synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
-        await dispatch(self.synchronized_on(event), event)
+        await dispatch(self.synchronized_on(event, c.call()), event, c.call())
 
         #if DEBUG
             await self.synchronizationTracker.unregister()
         #endif
     }
 
-    func synchronized_on(_ event: Event<Element>) async -> Observers {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async -> Observers {
         await self.lock.performLocked {
             switch event {
             case .next:
@@ -99,18 +99,18 @@ public final class PublishSubject<Element>:
      - parameter observer: Observer to subscribe to the subject.
      - returns: Disposable object that can be used to unsubscribe the observer from the subject.
      */
-    override public func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
-        await self.lock.performLocked { await self.synchronized_subscribe(observer) }
+    override public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await self.lock.performLocked { await self.synchronized_subscribe(c.call(), observer) }
     }
 
-    func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+    func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
         if let stoppedEvent = self.stoppedEvent {
-            await observer.on(stoppedEvent)
+            await observer.on(stoppedEvent, c.call())
             return Disposables.create()
         }
 
         if await self.isDisposed() {
-            await observer.on(.error(RxError.disposed(object: self)))
+            await observer.on(.error(RxError.disposed(object: self)), c.call())
             return Disposables.create()
         }
 

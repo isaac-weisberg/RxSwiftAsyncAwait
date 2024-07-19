@@ -11,7 +11,7 @@
 /// Forwards operations to an arbitrary underlying observer with the same `Element` type, hiding the specifics of the underlying observer type.
 public struct AnyObserver<Element>: ObserverType {
     /// Anonymous event handler type.
-    public typealias EventHandler = (Event<Element>) async -> Void
+    public typealias EventHandler = (C, Event<Element>) async -> Void
 
     private let observer: EventHandler
 
@@ -26,14 +26,16 @@ public struct AnyObserver<Element>: ObserverType {
     ///
     /// - parameter observer: Observer that receives sequence events.
     public init<Observer: ObserverType>(_ observer: Observer) where Observer.Element == Element {
-        self.observer = observer.on
+        self.observer = { c, e in
+            await observer.on(e, c)
+        }
     }
 
     /// Send `event` to this observer.
     ///
     /// - parameter event: Event instance.
-    public func on(_ event: Event<Element>) async {
-        await self.observer(event)
+    public func on(_ event: Event<Element>, _ c: C) async {
+        await self.observer(c.call(), event)
     }
 
     /// Erases type of observer and returns canonical observer.
@@ -46,7 +48,7 @@ public struct AnyObserver<Element>: ObserverType {
 
 extension AnyObserver {
     /// Collection of `AnyObserver`s
-    typealias s = Bag<(Event<Element>) async -> Void>
+    typealias s = Bag<(Event<Element>, C) async -> Void>
 }
 
 public extension ObserverType {
@@ -62,8 +64,8 @@ public extension ObserverType {
     ///
     /// - returns: observer that transforms events.
     func mapObserver<Result>(_ transform: @escaping (Result) throws -> Element) -> AnyObserver<Result> {
-        AnyObserver { e in
-            await self.on(e.map(transform))
+        AnyObserver { c, e in
+            await self.on(e.map(transform), c.call())
         }
     }
 }

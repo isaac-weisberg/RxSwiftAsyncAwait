@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-private let disposeScheduledDisposable: (ScheduledDisposable) async -> Disposable = { sd in
+private let disposeScheduledDisposable: (C, ScheduledDisposable) async -> Disposable = { c, sd in
     await sd.disposeInner()
     return Disposables.create()
 }
@@ -39,7 +39,7 @@ public final class ScheduledDisposable: Cancelable {
 
     /// Disposes the wrapped disposable on the provided scheduler.
     public func dispose() async {
-        _ = await self.scheduler.schedule(self, action: disposeScheduledDisposable)
+        _ = await self.scheduler.schedule(self, C(), action: disposeScheduledDisposable)
     }
 
     func disposeInner() async {

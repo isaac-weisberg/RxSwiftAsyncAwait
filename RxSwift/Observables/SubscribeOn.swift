@@ -62,22 +62,22 @@ private final class SubscribeOnSink<Ob: ObservableType, Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.forwardOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.forwardOn(event, c.call())
 
         if event.isStopEvent {
             await self.dispose()
         }
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let disposeEverything = await SerialDisposable()
         let cancelSchedule = await SingleAssignmentDisposable()
 
         await disposeEverything.setDisposable(cancelSchedule)
 
-        let disposeSchedule = await self.parent.scheduler.schedule(()) { _ -> Disposable in
-            let subscription = await self.parent.source.subscribe(self)
+        let disposeSchedule = await self.parent.scheduler.schedule((), c.call()) { c, _ -> Disposable in
+            let subscription = await self.parent.source.subscribe(c.call(), self)
             await disposeEverything.setDisposable(ScheduledDisposable(scheduler: self.parent.scheduler, disposable: subscription))
             return Disposables.create()
         }
@@ -98,9 +98,9 @@ private final class SubscribeOn<Ob: ObservableType>: Producer<Ob.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Ob.Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Ob.Element {
         let sink = await SubscribeOnSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

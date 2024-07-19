@@ -17,7 +17,8 @@
             numberOfSerialDispatchObservables = await AtomicInt(0)
         }
 
-        /// Counts internal Rx resource allocations (Observables, Observers, Disposables, etc.). This provides a simple way to detect leaks during development.
+        /// Counts internal Rx resource allocations (Observables, Observers, Disposables, etc.). This provides a simple
+        /// way to detect leaks during development.
         public static func total() async -> Int32 {
             await load(resourceCount)
         }
@@ -38,12 +39,14 @@
     }
 #endif
 
-/// Swift does not implement abstract methods. This method is used as a runtime check to ensure that methods which intended to be abstract (i.e., they should be implemented in subclasses) are not called directly on the superclass.
+/// Swift does not implement abstract methods. This method is used as a runtime check to ensure that methods which
+/// intended to be abstract (i.e., they should be implemented in subclasses) are not called directly on the superclass.
 func rxAbstractMethod(file: StaticString = #file, line: UInt = #line) -> Swift.Never {
     rxFatalError("Abstract method", file: file, line: line)
 }
 
-func rxFatalError(_ lastMessage: @autoclosure () -> String, file: StaticString = #file, line: UInt = #line) -> Swift.Never {
+func rxFatalError(_ lastMessage: @autoclosure () -> String, file: StaticString = #file, line: UInt = #line) -> Swift
+    .Never {
     fatalError(lastMessage(), file: file, line: line)
 }
 
@@ -78,11 +81,13 @@ func decrementChecked(_ i: inout Int) throws -> Int {
         private let lock: RecursiveLock
 
         public enum SynchronizationErrorMessages: String {
-            case variable = "Two different threads are trying to assign the same `Variable.value` unsynchronized.\n    This is undefined behavior because the end result (variable value) is nondeterministic and depends on the \n    operating system thread scheduler. This will cause random behavior of your program.\n"
-            case `default` = "Two different unsynchronized threads are trying to send some event simultaneously.\n    This is undefined behavior because the ordering of the effects caused by these events is nondeterministic and depends on the \n    operating system thread scheduler. This will result in a random behavior of your program.\n"
+            case variable =
+                "Two different threads are trying to assign the same `Variable.value` unsynchronized.\n    This is undefined behavior because the end result (variable value) is nondeterministic and depends on the \n    operating system thread scheduler. This will cause random behavior of your program.\n"
+            case `default` =
+                "Two different unsynchronized threads are trying to send some event simultaneously.\n    This is undefined behavior because the ordering of the effects caused by these events is nondeterministic and depends on the \n    operating system thread scheduler. This will result in a random behavior of your program.\n"
         }
 
-        private var threads = [UnsafeMutableRawPointer: Int]()
+        private var entrances = 0
 
         private func synchronizationError(_ message: String) {
             #if FATAL_SYNCHRONIZATION
@@ -97,9 +102,8 @@ func decrementChecked(_ i: inout Int) throws -> Int {
         }
 
         func register(synchronizationErrorMessage: SynchronizationErrorMessages) async {
-            await lock.performLocked {
-                let pointer = Unmanaged.passUnretained(Thread.current).toOpaque()
-                let count = (self.threads[pointer] ?? 0) + 1
+            await lock.performLocked { [self] in
+                let count = entrances + 1
 
                 if count > 1 {
                     self.synchronizationError(
@@ -115,30 +119,13 @@ func decrementChecked(_ i: inout Int) throws -> Int {
                     )
                 }
 
-                self.threads[pointer] = count
-
-                if self.threads.count > 1 {
-                    self.synchronizationError(
-                        "⚠️ Synchronization anomaly was detected.\n" +
-                            "  > Debugging: To debug this issue you can set a breakpoint in \(#file):\(#line) and observe the call stack.\n" +
-                            "  > Problem: This behavior is breaking the observable sequence grammar. `next (error | completed)?`\n" +
-                            "    This behavior breaks the grammar because there is overlapping between sequence events.\n" +
-                            "    Observable sequence is trying to send an event before sending of previous event has finished.\n" +
-                            "  > Interpretation: " + synchronizationErrorMessage.rawValue +
-                            "  > Remedy: If this is the expected behavior this message can be suppressed by adding `.observe(on:MainScheduler.asyncInstance)`\n" +
-                            "    or by synchronizing sequence events in some other way.\n"
-                    )
-                }
+                entrances = count
             }
         }
 
         func unregister() async {
-            await lock.performLocked {
-                let pointer = Unmanaged.passUnretained(Thread.current).toOpaque()
-                self.threads[pointer] = (self.threads[pointer] ?? 1) - 1
-                if self.threads[pointer] == 0 {
-                    self.threads[pointer] = nil
-                }
+            await lock.performLocked { [self] in
+                entrances = entrances - 1
             }
         }
     }
@@ -148,5 +135,5 @@ func decrementChecked(_ i: inout Int) throws -> Int {
 /// RxSwift global hooks
 public enum Hooks {
     // Should capture call stack
-    public static var recordCallStackOnError: Bool = false
+    public static var recordCallStackOnError = false
 }

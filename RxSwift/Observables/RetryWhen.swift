@@ -83,16 +83,16 @@ private final class RetryTriggerSink<Sequence: Swift.Sequence, Observer: Observe
         self.parent = parent
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
             self.parent.parent.lastError = nil
-            await self.parent.parent.schedule(.moveNext)
+            await self.parent.parent.schedule(c.call(), .moveNext)
         case .error(let e):
-            await self.parent.parent.forwardOn(.error(e))
+            await self.parent.parent.forwardOn(.error(e), c.call())
             await self.parent.parent.dispose()
         case .completed:
-            await self.parent.parent.forwardOn(.completed)
+            await self.parent.parent.forwardOn(.completed, c.call())
             await self.parent.parent.dispose()
         }
     }
@@ -115,10 +115,10 @@ private final class RetryWhenSequenceSinkIter<Sequence: Swift.Sequence, Observer
         self.subscription = subscription
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            await self.parent.forwardOn(event)
+            await self.parent.forwardOn(event, c.call())
         case .error(let error):
             self.parent.lastError = error
 
@@ -126,16 +126,16 @@ private final class RetryWhenSequenceSinkIter<Sequence: Swift.Sequence, Observer
                 // dispose current subscription
                 await self.subscription.dispose()
 
-                let errorHandlerSubscription = await self.parent.notifier.subscribe(RetryTriggerSink(parent: self))
+                let errorHandlerSubscription = await self.parent.notifier.subscribe(c.call(), RetryTriggerSink(parent: self))
                 await self.errorHandlerSubscription.setDisposable(errorHandlerSubscription)
-                await self.parent.errorSubject.on(.next(failedWith))
+                await self.parent.errorSubject.on(.next(failedWith), c.call())
             }
             else {
-                await self.parent.forwardOn(.error(error))
+                await self.parent.forwardOn(.error(error), c.call())
                 await self.parent.dispose()
             }
         case .completed:
-            await self.parent.forwardOn(event)
+            await self.parent.forwardOn(event, c.call())
             await self.parent.dispose()
         }
     }
@@ -170,35 +170,35 @@ private final class RetryWhenSequenceSink<Sequence: Swift.Sequence, Observer: Ob
         await super.init(observer: observer, cancel: cancel)
     }
 
-    override func done() async {
+    override func done(_ c: C) async {
         if let lastError = self.lastError {
-            await self.forwardOn(.error(lastError))
+            await self.forwardOn(.error(lastError), c.call())
             self.lastError = nil
         }
         else {
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
         }
 
         await self.dispose()
     }
 
-    override func extract(_ observable: Observable<Element>) -> SequenceGenerator? {
+    override func extract(_ c: C, _ observable: Observable<Element>) -> SequenceGenerator? {
         // It is important to always return `nil` here because there are side effects in the `run` method
         // that are dependent on particular `retryWhen` operator so single operator stack can't be reused in this
         // case.
         return nil
     }
 
-    override func subscribeToNext(_ source: Observable<Element>) async -> Disposable {
+    override func subscribeToNext(_ c: C, _ source: Observable<Element>) async -> Disposable {
         let subscription = await SingleAssignmentDisposable()
         let iter = await RetryWhenSequenceSinkIter(parent: self, subscription: subscription)
-        await subscription.setDisposable(source.subscribe(iter))
+        await subscription.setDisposable(source.subscribe(c.call(), iter))
         return iter
     }
 
-    override func run(_ sources: SequenceGenerator) async -> Disposable {
-        let triggerSubscription = await self.handler.subscribe(self.notifier.asObserver())
-        let superSubscription = await super.run(sources)
+    override func run(_ c: C, _ sources: SequenceGenerator) async -> Disposable {
+        let triggerSubscription = await self.handler.subscribe(c.call(), self.notifier.asObserver())
+        let superSubscription = await super.run(c.call(), sources)
         return await Disposables.create(superSubscription, triggerSubscription)
     }
 }
@@ -215,9 +215,9 @@ private final class RetryWhenSequence<Sequence: Swift.Sequence, TriggerObservabl
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await RetryWhenSequenceSink<Sequence, Observer, TriggerObservable, Error>(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run((self.sources.makeIterator(), nil))
+        let subscription = await sink.run(c.call(), (self.sources.makeIterator(), nil))
         return (sink: sink, subscription: subscription)
     }
 }

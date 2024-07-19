@@ -35,13 +35,13 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
     static func create(subscribe: @escaping (@escaping CompletableObserver) async -> Disposable) async -> PrimitiveSequence<Trait, Element> {
-        let source = await Observable<Element>.create { observer in
+        let source = await Observable<Element>.create { c, observer in
             await subscribe { event in
                 switch event {
                 case .error(let error):
-                    await observer.on(.error(error))
+                    await observer.on(.error(error), c.call())
                 case .completed:
-                    await observer.on(.completed)
+                    await observer.on(.completed, c.call())
                 }
             }
         }
@@ -54,9 +54,9 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
 
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
-    func subscribe(_ observer: @escaping (CompletableEvent) async -> Void) async -> Disposable {
+    func subscribe(_ c: C, _ observer: @escaping (CompletableEvent) async -> Void) async -> Disposable {
         var stopped = false
-        return await self.primitiveSequence.asObservable().subscribe { event in
+        return await self.primitiveSequence.asObservable().subscribe(c.call()) { c, event in
             if stopped { return }
             stopped = true
 
@@ -86,12 +86,14 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
     func subscribe<Object: AnyObject>(
+        _ c: C,
         with object: Object,
         onCompleted: ((Object) -> Void)? = nil,
         onError: ((Object, Swift.Error) -> Void)? = nil,
         onDisposed: ((Object) -> Void)? = nil
     ) async -> Disposable {
         await self.subscribe(
+            c.call(),
             onCompleted: { [weak object] in
                 guard let object = object else { return }
                 onCompleted?(object)
@@ -114,7 +116,9 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe(onCompleted: (() -> Void)? = nil,
+    func subscribe(
+        _ c: C,
+        onCompleted: (() -> Void)? = nil,
                    onError: ((Swift.Error) -> Void)? = nil,
                    onDisposed: (() -> Void)? = nil) async -> Disposable
     {
@@ -147,7 +151,7 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
         }
 
         return await Disposables.create(
-            self.primitiveSequence.subscribe(observer),
+            self.primitiveSequence.subscribe(c.call(), observer),
             disposable
         )
     }

@@ -11,19 +11,19 @@ class Producer<Element>: Observable<Element> {
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
         if !CurrentThreadScheduler.isScheduleRequired {
             // The returned disposable needs to release all references once it was disposed.
             let disposer = await SinkDisposer()
-            let sinkAndSubscription = await self.run(observer, cancel: disposer)
+            let sinkAndSubscription = await self.run(c.call(), observer, cancel: disposer)
             await disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
 
             return disposer
         }
         else {
-            return await CurrentThreadScheduler.instance.schedule(()) { _ in
+            return await CurrentThreadScheduler.instance.schedule((), c.call()) { c, _ in
                 let disposer = await SinkDisposer()
-                let sinkAndSubscription = await self.run(observer, cancel: disposer)
+                let sinkAndSubscription = await self.run(c.call(), observer, cancel: disposer)
                 await disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
 
                 return disposer
@@ -31,7 +31,7 @@ class Producer<Element>: Observable<Element> {
         }
     }
 
-    func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         rxAbstractMethod()
     }
 }

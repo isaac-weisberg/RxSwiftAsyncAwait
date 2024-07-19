@@ -27,7 +27,7 @@ class Sink<Observer: ObserverType>: Disposable {
         self.cancel = cancel
     }
 
-    final func forwardOn(_ event: Event<Observer.Element>) async {
+    final func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
         #if DEBUG
             await self.synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
@@ -35,7 +35,7 @@ class Sink<Observer: ObserverType>: Disposable {
             if await isFlagSet(self.disposed, 1) {
                 return
             }
-            await self.observer.on(event)
+            await self.observer.on(event, c.call())
         }
         #if DEBUG
             await self.synchronizationTracker.unregister()
@@ -73,12 +73,12 @@ final class SinkForward<Observer: ObserverType>: ObserverType {
         self.forward = forward
     }
 
-    final func on(_ event: Event<Element>) async {
+    final func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            await self.forward.observer.on(event)
+            await self.forward.observer.on(event, c.call())
         case .error, .completed:
-            await self.forward.observer.on(event)
+            await self.forward.observer.on(event, c.call())
             await self.forward.cancel.dispose()
         }
     }

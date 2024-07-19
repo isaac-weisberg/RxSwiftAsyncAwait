@@ -25,19 +25,19 @@ public struct Infallible<Element>: InfallibleType {
         self.source = source
     }
 
-    public func asObservable() -> Observable<Element> { self.source }
+    public func asObservable() -> Observable<Element> { source }
 }
 
 public extension InfallibleType {
     /**
      Subscribes an element handler, a completion handler and disposed handler to an observable sequence.
-     
+
      Error callback is not exposed because `Infallible` can't error out.
-     
+
      Also, take in an object and provide an unretained, safe to use (i.e. not implicitly unwrapped), reference to it along with the events emitted by the sequence.
-     
+
      - Note: If `object` can't be retained, none of the other closures will be invoked.
-     
+
      - parameter object: The object to provide an unretained reference on.
      - parameter onNext: Action to invoke for each element in the observable sequence.
      - parameter onCompleted: Action to invoke upon graceful termination of the observable sequence.
@@ -47,24 +47,27 @@ public extension InfallibleType {
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
     func subscribe<Object: AnyObject>(
+        _ c: C,
         with object: Object,
         onNext: ((Object, Element) -> Void)? = nil,
         onCompleted: ((Object) -> Void)? = nil,
         onDisposed: ((Object) -> Void)? = nil
-    ) async -> Disposable {
-        await self.asObservable().subscribe(
+    )
+        async -> Disposable {
+        await asObservable().subscribe(
+            c.call(),
             with: object,
             onNext: onNext,
             onCompleted: onCompleted,
             onDisposed: onDisposed
         )
     }
-    
+
     /**
       Subscribes an element handler, a completion handler and disposed handler to an observable sequence.
-     
+
       Error callback is not exposed because `Infallible` can't error out.
-     
+
       - parameter onNext: Action to invoke for each element in the observable sequence.
       - parameter onCompleted: Action to invoke upon graceful termination of the observable sequence.
       gracefully completed, errored, or if the generation is canceled by disposing subscription)
@@ -72,23 +75,29 @@ public extension InfallibleType {
       gracefully completed, errored, or if the generation is canceled by disposing subscription)
       - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe(onNext: ((Element) -> Void)? = nil,
-                   onCompleted: (() -> Void)? = nil,
-                   onDisposed: (() -> Void)? = nil) async -> Disposable
-    {
-        await self.asObservable().subscribe(onNext: onNext,
-                                            onCompleted: onCompleted,
-                                            onDisposed: onDisposed)
+    func subscribe(
+        _ c: C,
+        onNext: ((Element) -> Void)? = nil,
+        onCompleted: (() -> Void)? = nil,
+        onDisposed: (() -> Void)? = nil
+    )
+        async -> Disposable {
+        await asObservable().subscribe(
+            c.call(),
+            onNext: onNext,
+            onCompleted: onCompleted,
+            onDisposed: onDisposed
+        )
     }
 
     /**
      Subscribes an event handler to an observable sequence.
-     
+
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe(_ on: @escaping (InfallibleEvent<Element>) -> Void) async -> Disposable {
-        let eventHandler: ((Event<Element>) -> Void) = { event in
+    func subscribe(_ c: C, _ on: @escaping (InfallibleEvent<Element>) -> Void) async -> Disposable {
+        let eventHandler: ((C, Event<Element>) -> Void) = { c, event in
             switch event {
             case .next(let element):
                 on(.next(element))
@@ -98,6 +107,6 @@ public extension InfallibleType {
                 rxFatalErrorInDebug("Infallible must never emit a error event. error: \(error)")
             }
         }
-        return await self.asObservable().subscribe(eventHandler)
+        return await asObservable().subscribe(c.call(), eventHandler)
     }
 }

@@ -37,8 +37,8 @@ private final class GenerateSink<Sequence, Observer: ObserverType>: Sink<Observe
         await super.init(observer: observer, cancel: cancel)
     }
     
-    func run() async -> Disposable {
-        return await self.parent.scheduler.scheduleRecursive(true) { isFirst, recurse in
+    func run(_ c: C) async -> Disposable {
+        return await self.parent.scheduler.scheduleRecursive(true, c.call()) { isFirst, c, recurse in
             do {
                 if !isFirst {
                     self.state = try self.parent.iterate(self.state)
@@ -46,17 +46,17 @@ private final class GenerateSink<Sequence, Observer: ObserverType>: Sink<Observe
                 
                 if try self.parent.condition(self.state) {
                     let result = try self.parent.resultSelector(self.state)
-                    await self.forwardOn(.next(result))
+                    await self.forwardOn(.next(result), c.call())
                     
                     await recurse(false)
                 }
                 else {
-                    await self.forwardOn(.completed)
+                    await self.forwardOn(.completed, c.call())
                     await self.dispose()
                 }
             }
             catch {
-                await self.forwardOn(.error(error))
+                await self.forwardOn(.error(error), c.call())
                 await self.dispose()
             }
         }
@@ -79,9 +79,9 @@ private final class Generate<Sequence, Element>: Producer<Element> {
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await GenerateSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

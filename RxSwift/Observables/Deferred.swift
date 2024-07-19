@@ -26,20 +26,20 @@ private final class DeferredSink<Source: ObservableType, Observer: ObserverType>
     typealias Element = Observer.Element
     typealias Parent = Deferred<Source>
 
-    func run(_ parent: Parent) async -> Disposable {
+    func run(_ c: C, _ parent: Parent) async -> Disposable {
         do {
             let result = try await parent.observableFactory()
-            return await result.subscribe(self)
+            return await result.subscribe(c.call(), self)
         }
         catch let e {
-            await self.forwardOn(.error(e))
+            await self.forwardOn(.error(e), c.call())
             await self.dispose()
             return Disposables.create()
         }
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.forwardOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.forwardOn(event, c.call())
 
         switch event {
         case .next:
@@ -62,11 +62,11 @@ private final class Deferred<Source: ObservableType>: Producer<Source.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable)
         where Observer.Element == Source.Element
     {
         let sink = await DeferredSink<Source, Observer>(observer: observer, cancel: cancel)
-        let subscription = await sink.run(self)
+        let subscription = await sink.run(c.call(), self)
         return (sink: sink, subscription: subscription)
     }
 }

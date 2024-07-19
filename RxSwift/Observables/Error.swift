@@ -27,8 +27,8 @@ private final class ErrorProducer<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
-        await observer.on(.error(self.error))
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await observer.on(.error(self.error), c.call())
         return Disposables.create()
     }
 }

@@ -84,8 +84,8 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func run(_ source: Observable<SourceType>) async -> Disposable {
-        let subscription = await source.subscribe(self)
+    func run(_ source: Observable<SourceType>, _ c: C) async -> Disposable {
+        let subscription = await source.subscribe(c.call(), self)
         await self.subscriptions.setDisposable(subscription)
         return await Disposables.create(self.subscriptions, self.innerSubscription)
     }
@@ -95,7 +95,7 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
     }
 
     @inline(__always)
-    private final func nextElementArrived(element: Element) async -> (Int, Observable<Source.Element>)? {
+    private final func nextElementArrived(element: Element, _ c: C) async -> (Int, Observable<Source.Element>)? {
         await self.lock.performLocked {
             do {
                 let observable = try await self.performMap(element).asObservable()
@@ -104,7 +104,7 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
                 return (self.latest, observable)
             }
             catch {
-                await self.forwardOn(.error(error))
+                await self.forwardOn(.error(error), c.call())
                 await self.dispose()
             }
 
@@ -112,20 +112,20 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
         }
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
-            if let (latest, observable) = await self.nextElementArrived(element: element) {
+            if let (latest, observable) = await self.nextElementArrived(element: element, c.call()) {
                 let d = await SingleAssignmentDisposable()
                 await self.innerSubscription.setDisposable(d)
 
                 let observer = SwitchSinkIter(parent: self, id: latest, this: d)
-                let disposable = await observable.subscribe(observer)
+                let disposable = await observable.subscribe(c.call(), observer)
                 await d.setDisposable(disposable)
             }
         case .error(let error):
             await self.lock.performLocked {
-                await self.forwardOn(.error(error))
+                await self.forwardOn(.error(error), c.call())
                 await self.dispose()
             }
         case .completed:
@@ -135,7 +135,7 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
                 await self.subscriptions.dispose()
 
                 if !self.hasLatest {
-                    await self.forwardOn(.completed)
+                    await self.forwardOn(.completed, c.call())
                     await self.dispose()
                 }
             }
@@ -165,11 +165,11 @@ private final class SwitchSinkIter<SourceType, Source: ObservableConvertibleType
         self.this = this
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next: break
         case .error, .completed:
@@ -182,14 +182,14 @@ private final class SwitchSinkIter<SourceType, Source: ObservableConvertibleType
 
         switch event {
         case .next:
-            await self.parent.forwardOn(event)
+            await self.parent.forwardOn(event, c.call())
         case .error:
-            await self.parent.forwardOn(event)
+            await self.parent.forwardOn(event, c.call())
             await self.parent.dispose()
         case .completed:
             self.parent.hasLatest = false
             if self.parent.stopped {
-                await self.parent.forwardOn(event)
+                await self.parent.forwardOn(event, c.call())
                 await self.parent.dispose()
             }
         }
@@ -235,9 +235,9 @@ private final class Switch<Source: ObservableConvertibleType>: Producer<Source.E
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = await SwitchIdentitySink<Source, Observer>(observer: observer, cancel: cancel)
-        let subscription = await sink.run(self.source)
+        let subscription = await sink.run(self.source, C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -254,9 +254,9 @@ private final class FlatMapLatest<SourceType, Source: ObservableConvertibleType>
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = await MapSwitchSink<SourceType, Source, Observer>(selector: self.selector, observer: observer, cancel: cancel)
-        let subscription = await sink.run(self.source)
+        let subscription = await sink.run(self.source, C())
         return (sink: sink, subscription: subscription)
     }
 }

@@ -10,5 +10,5 @@ protocol ScheduledItemType:
     Cancelable,
     InvocableType
 {
-    func invoke() async
+    func invoke(_ c: C) async
 }

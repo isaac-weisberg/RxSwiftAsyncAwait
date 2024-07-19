@@ -52,17 +52,17 @@ private final class DebounceSink<Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
-        let subscription = await self.parent.source.subscribe(self)
+    func run(_ c: C) async -> Disposable {
+        let subscription = await self.parent.source.subscribe(c.call(), self)
 
         return await Disposables.create(subscription, self.cancellable)
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
             self.id = self.id &+ 1
@@ -74,28 +74,28 @@ private final class DebounceSink<Observer: ObserverType>:
 
             let d = await SingleAssignmentDisposable()
             await self.cancellable.setDisposable(d)
-            await d.setDisposable(scheduler.scheduleRelative(currentId, dueTime: dueTime, action: self.propagate))
+            await d.setDisposable(scheduler.scheduleRelative(currentId, c.call(), dueTime: dueTime, action: self.propagate))
         case .error:
             self.value = nil
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .completed:
             if let value = self.value {
                 self.value = nil
-                await self.forwardOn(.next(value))
+                await self.forwardOn(.next(value), c.call())
             }
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         }
     }
 
-    func propagate(_ currentId: UInt64) async -> Disposable {
-        await self.lock.performLocked {
+    func propagate(c: C, _ currentId: UInt64) async -> Disposable {
+        await self.lock.performLocked(c.call()) { c in
             let originalValue = self.value
 
             if let value = originalValue, self.id == currentId {
                 self.value = nil
-                await self.forwardOn(.next(value))
+                await self.forwardOn(.next(value), c.call())
             }
 
             return Disposables.create()
@@ -115,9 +115,9 @@ private final class Debounce<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await DebounceSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

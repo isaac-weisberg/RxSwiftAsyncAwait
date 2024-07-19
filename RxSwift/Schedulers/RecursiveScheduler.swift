@@ -14,7 +14,7 @@ private enum ScheduleState {
 
 /// Type erased recursive scheduler.
 final class AnyRecursiveScheduler<State> {
-    typealias Action = (State, AnyRecursiveScheduler<State>) async -> Void
+    typealias Action = (State, C, AnyRecursiveScheduler<State>) async -> Void
 
     private let lock: RecursiveLock
     
@@ -37,10 +37,10 @@ final class AnyRecursiveScheduler<State> {
      - parameter state: State passed to the action to be executed.
      - parameter dueTime: Relative time after which to execute the recursive action.
      */
-    func schedule(_ state: State, dueTime: RxTimeInterval) async {
+    func schedule(_ state: State, _ c: C, dueTime: RxTimeInterval) async {
         var scheduleState: ScheduleState = .initial
 
-        let d = await self.scheduler.scheduleRelative(state, dueTime: dueTime) { state -> Disposable in
+        let d = await self.scheduler.scheduleRelative(state, c.call(), dueTime: dueTime) { _, state -> Disposable in
             // best effort
             if await self.group.isDisposed() {
                 return Disposables.create()
@@ -62,7 +62,7 @@ final class AnyRecursiveScheduler<State> {
             }
             
             if let action = action {
-                await action(state, self)
+                await action(state, c.call(), self)
             }
             
             return Disposables.create()
@@ -88,10 +88,10 @@ final class AnyRecursiveScheduler<State> {
     /// Schedules an action to be executed recursively.
     ///
     /// - parameter state: State passed to the action to be executed.
-    func schedule(_ state: State) async {
+    func schedule(_ state: State, _ c: C) async {
         var scheduleState: ScheduleState = .initial
 
-        let d = await self.scheduler.schedule(state) { state -> Disposable in
+        let d = await self.scheduler.schedule(state, c.call()) { c, state -> Disposable in
             // best effort
             if await self.group.isDisposed() {
                 return Disposables.create()
@@ -113,7 +113,7 @@ final class AnyRecursiveScheduler<State> {
             }
            
             if let action = action {
-                await action(state, self)
+                await action(state, c.call(), self)
             }
             
             return Disposables.create()
@@ -146,15 +146,17 @@ final class AnyRecursiveScheduler<State> {
 
 /// Type erased recursive scheduler.
 final class RecursiveImmediateScheduler<State> {
-    typealias Action = (_ state: State, _ recurse: (State) async -> Void) async -> Void
+    typealias Action = (_ state: State, _ c: C, _ recurse: (State) async -> Void) async -> Void
     
     private var lock: SpinLock
     private let group: CompositeDisposable
     
     private var action: Action?
     private let scheduler: ImmediateSchedulerType
+    private let c: C
     
-    init(action: @escaping Action, scheduler: ImmediateSchedulerType) async {
+    init(action: @escaping Action, scheduler: ImmediateSchedulerType, _ c: C) async {
+        self.c = c
         self.lock = await SpinLock()
         self.group = await CompositeDisposable()
         self.action = action
@@ -169,7 +171,7 @@ final class RecursiveImmediateScheduler<State> {
     func schedule(_ state: State) async {
         var scheduleState: ScheduleState = .initial
 
-        let d = await self.scheduler.schedule(state) { state -> Disposable in
+        let d = await self.scheduler.schedule(state, c.call()) { c, state -> Disposable in
             // best effort
             if await self.group.isDisposed() {
                 return Disposables.create()
@@ -191,7 +193,7 @@ final class RecursiveImmediateScheduler<State> {
             }
             
             if let action = action {
-                await action(state, self.schedule)
+                await action(state, c, self.schedule)
             }
             
             return Disposables.create()

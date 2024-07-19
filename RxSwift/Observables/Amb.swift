@@ -78,7 +78,7 @@ private final class AmbObserver<Observer: ObserverType>: ObserverType {
         self.cancel = cancel
     }
     
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         await self.sink(self, event)
         if event.isStopEvent {
             await self.cancel.dispose()
@@ -111,13 +111,13 @@ private final class AmbSink<Observer: ObserverType>: Sink<Observer> {
         await super.init(observer: observer, cancel: cancel)
     }
     
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let disposeAll = await Disposables.create(subscription1, subscription2)
         
         let forwardEvent = { (_: AmbObserverType, event: Event<Element>) async in
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             if event.isStopEvent {
                 await self.dispose()
             }
@@ -133,7 +133,7 @@ private final class AmbSink<Observer: ObserverType>: Sink<Observer> {
                 }
                 
                 if self.choice == me {
-                    await self.forwardOn(event)
+                    await self.forwardOn(event, c.call())
                     if event.isStopEvent {
                         await self.dispose()
                     }
@@ -149,8 +149,8 @@ private final class AmbSink<Observer: ObserverType>: Sink<Observer> {
             await decide(o, e, .right, subscription1)
         }
         
-        await subscription1.setDisposable(self.parent.left.subscribe(sink1))
-        await subscription2.setDisposable(self.parent.right.subscribe(sink2))
+        await subscription1.setDisposable(self.parent.left.subscribe(c.call(), sink1))
+        await subscription2.setDisposable(self.parent.right.subscribe(c.call(), sink2))
         
         return disposeAll
     }
@@ -166,9 +166,9 @@ private final class Amb<Element>: Producer<Element> {
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await AmbSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

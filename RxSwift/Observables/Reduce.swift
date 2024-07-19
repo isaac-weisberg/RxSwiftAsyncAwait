@@ -57,28 +57,28 @@ private final class ReduceSink<SourceType, AccumulateType, Observer: ObserverTyp
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<SourceType>) async {
+    func on(_ event: Event<SourceType>, _ c: C) async {
         switch event {
         case .next(let value):
             do {
                 self.accumulation = try self.parent.accumulator(self.accumulation, value)
             }
             catch let e {
-                await self.forwardOn(.error(e))
+                await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
         case .error(let e):
-            await self.forwardOn(.error(e))
+            await self.forwardOn(.error(e), c.call())
             await self.dispose()
         case .completed:
             do {
                 let result = try self.parent.mapResult(self.accumulation)
-                await self.forwardOn(.next(result))
-                await self.forwardOn(.completed)
+                await self.forwardOn(.next(result), c.call())
+                await self.forwardOn(.completed, c.call())
                 await self.dispose()
             }
             catch let e {
-                await self.forwardOn(.error(e))
+                await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
         }
@@ -102,9 +102,9 @@ private final class Reduce<SourceType, AccumulateType, ResultType>: Producer<Res
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
         let sink = await ReduceSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

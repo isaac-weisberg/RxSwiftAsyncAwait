@@ -61,17 +61,17 @@ private final class SkipUntilSinkOther<Other, Observer: ObserverType>:
         #endif
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
             self.parent.forwardElements = true
             await self.subscription.dispose()
         case .error(let e):
-            await self.parent.forwardOn(.error(e))
+            await self.parent.forwardOn(.error(e), c.call())
             await self.parent.dispose()
         case .completed:
             await self.subscription.dispose()
@@ -109,31 +109,31 @@ private final class SkipUntilSink<Other, Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
             if self.forwardElements {
-                await self.forwardOn(event)
+                await self.forwardOn(event, c.call())
             }
         case .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .completed:
             if self.forwardElements {
-                await self.forwardOn(event)
+                await self.forwardOn(event, c.call())
             }
             await self.dispose()
         }
     }
 
-    func run() async -> Disposable {
-        let sourceSubscription = await self.parent.source.subscribe(self)
+    func run(_ c: C) async -> Disposable {
+        let sourceSubscription = await self.parent.source.subscribe(c.call(), self)
         let otherObserver = await SkipUntilSinkOther(parent: self)
-        let otherSubscription = await self.parent.other.subscribe(otherObserver)
+        let otherSubscription = await self.parent.other.subscribe(c.call(), otherObserver)
         await self.sourceSubscription.setDisposable(sourceSubscription)
         await otherObserver.subscription.setDisposable(otherSubscription)
 
@@ -151,9 +151,9 @@ private final class SkipUntil<Element, Other>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await SkipUntilSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

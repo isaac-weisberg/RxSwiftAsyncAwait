@@ -24,23 +24,23 @@ public extension ObservableType {
 private final class EnumeratedSink<Element, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == (index: Int, element: Element) {
     var index = 0
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
             do {
                 let nextIndex = try incrementChecked(&self.index)
                 let next = (index: nextIndex, element: value)
-                await self.forwardOn(.next(next))
+                await self.forwardOn(.next(next), c.call())
             }
             catch let e {
-                await self.forwardOn(.error(e))
+                await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
         case .completed:
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         case .error(let error):
-            await self.forwardOn(.error(error))
+            await self.forwardOn(.error(error), c.call())
             await self.dispose()
         }
     }
@@ -54,9 +54,9 @@ private final class Enumerated<Element>: Producer<(index: Int, element: Element)
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == (index: Int, element: Element) {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == (index: Int, element: Element) {
         let sink = await EnumeratedSink<Element, Observer>(observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

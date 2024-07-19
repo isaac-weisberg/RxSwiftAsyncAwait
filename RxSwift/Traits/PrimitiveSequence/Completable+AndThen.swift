@@ -70,9 +70,9 @@ private final class ConcatCompletable<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await ConcatCompletableSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -93,23 +93,23 @@ private final class ConcatCompletableSink<Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .error(let error):
-            await self.forwardOn(.error(error))
+            await self.forwardOn(.error(error), c.call())
             await self.dispose()
         case .next:
             break
         case .completed:
             let otherSink = ConcatCompletableSinkOther(parent: self)
-            await self.subscription.setDisposable(self.parent.second.subscribe(otherSink))
+            await self.subscription.setDisposable(self.parent.second.subscribe(c.call(), otherSink))
         }
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription = await SingleAssignmentDisposable()
         await self.subscription.setDisposable(subscription)
-        await subscription.setDisposable(self.parent.completable.subscribe(self))
+        await subscription.setDisposable(self.parent.completable.subscribe(c.call(), self))
         return self.subscription
     }
 }
@@ -127,8 +127,8 @@ private final class ConcatCompletableSinkOther<Observer: ObserverType>:
         self.parent = parent
     }
 
-    func on(_ event: Event<Observer.Element>) async {
-        await self.parent.forwardOn(event)
+    func on(_ event: Event<Observer.Element>, _ c: C) async {
+        await self.parent.forwardOn(event, c.call())
         if event.isStopEvent {
             await self.parent.dispose()
         }

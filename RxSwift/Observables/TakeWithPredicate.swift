@@ -138,17 +138,17 @@ private final class TakeUntilSinkOther<Other, Observer: ObserverType>:
 #endif
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            await self.parent.forwardOn(.completed)
+            await self.parent.forwardOn(.completed, c.call())
             await self.parent.dispose()
         case .error(let e):
-            await self.parent.forwardOn(.error(e))
+            await self.parent.forwardOn(.error(e), c.call())
             await self.parent.dispose()
         case .completed:
             await self.subscription.dispose()
@@ -183,28 +183,28 @@ private final class TakeUntilSink<Other, Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
         case .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .completed:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         }
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let otherObserver = await TakeUntilSinkOther(parent: self)
-        let otherSubscription = await self.parent.other.subscribe(otherObserver)
+        let otherSubscription = await self.parent.other.subscribe(c.call(), otherObserver)
         await otherObserver.subscription.setDisposable(otherSubscription)
-        let sourceSubscription = await self.parent.source.subscribe(self)
+        let sourceSubscription = await self.parent.source.subscribe(c.call(), self)
 
         return await Disposables.create(sourceSubscription, otherObserver.subscription)
     }
@@ -220,9 +220,9 @@ private final class TakeUntil<Element, Other>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await TakeUntilSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -243,7 +243,7 @@ private final class TakeUntilPredicateSink<Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
             if !self.running {
@@ -253,23 +253,23 @@ private final class TakeUntilPredicateSink<Observer: ObserverType>:
             do {
                 self.running = try !self.parent.predicate(value)
             } catch let e {
-                await self.forwardOn(.error(e))
+                await self.forwardOn(.error(e), c.call())
                 await self.dispose()
                 return
             }
 
             if self.running {
-                await self.forwardOn(.next(value))
+                await self.forwardOn(.next(value), c.call())
             } else {
                 if self.parent.behavior == .inclusive {
-                    await self.forwardOn(.next(value))
+                    await self.forwardOn(.next(value), c.call())
                 }
 
-                await self.forwardOn(.completed)
+                await self.forwardOn(.completed, c.call())
                 await self.dispose()
             }
         case .error, .completed:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         }
     }
@@ -292,9 +292,9 @@ private final class TakeUntilPredicate<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await TakeUntilPredicateSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

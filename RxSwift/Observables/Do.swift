@@ -62,17 +62,17 @@ private final class DoSink<Observer: ObserverType>: Sink<Observer>, ObserverType
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         do {
             try await self.eventHandler(event)
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             try await self.afterEventHandler(event)
             if event.isStopEvent {
                 await self.dispose()
             }
         }
         catch {
-            await self.forwardOn(.error(error))
+            await self.forwardOn(.error(error), c.call())
             await self.dispose()
         }
     }
@@ -99,10 +99,10 @@ private final class Do<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         await self.onSubscribe?()
         let sink = await DoSink(eventHandler: self.eventHandler, afterEventHandler: self.afterEventHandler, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         await self.onSubscribed?()
         let onDispose = self.onDispose
         let allSubscriptions = await Disposables.create {

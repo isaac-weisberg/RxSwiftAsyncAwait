@@ -32,7 +32,7 @@ private final class UsingSink<ResourceType: Disposable, Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
     
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         var disposable = Disposables.create()
         
         do {
@@ -41,26 +41,26 @@ private final class UsingSink<ResourceType: Disposable, Observer: ObserverType>:
             let source = try await self.parent.observableFactory(resource)
             
             return await Disposables.create(
-                source.subscribe(self),
+                source.subscribe(c.call(), self),
                 disposable
             )
         } catch {
             return await Disposables.create(
-                Observable.error(error).subscribe(self),
+                Observable.error(error).subscribe(c.call(), self),
                 disposable
             )
         }
     }
     
-    func on(_ event: Event<SourceType>) async {
+    func on(_ event: Event<SourceType>, _ c: C) async {
         switch event {
         case let .next(value):
-            await self.forwardOn(.next(value))
+            await self.forwardOn(.next(value), c.call())
         case let .error(error):
-            await self.forwardOn(.error(error))
+            await self.forwardOn(.error(error), c.call())
             await self.dispose()
         case .completed:
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         }
     }
@@ -81,9 +81,9 @@ private final class Using<SourceType, ResourceType: Disposable>: Producer<Source
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await UsingSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

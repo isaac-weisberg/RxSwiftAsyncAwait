@@ -30,8 +30,8 @@ private final class DelaySubscriptionSink<Observer: ObserverType>:
 {
     typealias Element = Observer.Element
 
-    func on(_ event: Event<Element>) async {
-        await self.forwardOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.forwardOn(event, c.call())
         if event.isStopEvent {
             await self.dispose()
         }
@@ -50,10 +50,10 @@ private final class DelaySubscription<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await DelaySubscriptionSink(observer: observer, cancel: cancel)
-        let subscription = await self.scheduler.scheduleRelative((), dueTime: self.dueTime) { _ in
-            await self.source.subscribe(sink)
+        let subscription = await self.scheduler.scheduleRelative((), c.call(), dueTime: self.dueTime) { c, _ in
+            await self.source.subscribe(c.call(), sink)
         }
 
         return (sink: sink, subscription: subscription)

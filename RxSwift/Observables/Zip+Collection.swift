@@ -68,8 +68,8 @@ private final class ZipCollectionTypeSink<Collection: Swift.Collection, Observer
         await super.init(observer: observer, cancel: cancel)
     }
     
-    func on(_ event: Event<SourceElement>, atIndex: Int) async {
-        await self.lock.performLocked {
+    func on(_ c: C, _ event: Event<SourceElement>, atIndex: Int) async {
+        await self.lock.performLocked(c.call()) { c in
             switch event {
             case .next(let element):
                 self.values[atIndex].enqueue(element)
@@ -80,7 +80,7 @@ private final class ZipCollectionTypeSink<Collection: Swift.Collection, Observer
                 
                 if self.numberOfValues < self.parent.count {
                     if self.numberOfDone == self.parent.count - 1 {
-                        await self.forwardOn(.completed)
+                        await self.forwardOn(.completed, c.call())
                         await self.dispose()
                     }
                     return
@@ -101,15 +101,15 @@ private final class ZipCollectionTypeSink<Collection: Swift.Collection, Observer
                     }
                     
                     let result = try self.parent.resultSelector(arguments)
-                    await self.forwardOn(.next(result))
+                    await self.forwardOn(.next(result), c.call())
                 }
                 catch {
-                    await self.forwardOn(.error(error))
+                    await self.forwardOn(.error(error), c.call())
                     await self.dispose()
                 }
                 
             case .error(let error):
-                await self.forwardOn(.error(error))
+                await self.forwardOn(.error(error), c.call())
                 await self.dispose()
                 
             case .completed:
@@ -121,7 +121,7 @@ private final class ZipCollectionTypeSink<Collection: Swift.Collection, Observer
                 self.numberOfDone += 1
                 
                 if self.numberOfDone == self.parent.count {
-                    await self.forwardOn(.completed)
+                    await self.forwardOn(.completed, c.call())
                     await self.dispose()
                 }
                 else {
@@ -131,21 +131,21 @@ private final class ZipCollectionTypeSink<Collection: Swift.Collection, Observer
         }
     }
     
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         var j = 0
         for i in self.parent.sources {
             let index = j
             let source = await i.asObservable()
 
-            let disposable = await source.subscribe(AnyObserver { event in
-                await self.on(event, atIndex: index)
+            let disposable = await source.subscribe(c.call(), AnyObserver { c, event in
+                await self.on(c.call(), event, atIndex: index)
             })
             await self.subscriptions[j].setDisposable(disposable)
             j += 1
         }
 
         if self.parent.sources.isEmpty {
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
         }
         
         return await Disposables.create(self.subscriptions)
@@ -166,9 +166,9 @@ private final class ZipCollectionType<Collection: Swift.Collection, Result>: Pro
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

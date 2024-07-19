@@ -44,17 +44,17 @@ private final class ObservableOptionalScheduledSink<Observer: ObserverType>: Sin
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func run() async -> Disposable {
-        return await self.parent.scheduler.schedule(self.parent.optional) { (optional: Element?) -> Disposable in
+    func run(_ c: C) async -> Disposable {
+        return await self.parent.scheduler.schedule(self.parent.optional, c.call()) { (c, optional: Element?) -> Disposable in
             if let next = optional {
-                await self.forwardOn(.next(next))
-                return await self.parent.scheduler.schedule(()) { _ in
-                    await self.forwardOn(.completed)
+                await self.forwardOn(.next(next), c.call())
+                return await self.parent.scheduler.schedule((), c.call()) { c, _ in
+                    await self.forwardOn(.completed, c.call())
                     await self.dispose()
                     return Disposables.create()
                 }
             } else {
-                await self.forwardOn(.completed)
+                await self.forwardOn(.completed, c.call())
                 await self.dispose()
                 return Disposables.create()
             }
@@ -72,9 +72,9 @@ private final class ObservableOptionalScheduled<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await ObservableOptionalScheduledSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -87,11 +87,11 @@ private final class ObservableOptional<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
         if let element = self.optional {
-            await observer.on(.next(element))
+            await observer.on(.next(element), c.call())
         }
-        await observer.on(.completed)
+        await observer.on(.completed, c.call())
         return Disposables.create()
     }
 }

@@ -7,9 +7,9 @@
 //
 
 protocol CombineLatestProtocol: AnyObject {
-    func next(_ index: Int) async
-    func fail(_ error: Swift.Error) async
-    func done(_ index: Int) async
+    func next(_ c: C, _ index: Int) async
+    func fail(_ c: C, _ error: Swift.Error) async
+    func done(_ c: C, _ index: Int) async
 }
 
 class CombineLatestSink<Observer: ObserverType>:
@@ -39,7 +39,7 @@ class CombineLatestSink<Observer: ObserverType>:
         rxAbstractMethod()
     }
     
-    func next(_ index: Int) async {
+    func next(_ c: C, _ index: Int) async {
         if !self.hasValue[index] {
             self.hasValue[index] = true
             self.numberOfValues += 1
@@ -48,10 +48,10 @@ class CombineLatestSink<Observer: ObserverType>:
         if self.numberOfValues == self.arity {
             do {
                 let result = try await self.getResult()
-                await self.forwardOn(.next(result))
+                await self.forwardOn(.next(result), c.call())
             }
             catch let e {
-                await self.forwardOn(.error(e))
+                await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
         }
@@ -66,18 +66,18 @@ class CombineLatestSink<Observer: ObserverType>:
             }
             
             if allOthersDone {
-                await self.forwardOn(.completed)
+                await self.forwardOn(.completed, c.call())
                 await self.dispose()
             }
         }
     }
     
-    func fail(_ error: Swift.Error) async {
-        await self.forwardOn(.error(error))
+    func fail(_ c: C, _ error: Swift.Error) async {
+        await self.forwardOn(.error(error), c.call())
         await self.dispose()
     }
     
-    func done(_ index: Int) async {
+    func done(_ c: C, _ index: Int) async {
         if self.isDone[index] {
             return
         }
@@ -86,7 +86,7 @@ class CombineLatestSink<Observer: ObserverType>:
         self.numberOfDone += 1
 
         if self.numberOfDone == self.arity {
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         }
     }
@@ -114,21 +114,21 @@ final class CombineLatestObserver<Element>:
         self.setLatestValue = setLatestValue
     }
     
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
             self.setLatestValue(value)
-            await self.parent.next(self.index)
+            await self.parent.next(c.call(), self.index)
         case .error(let error):
             await self.this.dispose()
-            await self.parent.fail(error)
+            await self.parent.fail(c.call(),error)
         case .completed:
             await self.this.dispose()
-            await self.parent.done(self.index)
+            await self.parent.done(c.call(),self.index)
         }
     }
 }

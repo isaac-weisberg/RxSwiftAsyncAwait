@@ -9,8 +9,8 @@
 // MARK: forEach
 
 @inline(__always)
-func dispatch<Element>(_ bag: Bag<(Event<Element>) async -> Void>, _ event: Event<Element>) async {
-    await bag._value0?(event)
+func dispatch<Element>(_ bag: Bag<(Event<Element>, _ c: C) async -> Void>, _ event: Event<Element>, _ c: C) async {
+    await bag._value0?(event, c.call())
 
     if bag._onlyFastPath {
         return
@@ -18,12 +18,12 @@ func dispatch<Element>(_ bag: Bag<(Event<Element>) async -> Void>, _ event: Even
 
     let pairs = bag._pairs
     for i in 0 ..< pairs.count {
-        await pairs[i].value(event)
+        await pairs[i].value(event, c.call())
     }
 
     if let dictionary = bag._dictionary {
         for element in dictionary.values {
-            await element(event)
+            await element(event, c.call())
         }
     }
 }

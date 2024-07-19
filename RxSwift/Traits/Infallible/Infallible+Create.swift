@@ -28,13 +28,13 @@ public extension Infallible {
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
     static func create(subscribe: @escaping (@escaping InfallibleObserver) async -> Disposable) async -> Infallible<Element> {
-        let source = await Observable<Element>.create { observer in
+        let source = await Observable<Element>.create { c, observer in
             await subscribe { event in
                 switch event {
                 case let .next(element):
-                    await observer.onNext(element)
+                    await observer.onNext(element, c.call())
                 case .completed:
-                    await observer.onCompleted()
+                    await observer.onCompleted(c.call())
                 }
             }
         }

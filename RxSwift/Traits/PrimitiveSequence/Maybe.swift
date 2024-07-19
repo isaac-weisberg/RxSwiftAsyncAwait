@@ -38,16 +38,16 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
     static func create(subscribe: @escaping (@escaping MaybeObserver) async -> Disposable) async -> PrimitiveSequence<Trait, Element> {
-        let source = await Observable<Element>.create { observer in
+        let source = await Observable<Element>.create { c, observer in
             await subscribe { event in
                 switch event {
                 case .success(let element):
-                    await observer.on(.next(element))
-                    await observer.on(.completed)
+                    await observer.on(.next(element), c.call())
+                    await observer.on(.completed, c.call())
                 case .error(let error):
-                    await observer.on(.error(error))
+                    await observer.on(.error(error), c.call())
                 case .completed:
-                    await observer.on(.completed)
+                    await observer.on(.completed, c.call())
                 }
             }
         }
@@ -60,9 +60,9 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
 
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
-    func subscribe(_ observer: @escaping (MaybeEvent<Element>) async -> Void) async -> Disposable {
+    func subscribe(_ c: C, _ observer: @escaping (MaybeEvent<Element>) async -> Void) async -> Disposable {
         var stopped = false
-        return await self.primitiveSequence.asObservable().subscribe { event in
+        return await self.primitiveSequence.asObservable().subscribe(c.call()) { c, event in
             if stopped { return }
             stopped = true
 
@@ -93,6 +93,7 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
     func subscribe<Object: AnyObject>(
+        _ c: C,
         with object: Object,
         onSuccess: ((Object, Element) -> Void)? = nil,
         onError: ((Object, Swift.Error) -> Void)? = nil,
@@ -100,6 +101,7 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
         onDisposed: ((Object) -> Void)? = nil
     ) async -> Disposable {
         await self.subscribe(
+            c.call(),
             onSuccess: { [weak object] in
                 guard let object = object else { return }
                 onSuccess?(object, $0)
@@ -129,7 +131,9 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe(onSuccess: ((Element) -> Void)? = nil,
+    func subscribe(
+        _ c: C,
+        onSuccess: ((Element) -> Void)? = nil,
                    onError: ((Swift.Error) -> Void)? = nil,
                    onCompleted: (() -> Void)? = nil,
                    onDisposed: (() -> Void)? = nil) async -> Disposable
@@ -165,7 +169,7 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
         }
 
         return await Disposables.create(
-            await self.primitiveSequence.subscribe(observer),
+            await self.primitiveSequence.subscribe(c.call(), observer),
             disposable
         )
     }

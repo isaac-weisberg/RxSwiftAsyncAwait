@@ -87,23 +87,23 @@ private final class ConcatSink<Sequence: Swift.Sequence, Observer: ObserverType>
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
         case .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .completed:
-            await self.schedule(.moveNext)
+            await self.schedule(c.call(), .moveNext)
         }
     }
 
-    override func subscribeToNext(_ source: Observable<Element>) async -> Disposable {
-        await source.subscribe(self)
+    override func subscribeToNext(_ c: C, _ source: Observable<Element>) async -> Disposable {
+        await source.subscribe(c.call(), self)
     }
 
-    override func extract(_ observable: Observable<Element>) -> SequenceGenerator? {
+    override func extract(_ c: C, _ observable: Observable<Element>) -> SequenceGenerator? {
         if let source = observable as? Concat<Sequence> {
             return (source.sources.makeIterator(), source.count)
         }
@@ -125,9 +125,9 @@ private final class Concat<Sequence: Swift.Sequence>: Producer<Sequence.Element.
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await ConcatSink<Sequence, Observer>(observer: observer, cancel: cancel)
-        let subscription = await sink.run((self.sources.makeIterator(), self.count))
+        let subscription = await sink.run(c.call(), (self.sources.makeIterator(), self.count))
         return (sink: sink, subscription: subscription)
     }
 }

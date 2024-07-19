@@ -7,9 +7,9 @@
 //
 
 protocol ZipSinkProtocol: AnyObject {
-    func next(_ index: Int) async
-    func fail(_ error: Swift.Error) async
-    func done(_ index: Int) async
+    func next(_ c: C, _ index: Int) async
+    func fail(_ c: C, _ error: Swift.Error) async
+    func done(_ c: C, _ index: Int) async
 }
 
 class ZipSink<Observer: ObserverType>: Sink<Observer>, ZipSinkProtocol {
@@ -38,7 +38,7 @@ class ZipSink<Observer: ObserverType>: Sink<Observer>, ZipSinkProtocol {
         rxAbstractMethod()
     }
     
-    func next(_ index: Int) async {
+    func next(_ c: C, _ index: Int) async {
         var hasValueAll = true
         
         for i in 0 ..< self.arity {
@@ -51,21 +51,21 @@ class ZipSink<Observer: ObserverType>: Sink<Observer>, ZipSinkProtocol {
         if hasValueAll {
             do {
                 let result = try self.getResult()
-                await self.forwardOn(.next(result))
+                await self.forwardOn(.next(result), c.call())
             }
             catch let e {
-                await self.forwardOn(.error(e))
+                await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
         }
     }
     
-    func fail(_ error: Swift.Error) async {
-        await self.forwardOn(.error(error))
+    func fail(_ c: C, _ error: Swift.Error) async {
+        await self.forwardOn(.error(error), c.call())
         await self.dispose()
     }
     
-    func done(_ index: Int) async {
+    func done(_ c: C, _ index: Int) async {
         self.isDone[index] = true
         
         var allDone = true
@@ -76,7 +76,7 @@ class ZipSink<Observer: ObserverType>: Sink<Observer>, ZipSinkProtocol {
         }
         
         if allDone {
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         }
     }
@@ -106,11 +106,11 @@ final class ZipObserver<Element>:
         self.setNextValue = setNextValue
     }
     
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         if self.parent != nil {
             switch event {
             case .next:
@@ -126,11 +126,11 @@ final class ZipObserver<Element>:
             switch event {
             case .next(let value):
                 self.setNextValue(value)
-                await parent.next(self.index)
+                await parent.next(c.call(), self.index)
             case .error(let error):
-                await parent.fail(error)
+                await parent.fail(c.call(), error)
             case .completed:
-                await parent.done(self.index)
+                await parent.done(c.call(), self.index)
             }
         }
     }

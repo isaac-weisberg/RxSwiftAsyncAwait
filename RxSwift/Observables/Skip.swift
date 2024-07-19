@@ -57,21 +57,21 @@ private final class SkipCountSink<Observer: ObserverType>: Sink<Observer>, Obser
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
 
             if self.remaining <= 0 {
-                await self.forwardOn(.next(value))
+                await self.forwardOn(.next(value), c.call())
             }
             else {
                 self.remaining -= 1
             }
         case .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .completed:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         }
     }
@@ -87,9 +87,9 @@ private final class SkipCount<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await SkipCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
 
         return (sink: sink, subscription: subscription)
     }
@@ -110,17 +110,17 @@ private final class SkipTimeSink<Element, Observer: ObserverType>: Sink<Observer
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
             if self.open {
-                await self.forwardOn(.next(value))
+                await self.forwardOn(.next(value), c.call())
             }
         case .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .completed:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         }
     }
@@ -129,13 +129,13 @@ private final class SkipTimeSink<Element, Observer: ObserverType>: Sink<Observer
         self.open = true
     }
 
-    func run() async -> Disposable {
-        let disposeTimer = await self.parent.scheduler.scheduleRelative((), dueTime: self.parent.duration) { _ in
+    func run(_ c: C) async -> Disposable {
+        let disposeTimer = await self.parent.scheduler.scheduleRelative((), c.call(), dueTime: self.parent.duration) { c, _ in
             self.tick()
             return Disposables.create()
         }
 
-        let disposeSubscription = await self.parent.source.subscribe(self)
+        let disposeSubscription = await self.parent.source.subscribe(c.call(), self)
 
         return await Disposables.create(disposeTimer, disposeSubscription)
     }
@@ -153,9 +153,9 @@ private final class SkipTime<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await SkipTimeSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

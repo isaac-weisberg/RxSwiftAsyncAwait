@@ -63,9 +63,9 @@ private final class ObserveOn<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await ObserveOnSink(scheduler: self.scheduler, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 
@@ -109,7 +109,7 @@ private final class ObserveOnSink<Observer: ObserverType>: ObserverBase<Observer
         await super.init()
     }
 
-    override func onCore(_ event: Event<Element>) async {
+    override func onCore(_ event: Event<Element>, _ c: C) async {
         let shouldStart = await self.lock.performLocked { () -> Bool in
             self.queue.enqueue(event)
 
@@ -123,11 +123,11 @@ private final class ObserveOnSink<Observer: ObserverType>: ObserverBase<Observer
         }
 
         if shouldStart {
-            await self.scheduleDisposable.setDisposable(self.scheduler.scheduleRecursive((), action: self.run))
+            await self.scheduleDisposable.setDisposable(self.scheduler.scheduleRecursive((), c.call(), action: self.run))
         }
     }
 
-    func run(_ state: (), _ recurse: (()) async -> Void) async {
+    func run(_ state: (), _ c: C, _ recurse: (()) async -> Void) async {
         let (nextEvent, observer) = await self.lock.performLocked { () -> (Event<Element>?, Observer) in
             if !self.queue.isEmpty {
                 return (self.queue.dequeue(), self.observer)
@@ -139,7 +139,7 @@ private final class ObserveOnSink<Observer: ObserverType>: ObserverBase<Observer
         }
 
         if let nextEvent = nextEvent, await !self.cancel.isDisposed() {
-            await observer.on(nextEvent)
+            await observer.on(nextEvent, c.call())
             if nextEvent.isStopEvent {
                 await self.dispose()
             }
@@ -192,7 +192,7 @@ private final class ObserveOnSerialDispatchQueueSink<Observer: ObserverType>: Ob
 
     let cancel: Cancelable
 
-    var cachedScheduleLambda: (((sink: ObserveOnSerialDispatchQueueSink<Observer>, event: Event<Element>)) async -> Disposable)!
+    var cachedScheduleLambda: (((sink: ObserveOnSerialDispatchQueueSink<Observer>, event: Event<Element>, c: C)) async -> Disposable)!
 
     init(scheduler: SerialDispatchQueueScheduler, observer: Observer, cancel: Cancelable) async {
         self.scheduler = scheduler
@@ -203,7 +203,7 @@ private final class ObserveOnSerialDispatchQueueSink<Observer: ObserverType>: Ob
         self.cachedScheduleLambda = { pair in
             guard await !cancel.isDisposed() else { return Disposables.create() }
 
-            await pair.sink.observer.on(pair.event)
+            await pair.sink.observer.on(pair.event, pair.c.call())
 
             if pair.event.isStopEvent {
                 await pair.sink.dispose()
@@ -213,8 +213,8 @@ private final class ObserveOnSerialDispatchQueueSink<Observer: ObserverType>: Ob
         }
     }
 
-    override func onCore(_ event: Event<Element>) async {
-        _ = await self.scheduler.schedule((self, event), action: self.cachedScheduleLambda!)
+    override func onCore(_ event: Event<Element>, _ c: C) async {
+        _ = await self.scheduler.schedule((self, event, c.call()), action: self.cachedScheduleLambda!)
     }
 
     override func dispose() async {
@@ -239,9 +239,9 @@ private final class ObserveOnSerialDispatchQueue<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await ObserveOnSerialDispatchQueueSink(scheduler: self.scheduler, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 

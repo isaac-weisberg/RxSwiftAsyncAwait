@@ -32,11 +32,11 @@ private final class StartWith<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         for e in self.elements {
-            await observer.on(.next(e))
+            await observer.on(.next(e), c.call())
         }
 
-        return (sink: Disposables.create(), subscription: await self.source.subscribe(observer))
+        return (sink: Disposables.create(), subscription: await self.source.subscribe(c.call(), observer))
     }
 }

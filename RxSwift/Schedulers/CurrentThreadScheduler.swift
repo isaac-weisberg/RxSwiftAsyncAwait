@@ -87,11 +87,11 @@ public class CurrentThreadScheduler: ImmediateSchedulerType {
      - parameter action: Action to be executed.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    public func schedule<StateType>(_ state: StateType, action: @escaping (StateType) async -> Disposable) async -> Disposable {
+    public func schedule<StateType>(_ state: StateType, _ c: C, action: @escaping (C, StateType) async -> Disposable) async -> Disposable {
         if CurrentThreadScheduler.isScheduleRequired {
             CurrentThreadScheduler.isScheduleRequired = false
 
-            let disposable = await action(state)
+            let disposable = await action(c.call(), state)
 
             defer {
                 CurrentThreadScheduler.isScheduleRequired = true
@@ -106,7 +106,7 @@ public class CurrentThreadScheduler: ImmediateSchedulerType {
                 if await latest.isDisposed() {
                     continue
                 }
-                await latest.invoke()
+                await latest.invoke(c.call())
             }
 
             return disposable

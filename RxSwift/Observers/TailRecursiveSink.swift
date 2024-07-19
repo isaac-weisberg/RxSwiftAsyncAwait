@@ -37,40 +37,40 @@ class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func run(_ sources: SequenceGenerator) async -> Disposable {
+    func run(_ c: C, _ sources: SequenceGenerator) async -> Disposable {
         self.generators.append(sources)
 
-        await self.schedule(.moveNext)
+        await self.schedule(c.call(), .moveNext)
 
         return self.subscription
     }
 
-    func invoke(_ command: TailRecursiveSinkCommand) async {
+    func invoke(_ c: C, _ command: TailRecursiveSinkCommand) async {
         switch command {
         case .dispose:
             self.disposeCommand()
         case .moveNext:
-            await self.moveNextCommand()
+            await self.moveNextCommand(c.call())
         }
     }
 
     // simple implementation for now
-    func schedule(_ command: TailRecursiveSinkCommand) async {
-        await self.gate.invoke(InvocableScheduledItem(invocable: self, state: command))
+    func schedule(_ c: C, _ command: TailRecursiveSinkCommand) async {
+        await self.gate.invoke(c.call(), InvocableScheduledItem(invocable: self, state: command))
     }
 
-    func done() async {
-        await self.forwardOn(.completed)
+    func done(_ c: C) async {
+        await self.forwardOn(.completed, c.call())
         await self.dispose()
     }
 
-    func extract(_ observable: Observable<Element>) -> SequenceGenerator? {
+    func extract(_ c: C, _ observable: Observable<Element>) -> SequenceGenerator? {
         rxAbstractMethod()
     }
 
     // should be done on gate locked
 
-    private func moveNextCommand() async {
+    private func moveNextCommand(_ c: C) async {
         var next: Observable<Element>?
 
         repeat {
@@ -108,7 +108,7 @@ class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
                 self.generators.append((e, nil))
             }
 
-            let nextGenerator = self.extract(nextCandidate)
+            let nextGenerator = self.extract(c.call(), nextCandidate)
 
             if let nextGenerator = nextGenerator {
                 self.generators.append(nextGenerator)
@@ -125,16 +125,16 @@ class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
         while next == nil
 
         guard let existingNext = next else {
-            await self.done()
+            await self.done(c.call())
             return
         }
 
         let disposable = await SingleAssignmentDisposable()
         await self.subscription.setDisposable(disposable)
-        await disposable.setDisposable(self.subscribeToNext(existingNext))
+        await disposable.setDisposable(self.subscribeToNext(c.call(), existingNext))
     }
 
-    func subscribeToNext(_ source: Observable<Element>) async -> Disposable {
+    func subscribeToNext(_ c: C, _ source: Observable<Element>) async -> Disposable {
         rxAbstractMethod()
     }
 
@@ -149,6 +149,6 @@ class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
         await self.subscription.dispose()
         await self.gate.dispose()
 
-        await self.schedule(.dispose)
+        await self.schedule(C(), .dispose)
     }
 }

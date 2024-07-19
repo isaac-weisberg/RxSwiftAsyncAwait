@@ -47,7 +47,7 @@ private final class DebugSink<Source: ObservableType, Observer: ObserverType>: S
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         let maxEventTextLength = 40
         let eventText = "\(event)"
 
@@ -57,7 +57,7 @@ private final class DebugSink<Source: ObservableType, Observer: ObserverType>: S
 
         logEvent(self.parent.identifier, dateFormat: self.timestampFormatter, content: "Event \(eventNormalized)")
 
-        await self.forwardOn(event)
+        await self.forwardOn(event, c.call())
         if event.isStopEvent {
             await self.dispose()
         }
@@ -95,9 +95,9 @@ private final class Debug<Source: ObservableType>: Producer<Source.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = await DebugSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

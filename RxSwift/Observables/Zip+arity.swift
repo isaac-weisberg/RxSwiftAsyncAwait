@@ -72,7 +72,7 @@ final class ZipSink2_<E1, E2, Observer: ObserverType> : ZipSink<Observer> {
         }
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
 
@@ -109,9 +109,9 @@ final class Zip2<E1, E2, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink2_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -183,7 +183,7 @@ final class ZipSink3_<E1, E2, E3, Observer: ObserverType> : ZipSink<Observer> {
         }
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -226,9 +226,9 @@ final class Zip3<E1, E2, E3, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink3_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -302,7 +302,7 @@ final class ZipSink4_<E1, E2, E3, E4, Observer: ObserverType> : ZipSink<Observer
         }
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -351,9 +351,9 @@ final class Zip4<E1, E2, E3, E4, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink4_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -429,7 +429,7 @@ final class ZipSink5_<E1, E2, E3, E4, E5, Observer: ObserverType> : ZipSink<Obse
         }
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -484,9 +484,9 @@ final class Zip5<E1, E2, E3, E4, E5, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink5_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -564,7 +564,7 @@ final class ZipSink6_<E1, E2, E3, E4, E5, E6, Observer: ObserverType> : ZipSink<
         }
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -625,9 +625,9 @@ final class Zip6<E1, E2, E3, E4, E5, E6, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink6_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -707,7 +707,7 @@ final class ZipSink7_<E1, E2, E3, E4, E5, E6, E7, Observer: ObserverType> : ZipS
         }
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -774,9 +774,9 @@ final class Zip7<E1, E2, E3, E4, E5, E6, E7, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink7_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -858,7 +858,7 @@ final class ZipSink8_<E1, E2, E3, E4, E5, E6, E7, E8, Observer: ObserverType> : 
         }
     }
 
-    func run() async -> Disposable {
+    func run(_ c: C) async -> Disposable {
         let subscription1 = await SingleAssignmentDisposable()
         let subscription2 = await SingleAssignmentDisposable()
         let subscription3 = await SingleAssignmentDisposable()
@@ -931,9 +931,9 @@ final class Zip8<E1, E2, E3, E4, E5, E6, E7, E8, Result> : Producer<Result> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipSink8_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

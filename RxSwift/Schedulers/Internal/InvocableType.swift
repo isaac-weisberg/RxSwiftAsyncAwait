@@ -7,11 +7,11 @@
 //
 
 protocol InvocableType {
-    func invoke() async
+    func invoke(_ c: C) async
 }
 
 protocol InvocableWithValueType {
     associatedtype Value
 
-    func invoke(_ value: Value) async
+    func invoke(_ c: C, _ value: Value) async
 }

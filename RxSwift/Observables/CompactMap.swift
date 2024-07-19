@@ -34,23 +34,23 @@ private final class CompactMapSink<SourceType, Observer: ObserverType>: Sink<Obs
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<SourceType>) async {
+    func on(_ event: Event<SourceType>, _ c: C) async {
         switch event {
         case .next(let element):
             do {
                 if let mappedElement = try await self.transform(element) {
-                    await self.forwardOn(.next(mappedElement))
+                    await self.forwardOn(.next(mappedElement), c.call())
                 }
             }
             catch let e {
-                await self.forwardOn(.error(e))
+                await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
         case .error(let error):
-            await self.forwardOn(.error(error))
+            await self.forwardOn(.error(error), c.call())
             await self.dispose()
         case .completed:
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         }
     }
@@ -69,9 +69,9 @@ private final class CompactMap<SourceType, ResultType>: Producer<ResultType> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
         let sink = await CompactMapSink(transform: self.transform, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

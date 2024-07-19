@@ -18,7 +18,7 @@
 public struct Binder<Value>: ObserverType {
     public typealias Element = Value
 
-    private let binding: (Event<Value>) async -> Void
+    private let binding: (C, Event<Value>) async -> Void
 
     /// Initializes `Binder`
     ///
@@ -34,10 +34,10 @@ public struct Binder<Value>: ObserverType {
         }
         weak var weakTarget = target
 
-        self.binding = { event in
+        self.binding = { c, event in
             switch event {
             case .next(let element):
-                _ = await scheduler.schedule(element) { element in
+                _ = await scheduler.schedule(element, c.call()) { c, element in
                     if let target = weakTarget {
                         await binding(target, element)
                     }
@@ -52,14 +52,16 @@ public struct Binder<Value>: ObserverType {
     }
 
     /// Binds next element to owner view as described in `binding`.
-    public func on(_ event: Event<Value>) async {
-        await self.binding(event)
+    public func on(_ event: Event<Value>, _ c: C) async {
+        await self.binding(c.call(), event)
     }
 
     /// Erases type of observer.
     ///
     /// - returns: type erased observer.
     public func asObserver() -> AnyObserver<Value> {
-        AnyObserver(eventHandler: self.on)
+        AnyObserver(eventHandler: { c, e in
+            await self.on(e, c)
+        })
     }
 }

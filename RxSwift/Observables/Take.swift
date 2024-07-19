@@ -78,25 +78,25 @@ private final class TakeCountSink<Observer: ObserverType>: Sink<Observer>, Obser
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
 
             if self.remaining > 0 {
                 self.remaining -= 1
 
-                await self.forwardOn(.next(value))
+                await self.forwardOn(.next(value), c.call())
 
                 if self.remaining == 0 {
-                    await self.forwardOn(.completed)
+                    await self.forwardOn(.completed, c.call())
                     await self.dispose()
                 }
             }
         case .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .completed:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         }
     }
@@ -115,9 +115,9 @@ private final class TakeCount<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await TakeCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(sink)
+        let subscription = await self.source.subscribe(C(), sink)
         return (sink: sink, subscription: subscription)
     }
 }
@@ -142,37 +142,37 @@ private final class TakeTimeSink<Element, Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
-            await self.forwardOn(.next(value))
+            await self.forwardOn(.next(value), c.call())
         case .error:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         case .completed:
-            await self.forwardOn(event)
+            await self.forwardOn(event, c.call())
             await self.dispose()
         }
     }
 
-    func tick() async {
+    func tick(_ c: C) async {
         await self.lock.performLocked {
-            await self.forwardOn(.completed)
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         }
     }
 
-    func run() async -> Disposable {
-        let disposeTimer = await self.parent.scheduler.scheduleRelative((), dueTime: self.parent.duration) { _ in
-            await self.tick()
+    func run(_ c: C) async -> Disposable {
+        let disposeTimer = await self.parent.scheduler.scheduleRelative((), c.call(), dueTime: self.parent.duration) { c, _ in
+            await self.tick(c.call())
             return Disposables.create()
         }
 
-        let disposeSubscription = await self.parent.source.subscribe(self)
+        let disposeSubscription = await self.parent.source.subscribe(c.call(), self)
 
         return await Disposables.create(disposeTimer, disposeSubscription)
     }
@@ -192,9 +192,9 @@ private final class TakeTime<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await TakeTimeSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }

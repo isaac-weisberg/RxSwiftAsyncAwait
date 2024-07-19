@@ -96,12 +96,12 @@ public class SerialDispatchQueueScheduler: SchedulerType {
      - parameter action: Action to be executed.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    public final func schedule<StateType>(_ state: StateType, action: @escaping (StateType) async -> Disposable) async -> Disposable {
-        await self.scheduleInternal(state, action: action)
+    public func schedule<StateType>(_ state: StateType, _ c: C, action: @escaping (C, StateType) async -> Disposable) async -> Disposable  {
+        await self.scheduleInternal(state, c.call(), action: action)
     }
 
-    func scheduleInternal<StateType>(_ state: StateType, action: @escaping (StateType) async -> Disposable) async -> Disposable {
-        await self.configuration.schedule(state, action: action)
+    func scheduleInternal<StateType>(_ state: StateType, _ c: C, action: @escaping (C, StateType) async -> Disposable) async -> Disposable  {
+        await self.configuration.schedule(state, c.call(), action: action)
     }
 
     /**
@@ -112,8 +112,8 @@ public class SerialDispatchQueueScheduler: SchedulerType {
      - parameter action: Action to be executed.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    public final func scheduleRelative<StateType>(_ state: StateType, dueTime: RxTimeInterval, action: @escaping (StateType) async -> Disposable) async -> Disposable {
-        await self.configuration.scheduleRelative(state, dueTime: dueTime, action: action)
+    public final func scheduleRelative<StateType>(_ state: StateType, _ c: C, dueTime: RxTimeInterval, action: @escaping (C, StateType) async -> Disposable) async -> Disposable {
+        await self.configuration.scheduleRelative(state, c.call(), dueTime: dueTime, action: action)
     }
 
     /**
@@ -125,7 +125,7 @@ public class SerialDispatchQueueScheduler: SchedulerType {
      - parameter action: Action to be executed.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    public func schedulePeriodic<StateType>(_ state: StateType, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (StateType) -> StateType) async -> Disposable {
-        await self.configuration.schedulePeriodic(state, startAfter: startAfter, period: period, action: action)
+    public func schedulePeriodic<StateType>(_ state: StateType, _ c: C, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (C, StateType) -> StateType) async -> Disposable {
+        await self.configuration.schedulePeriodic(state, c.call(), startAfter: startAfter, period: period, action: action)
     }
 }

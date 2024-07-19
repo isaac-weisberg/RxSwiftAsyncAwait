@@ -61,11 +61,11 @@ public final class MainScheduler: SerialDispatchQueueScheduler {
         #endif
     }
 
-    override func scheduleInternal<StateType>(_ state: StateType, action: @escaping (StateType) async -> Disposable) async -> Disposable {
+    override func scheduleInternal<StateType>(_ state: StateType, _ c: C, action: @escaping (C, StateType) async -> any Disposable) async -> any Disposable {
         let previousNumberEnqueued = await increment(self.numberEnqueued)
 
         if DispatchQueue.isMain && previousNumberEnqueued == 0 {
-            let disposable = await action(state)
+            let disposable = await action(c.call(), state)
             await decrement(self.numberEnqueued)
             return disposable
         }
@@ -75,7 +75,7 @@ public final class MainScheduler: SerialDispatchQueueScheduler {
         self.mainQueue.async {
             Task { @MainActor in
                 if await !cancel.isDisposed() {
-                    await cancel.setDisposable(action(state))
+                    await cancel.setDisposable(action(c.call(), state))
                 }
 
                 await decrement(self.numberEnqueued)

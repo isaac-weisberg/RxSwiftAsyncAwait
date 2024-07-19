@@ -17,11 +17,11 @@ public extension ObservableType {
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe(_ on: @escaping (Event<Element>) async -> Void) async -> Disposable {
-        let observer = await AnonymousObserver { e in
-            await on(e)
+    func subscribe(_ c: C, _ on: @escaping (C, Event<Element>) async -> Void) async -> Disposable {
+        let observer = await AnonymousObserver { c, e in
+            await on(c.call(), e)
         }
-        return await self.asObservable().subscribe(observer)
+        return await self.asObservable().subscribe(c.call(), observer)
     }
     
     /**
@@ -40,6 +40,7 @@ public extension ObservableType {
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
     func subscribe<Object: AnyObject>(
+        _ c: C,
         with object: Object,
         onNext: ((Object, Element) -> Void)? = nil,
         onError: ((Object, Swift.Error) -> Void)? = nil,
@@ -47,6 +48,7 @@ public extension ObservableType {
         onDisposed: ((Object) -> Void)? = nil
     ) async -> Disposable {
         await self.subscribe(
+            c.call(),
             onNext: { [weak object] in
                 guard let object = object else { return }
                 onNext?(object, $0)
@@ -77,6 +79,7 @@ public extension ObservableType {
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
     func subscribe(
+        _ c: C,
         onNext: ((Element) async -> Void)? = nil,
         onError: ((Swift.Error) async -> Void)? = nil,
         onCompleted: (() async -> Void)? = nil,
@@ -97,7 +100,7 @@ public extension ObservableType {
             
         let callStack = Hooks.recordCallStackOnError ? await Hooks.getCustomCaptureSubscriptionCallstack()() : []
             
-        let observer = await AnonymousObserver<Element> { event in
+        let observer = await AnonymousObserver<Element> { c, event in
             #if DEBUG
                 await synchronizationTracker.register(synchronizationErrorMessage: .default)
             #endif
@@ -123,7 +126,7 @@ public extension ObservableType {
             #endif
         }
         return await Disposables.create(
-            await self.asObservable().subscribe(observer),
+            await self.asObservable().subscribe(c.call(), observer),
             disposable
         )
     }

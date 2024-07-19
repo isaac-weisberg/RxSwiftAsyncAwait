@@ -59,37 +59,37 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
         await super.init(observer: observer, cancel: cancel)
     }
     
-    func run() async -> Disposable {
-        await self.forwardOn(.next(AddRef(source: self.subject, refCount: self.refCountDisposable).asObservable()))
-        await self.createTimer(self.windowId)
+    func run(_ c: C) async -> Disposable {
+        await self.forwardOn(.next(AddRef(source: self.subject, refCount: self.refCountDisposable).asObservable()), c.call())
+        await self.createTimer(c.call(), self.windowId)
         
-        _ = await self.groupDisposable.insert(self.parent.source.subscribe(self))
+        _ = await self.groupDisposable.insert(self.parent.source.subscribe(c.call(), self))
         return self.refCountDisposable
     }
     
-    func startNewWindowAndCompleteCurrentOne() async {
-        await self.subject.on(.completed)
+    func startNewWindowAndCompleteCurrentOne(_ c: C) async {
+        await self.subject.on(.completed, c.call())
         self.subject = await PublishSubject<Element>()
         
-        await self.forwardOn(.next(AddRef(source: self.subject, refCount: self.refCountDisposable).asObservable()))
+        await self.forwardOn(.next(AddRef(source: self.subject, refCount: self.refCountDisposable).asObservable()), c.call())
     }
 
-    func on(_ event: Event<Element>) async {
-        await self.synchronizedOn(event)
+    func on(_ event: Event<Element>, _ c: C) async {
+        await self.synchronizedOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>) async {
+    func synchronized_on(_ event: Event<Element>, _ c: C) async {
         var newWindow = false
         var newId = 0
         
         switch event {
         case .next(let element):
-            await self.subject.on(.next(element))
+            await self.subject.on(.next(element), c.call())
             
             do {
                 _ = try incrementChecked(&self.count)
             } catch let e {
-                await self.subject.on(.error(e as Swift.Error))
+                await self.subject.on(.error(e as Swift.Error), c.call())
                 await self.dispose()
             }
             
@@ -98,26 +98,26 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
                 self.count = 0
                 self.windowId += 1
                 newId = self.windowId
-                await self.startNewWindowAndCompleteCurrentOne()
+                await self.startNewWindowAndCompleteCurrentOne(c.call())
             }
             
         case .error(let error):
-            await self.subject.on(.error(error))
-            await self.forwardOn(.error(error))
+            await self.subject.on(.error(error), c.call())
+            await self.forwardOn(.error(error), c.call())
             await self.dispose()
 
         case .completed:
-            await self.subject.on(.completed)
-            await self.forwardOn(.completed)
+            await self.subject.on(.completed, c.call())
+            await self.forwardOn(.completed, c.call())
             await self.dispose()
         }
 
         if newWindow {
-            await self.createTimer(newId)
+            await self.createTimer(c.call(), newId)
         }
     }
     
-    func createTimer(_ windowId: Int) async {
+    func createTimer(_ c: C, _ windowId: Int) async {
         if await self.timerD.isDisposed() {
             return
         }
@@ -130,7 +130,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
 
         await self.timerD.setDisposable(nextTimer)
 
-        let scheduledRelative = await self.parent.scheduler.scheduleRelative(windowId, dueTime: self.parent.timeSpan) { previousWindowId in
+        let scheduledRelative = await self.parent.scheduler.scheduleRelative(windowId, c.call(), dueTime: self.parent.timeSpan) { c, previousWindowId in
             
             var newId = 0
             
@@ -142,10 +142,10 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
                 self.count = 0
                 self.windowId = self.windowId &+ 1
                 newId = self.windowId
-                await self.startNewWindowAndCompleteCurrentOne()
+                await self.startNewWindowAndCompleteCurrentOne(C())
             }
             
-            await self.createTimer(newId)
+            await self.createTimer(c.call(), newId)
             
             return Disposables.create()
         }
@@ -168,9 +168,9 @@ private final class WindowTimeCount<Element>: Producer<Observable<Element>> {
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Observable<Element> {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Observable<Element> {
         let sink = await WindowTimeCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run()
+        let subscription = await sink.run(C())
         return (sink: sink, subscription: subscription)
     }
 }
