@@ -102,7 +102,7 @@ private final class Do<Element>: Producer<Element> {
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         await self.onSubscribe?()
         let sink = await DoSink(eventHandler: self.eventHandler, afterEventHandler: self.afterEventHandler, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(C(), sink)
+        let subscription = await self.source.subscribe(c.call(), sink)
         await self.onSubscribed?()
         let onDispose = self.onDispose
         let allSubscriptions = await Disposables.create {

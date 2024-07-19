@@ -137,7 +137,7 @@ private final class Sample<Element, SampleType>: Producer<Element> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await SampleSequenceSink(parent: self, observer: observer, cancel: cancel, defaultValue: self.defaultValue)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }

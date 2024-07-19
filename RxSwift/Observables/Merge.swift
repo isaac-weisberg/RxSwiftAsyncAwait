@@ -342,7 +342,7 @@ private final class MergeLimited<SourceSequence: ObservableConvertibleType>: Pro
             observer: observer,
             cancel: cancel
         )
-        let subscription = await sink.run(source, C())
+        let subscription = await sink.run(source, c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -575,7 +575,7 @@ private final class FlatMap<
         async -> (sink: Disposable, subscription: Disposable)
         where Observer.Element == SourceSequence.Element {
         let sink = await FlatMapSink(selector: selector, observer: observer, cancel: cancel)
-        let subscription = await sink.run(source, C())
+        let subscription = await sink.run(source, c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -608,7 +608,7 @@ private final class FlatMapFirst<
             observer: observer,
             cancel: cancel
         )
-        let subscription = await sink.run(source, C())
+        let subscription = await sink.run(source, c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -637,7 +637,7 @@ final class ConcatMap<SourceElement, SourceSequence: ObservableConvertibleType>:
             observer: observer,
             cancel: cancel
         )
-        let subscription = await sink.run(source, C())
+        let subscription = await sink.run(source, c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -658,7 +658,7 @@ final class Merge<SourceSequence: ObservableConvertibleType>: Producer<SourceSeq
         async -> (sink: Disposable, subscription: Disposable)
         where Observer.Element == SourceSequence.Element {
         let sink = await MergeBasicSink<SourceSequence, Observer>(observer: observer, cancel: cancel)
-        let subscription = await sink.run(source, C())
+        let subscription = await sink.run(source, c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -678,7 +678,7 @@ private final class MergeArray<Element>: Producer<Element> {
     )
         async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await MergeBasicSink<Observable<Element>, Observer>(observer: observer, cancel: cancel)
-        let subscription = await sink.run(sources, C())
+        let subscription = await sink.run(sources, c.call())
         return (sink: sink, subscription: subscription)
     }
 }

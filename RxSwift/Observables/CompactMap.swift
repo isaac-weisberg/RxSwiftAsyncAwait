@@ -71,7 +71,7 @@ private final class CompactMap<SourceType, ResultType>: Producer<ResultType> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
         let sink = await CompactMapSink(transform: self.transform, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(C(), sink)
+        let subscription = await self.source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

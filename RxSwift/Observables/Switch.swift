@@ -237,7 +237,7 @@ private final class Switch<Source: ObservableConvertibleType>: Producer<Source.E
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = await SwitchIdentitySink<Source, Observer>(observer: observer, cancel: cancel)
-        let subscription = await sink.run(self.source, C())
+        let subscription = await sink.run(self.source, c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -256,7 +256,7 @@ private final class FlatMapLatest<SourceType, Source: ObservableConvertibleType>
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = await MapSwitchSink<SourceType, Source, Observer>(selector: self.selector, observer: observer, cancel: cancel)
-        let subscription = await sink.run(self.source, C())
+        let subscription = await sink.run(self.source, c.call())
         return (sink: sink, subscription: subscription)
     }
 }

@@ -168,7 +168,7 @@ private final class ZipCollectionType<Collection: Swift.Collection, Result>: Pro
     
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }

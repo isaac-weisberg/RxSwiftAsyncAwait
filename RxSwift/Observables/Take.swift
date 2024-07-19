@@ -117,7 +117,7 @@ private final class TakeCount<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await TakeCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(C(), sink)
+        let subscription = await self.source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)
     }
 }
@@ -194,7 +194,7 @@ private final class TakeTime<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await TakeTimeSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }

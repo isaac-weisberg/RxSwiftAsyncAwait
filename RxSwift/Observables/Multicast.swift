@@ -349,7 +349,7 @@ private final class RefCount<ConnectableSource: ConnectableObservableType>: Prod
         where Observer.Element == ConnectableSource.Element
     {
         let sink = await RefCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
@@ -379,7 +379,7 @@ private final class MulticastSink<Subject: SubjectType, Observer: ObserverType>:
             return await Disposables.create(subscription, connection)
         }
         catch let e {
-            await self.forwardOn(.error(e), C())
+            await self.forwardOn(.error(e), c.call())
             await self.dispose()
             return Disposables.create()
         }
@@ -412,7 +412,7 @@ private final class Multicast<Subject: SubjectType, Result>: Producer<Result> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await MulticastSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }

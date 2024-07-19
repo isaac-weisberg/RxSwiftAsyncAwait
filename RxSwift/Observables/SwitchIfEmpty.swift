@@ -34,7 +34,7 @@ private final class SwitchIfEmpty<Element>: Producer<Element> {
         let sink = await SwitchIfEmptySink(ifEmpty: self.ifEmpty,
                                            observer: observer,
                                            cancel: cancel)
-        let subscription = await sink.run(self.source.asObservable(), C())
+        let subscription = await sink.run(self.source.asObservable(), c.call())
         
         return (sink: sink, subscription: subscription)
     }

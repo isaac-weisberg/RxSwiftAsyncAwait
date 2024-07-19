@@ -45,7 +45,7 @@ private final class Dematerialize<T: EventConvertible>: Producer<T.Element> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == T.Element {
         let sink = await DematerializeSink<T, Observer>(observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(C(), sink)
+        let subscription = await self.source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

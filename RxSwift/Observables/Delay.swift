@@ -179,7 +179,7 @@ private final class Delay<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await DelaySink(observer: observer, dueTime: dueTime, scheduler: scheduler, cancel: cancel)
-        let subscription = await sink.run(C(), source: source)
+        let subscription = await sink.run(c.call(), source: source)
         return (sink: sink, subscription: subscription)
     }
 }

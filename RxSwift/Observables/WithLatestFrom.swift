@@ -157,7 +157,7 @@ private final class WithLatestFrom<FirstType, SecondType, ResultType>: Producer<
     )
         async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
         let sink = await WithLatestFromSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }

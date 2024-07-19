@@ -142,7 +142,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
                 self.count = 0
                 self.windowId = self.windowId &+ 1
                 newId = self.windowId
-                await self.startNewWindowAndCompleteCurrentOne(C())
+                await self.startNewWindowAndCompleteCurrentOne(c.call())
             }
             
             await self.createTimer(c.call(), newId)
@@ -170,7 +170,7 @@ private final class WindowTimeCount<Element>: Producer<Observable<Element>> {
     
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Observable<Element> {
         let sink = await WindowTimeCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(C())
+        let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
     }
 }
