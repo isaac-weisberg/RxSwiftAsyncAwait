@@ -171,6 +171,7 @@ public final actor AsyncAwaitLock {
     }
 }
 
+#if VICIOUS_TRACING
 public struct C {
     struct Entry: Equatable {
         static func == (lhs: Entry, rhs: Entry) -> Bool {
@@ -188,7 +189,7 @@ public struct C {
 
     let entries: [Entry]
 
-    public init(_ file: StaticString = #file, line: UInt = #line) {
+    public init(_ file: StaticString = #file, _ line: UInt = #line) {
         let entry = Entry(file: file, line: line)
         entries = [entry]
     }
@@ -209,3 +210,16 @@ public struct C {
         return stack
     }
 }
+
+#else
+public struct C {
+    public init() {
+        
+    }
+    
+    @inline(__always)
+    public func call() -> C {
+        self
+    }
+}
+#endif

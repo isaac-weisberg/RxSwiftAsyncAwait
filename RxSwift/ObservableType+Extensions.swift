@@ -13,7 +13,7 @@
 public extension ObservableType {
     /**
      Subscribes an event handler to an observable sequence.
-     
+
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
@@ -21,16 +21,16 @@ public extension ObservableType {
         let observer = await AnonymousObserver { c, e in
             await on(c.call(), e)
         }
-        return await self.asObservable().subscribe(c.call(), observer)
+        return await asObservable().subscribe(c.call(), observer)
     }
-    
+
     /**
      Subscribes an element handler, an error handler, a completion handler and disposed handler to an observable sequence.
-     
+
      Also, take in an object and provide an unretained, safe to use (i.e. not implicitly unwrapped), reference to it along with the events emitted by the sequence.
-     
+
      - Note: If `object` can't be retained, none of the other closures will be invoked.
-     
+
      - parameter object: The object to provide an unretained reference on.
      - parameter onNext: Action to invoke for each element in the observable sequence.
      - parameter onError: Action to invoke upon errored termination of the observable sequence.
@@ -46,28 +46,29 @@ public extension ObservableType {
         onError: ((Object, Swift.Error) -> Void)? = nil,
         onCompleted: ((Object) -> Void)? = nil,
         onDisposed: ((Object) -> Void)? = nil
-    ) async -> Disposable {
-        await self.subscribe(
+    )
+        async -> Disposable {
+        await subscribe(
             c.call(),
             onNext: { [weak object] in
-                guard let object = object else { return }
+                guard let object else { return }
                 onNext?(object, $0)
             },
             onError: { [weak object] in
-                guard let object = object else { return }
+                guard let object else { return }
                 onError?(object, $0)
             },
             onCompleted: { [weak object] in
-                guard let object = object else { return }
+                guard let object else { return }
                 onCompleted?(object)
             },
             onDisposed: { [weak object] in
-                guard let object = object else { return }
+                guard let object else { return }
                 onDisposed?(object)
             }
         )
     }
-    
+
     /**
      Subscribes an element handler, an error handler, a completion handler and disposed handler to an observable sequence.
      
@@ -78,29 +79,60 @@ public extension ObservableType {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
+    #if VICIOUS_TRACE
+        func subscribe(
+            _ file: StaticString = #file,
+            _ line: UInt = #line,
+            onNext: ((Element) async -> Void)? = nil,
+            onError: ((Swift.Error) async -> Void)? = nil,
+            onCompleted: (() async -> Void)? = nil,
+            onDisposed: (() async -> Void)? = nil
+        )
+            async -> Disposable {
+            let c = C(file, line)
+            return await subscribe(
+                c,
+                onNext: onNext,
+                onError: onError,
+                onCompleted: onCompleted,
+                onDisposed: onDisposed
+            )
+        }
+    #else
+        func subscribe(
+            onNext: ((Element) async -> Void)? = nil,
+            onError: ((Swift.Error) async -> Void)? = nil,
+            onCompleted: (() async -> Void)? = nil,
+            onDisposed: (() async -> Void)? = nil
+        )
+            async -> Disposable {
+            await subscribe(C(), onNext: onNext, onError: onError, onCompleted: onCompleted, onDisposed: onDisposed)
+        }
+    #endif
+
     func subscribe(
         _ c: C,
         onNext: ((Element) async -> Void)? = nil,
         onError: ((Swift.Error) async -> Void)? = nil,
         onCompleted: (() async -> Void)? = nil,
         onDisposed: (() async -> Void)? = nil
-    ) async -> Disposable {
+    )
+        async -> Disposable {
         let disposable: Disposable
-            
+
         if let disposed = onDisposed {
             disposable = await Disposables.create(with: disposed)
-        }
-        else {
+        } else {
             disposable = Disposables.create()
         }
-            
+
         #if DEBUG
             let synchronizationTracker = await SynchronizationTracker()
         #endif
-            
+
         let callStack = Hooks.recordCallStackOnError ? await Hooks.getCustomCaptureSubscriptionCallstack()() : []
-            
-        let observer = await AnonymousObserver<Element> { c, event in
+
+        let observer = await AnonymousObserver<Element> { _, event in
             #if DEBUG
                 await synchronizationTracker.register(synchronizationErrorMessage: .default)
             #endif
@@ -109,10 +141,9 @@ public extension ObservableType {
                 case .next(let value):
                     await onNext?(value)
                 case .error(let error):
-                    if let onError = onError {
+                    if let onError {
                         await onError(error)
-                    }
-                    else {
+                    } else {
                         await Hooks.getDefaultErrorHandler()(callStack, error)
                     }
                     await disposable.dispose()
@@ -126,7 +157,7 @@ public extension ObservableType {
             #endif
         }
         return await Disposables.create(
-            await self.asObservable().subscribe(c.call(), observer),
+            asObservable().subscribe(c.call(), observer),
             disposable
         )
     }
@@ -139,7 +170,7 @@ public extension Hooks {
     typealias CustomCaptureSubscriptionCallstack = () -> [String]
 
     private static var lock: RecursiveLock!
-    
+
     // call me manually plz
     static func initialize() async {
         await MainScheduler.initialize()
@@ -147,9 +178,9 @@ public extension Hooks {
         #if TRACE_RESOURCES
             await Resources.initialize()
         #endif
-        self.lock = await RecursiveLock()
+        lock = await RecursiveLock()
     }
-    
+
     private static var _defaultErrorHandler: DefaultErrorHandler = { subscriptionCallStack, error in
         #if DEBUG
             let serializedCallStack = subscriptionCallStack.joined(separator: "\n")
@@ -170,23 +201,23 @@ public extension Hooks {
 
     /// Error handler called in case onError handler wasn't provided.
     static func getDefaultErrorHandler() async -> DefaultErrorHandler {
-        await self.lock.performLocked {
+        await lock.performLocked {
             self._defaultErrorHandler
         }
     }
 
     static func setDefaultErrorHandler(_ newValue: @escaping DefaultErrorHandler) async {
-        await self.lock.performLocked {
+        await lock.performLocked {
             self._defaultErrorHandler = newValue
         }
     }
-    
+
     /// Subscription callstack block to fetch custom callstack information.
     static func getCustomCaptureSubscriptionCallstack() async -> CustomCaptureSubscriptionCallstack {
-        await self.lock.performLocked { self._customCaptureSubscriptionCallstack }
+        await lock.performLocked { self._customCaptureSubscriptionCallstack }
     }
-    
+
     static func setCustomCaptureSubscriptionCallstack(_ newValue: @escaping CustomCaptureSubscriptionCallstack) async {
-        await self.lock.performLocked { self._customCaptureSubscriptionCallstack = newValue }
+        await lock.performLocked { self._customCaptureSubscriptionCallstack = newValue }
     }
 }

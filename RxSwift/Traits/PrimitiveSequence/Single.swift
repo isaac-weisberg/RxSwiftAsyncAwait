@@ -50,7 +50,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      */
     func subscribe(_ c: C, _ observer: @escaping (SingleEvent<Element>) async -> Void) async -> Disposable {
         var stopped = false
-        return await self.primitiveSequence.asObservable().subscribe(c.call()) { c, event in
+        return await primitiveSequence.asObservable().subscribe(c.call()) { _, event in
             if stopped { return }
             stopped = true
 
@@ -64,6 +64,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
             }
         }
     }
+
 //
 //    /**
 //     Subscribes a success handler, and an error handler for this sequence.
@@ -102,19 +103,20 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
         onSuccess: ((Object, Element) -> Void)? = nil,
         onFailure: ((Object, Swift.Error) -> Void)? = nil,
         onDisposed: ((Object) -> Void)? = nil
-    ) async -> Disposable {
-        await self.subscribe(
+    )
+        async -> Disposable {
+        await subscribe(
             c.call(),
             onSuccess: { [weak object] in
-                guard let object = object else { return }
+                guard let object else { return }
                 onSuccess?(object, $0)
             },
             onFailure: { [weak object] in
-                guard let object = object else { return }
+                guard let object else { return }
                 onFailure?(object, $0)
             },
             onDisposed: { [weak object] in
-                guard let object = object else { return }
+                guard let object else { return }
                 onDisposed?(object)
             }
         )
@@ -122,19 +124,42 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
 
     /**
      Subscribes a success handler, and an error handler for this sequence.
-
+     
      - parameter onSuccess: Action to invoke for each element in the observable sequence.
      - parameter onFailure: Action to invoke upon errored termination of the observable sequence.
      - parameter onDisposed: Action to invoke upon any type of termination of sequence (if the sequence has
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
+    #if VICIOUS_TRACING
+        func subscribe(
+            onSuccess: ((Element) -> Void)? = nil,
+            onFailure: ((Swift.Error) -> Void)? = nil,
+            onDisposed: (() -> Void)? = nil,
+            _ file: StaticString = #file,
+            _ line: UInt = #line
+        )
+            async -> Disposable {
+            let c = C(file, line)
+            return await subscribe(c, onSuccess: onSuccess, onFailure: onFailure, onDisposed: onDisposed)
+        }
+    #else
+        func subscribe(
+            onSuccess: ((Element) -> Void)? = nil,
+            onFailure: ((Swift.Error) -> Void)? = nil,
+            onDisposed: (() -> Void)? = nil
+        )
+            async -> Disposable {
+            return await subscribe(C(), onSuccess: onSuccess, onFailure: onFailure, onDisposed: onDisposed)
+        }
+    #endif
     func subscribe(
         _ c: C,
         onSuccess: ((Element) -> Void)? = nil,
-                   onFailure: ((Swift.Error) -> Void)? = nil,
-                   onDisposed: (() -> Void)? = nil) async -> Disposable
-    {
+        onFailure: ((Swift.Error) -> Void)? = nil,
+        onDisposed: (() -> Void)? = nil
+    )
+        async -> Disposable {
         #if DEBUG
             let callStack = Hooks.recordCallStackOnError ? Thread.callStackSymbols : []
         #else
@@ -142,7 +167,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
         #endif
 
         let disposable: Disposable
-        if let onDisposed = onDisposed {
+        if let onDisposed {
             disposable = await Disposables.create(with: onDisposed)
         } else {
             disposable = Disposables.create()
@@ -154,7 +179,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
                 onSuccess?(element)
                 await disposable.dispose()
             case .failure(let error):
-                if let onFailure = onFailure {
+                if let onFailure {
                     onFailure(error)
                 } else {
                     await Hooks.getDefaultErrorHandler()(callStack, error)
@@ -164,7 +189,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
         }
 
         return await Disposables.create(
-            self.primitiveSequence.subscribe(c.call(), observer),
+            primitiveSequence.subscribe(c.call(), observer),
             disposable
         )
     }
@@ -234,24 +259,26 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter onDispose: Action to invoke after subscription to source observable has been disposed for any reason. It can be either because sequence terminates for some reason or observer subscription being disposed.
      - returns: The source sequence with the side-effecting behavior applied.
      */
-    func `do`(onSuccess: ((Element) throws -> Void)? = nil,
-              afterSuccess: ((Element) throws -> Void)? = nil,
-              onError: ((Swift.Error) throws -> Void)? = nil,
-              afterError: ((Swift.Error) throws -> Void)? = nil,
-              onSubscribe: (() -> Void)? = nil,
-              onSubscribed: (() -> Void)? = nil,
-              onDispose: (() -> Void)? = nil) async
-        -> Single<Element>
-    {
-        return await Single(raw: self.primitiveSequence.source.do(
-            onNext: onSuccess,
-            afterNext: afterSuccess,
-            onError: onError,
-            afterError: afterError,
-            onSubscribe: onSubscribe,
-            onSubscribed: onSubscribed,
-            onDispose: onDispose
-        )
+    func `do`(
+        onSuccess: ((Element) throws -> Void)? = nil,
+        afterSuccess: ((Element) throws -> Void)? = nil,
+        onError: ((Swift.Error) throws -> Void)? = nil,
+        afterError: ((Swift.Error) throws -> Void)? = nil,
+        onSubscribe: (() -> Void)? = nil,
+        onSubscribed: (() -> Void)? = nil,
+        onDispose: (() -> Void)? = nil
+    )
+        async -> Single<Element> {
+        await Single(
+            raw: primitiveSequence.source.do(
+                onNext: onSuccess,
+                afterNext: afterSuccess,
+                onError: onError,
+                afterError: afterError,
+                onSubscribe: onSubscribe,
+                onSubscribed: onSubscribed,
+                onDispose: onDispose
+            )
         )
     }
 
@@ -264,9 +291,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: An observable sequence that contains elements from the input sequence that satisfy the condition.
      */
     func filter(_ predicate: @escaping (Element) async throws -> Bool) async
-        -> Maybe<Element>
-    {
-        return await Maybe(raw: self.primitiveSequence.source.filter(predicate))
+        -> Maybe<Element> {
+        await Maybe(raw: primitiveSequence.source.filter(predicate))
     }
 
     /**
@@ -279,9 +305,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
 
      */
     func map<Result>(_ transform: @escaping (Element) async throws -> Result) async
-        -> Single<Result>
-    {
-        return await Single(raw: self.primitiveSequence.source.map(transform))
+        -> Single<Result> {
+        await Single(raw: primitiveSequence.source.map(transform))
     }
 
     /**
@@ -292,9 +317,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
 
      */
     func compactMap<Result>(_ transform: @escaping (Element) async throws -> Result?) async
-        -> Maybe<Result>
-    {
-        await Maybe(raw: self.primitiveSequence.source.compactMap(transform))
+        -> Maybe<Result> {
+        await Maybe(raw: primitiveSequence.source.compactMap(transform))
     }
 
     /**
@@ -306,9 +330,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
     func flatMap<Result>(_ selector: @escaping (Element) async throws -> Single<Result>) async
-        -> Single<Result>
-    {
-        return await Single<Result>(raw: self.primitiveSequence.source.flatMap(selector))
+        -> Single<Result> {
+        await Single<Result>(raw: primitiveSequence.source.flatMap(selector))
     }
 
     /**
@@ -320,9 +343,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
     func flatMapMaybe<Result>(_ selector: @escaping (Element) async throws -> Maybe<Result>) async
-        -> Maybe<Result>
-    {
-        return await Maybe<Result>(raw: self.primitiveSequence.source.flatMap(selector))
+        -> Maybe<Result> {
+        await Maybe<Result>(raw: primitiveSequence.source.flatMap(selector))
     }
 
     /**
@@ -334,9 +356,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
     func flatMapCompletable(_ selector: @escaping (Element) async throws -> Completable) async
-        -> Completable
-    {
-        return await Completable(raw: self.primitiveSequence.source.flatMap(selector))
+        -> Completable {
+        await Completable(raw: primitiveSequence.source.flatMap(selector))
     }
 
     /**
@@ -345,10 +366,14 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter resultSelector: Function to invoke for each series of elements at corresponding indexes in the sources.
      - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
      */
-    static func zip<Collection: Swift.Collection, Result>(_ collection: Collection, resultSelector: @escaping ([Element]) throws -> Result) async -> PrimitiveSequence<Trait, Result> where Collection.Element == PrimitiveSequence<Trait, Element> {
+    static func zip<Collection: Swift.Collection, Result>(
+        _ collection: Collection,
+        resultSelector: @escaping ([Element]) throws -> Result
+    )
+        async -> PrimitiveSequence<Trait, Result> where Collection.Element == PrimitiveSequence<Trait, Element> {
         if collection.isEmpty {
             return await PrimitiveSequence<Trait, Result>.deferred {
-                try PrimitiveSequence<Trait, Result>(raw: await .just(resultSelector([])))
+                try await PrimitiveSequence<Trait, Result>(raw: .just(resultSelector([])))
             }
         }
 
@@ -361,7 +386,11 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
 
      - returns: An observable sequence containing the result of combining elements of the sources.
      */
-    static func zip<Collection: Swift.Collection>(_ collection: Collection) async -> PrimitiveSequence<Trait, [Element]> where Collection.Element == PrimitiveSequence<Trait, Element> {
+    static func zip<Collection: Swift.Collection>(_ collection: Collection) async
+        -> PrimitiveSequence<Trait, [Element]> where Collection.Element == PrimitiveSequence<
+            Trait,
+            Element
+        > {
         if collection.isEmpty {
             return await PrimitiveSequence<Trait, [Element]>(raw: .just([]))
         }
@@ -379,9 +408,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: An observable sequence containing the source sequence's elements, followed by the `element` in case an error occurred.
      */
     func catchAndReturn(_ element: Element) async
-        -> PrimitiveSequence<Trait, Element>
-    {
-        await PrimitiveSequence(raw: self.primitiveSequence.source.catchAndReturn(element))
+        -> PrimitiveSequence<Trait, Element> {
+        await PrimitiveSequence(raw: primitiveSequence.source.catchAndReturn(element))
     }
 
     /**
@@ -394,16 +422,15 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      */
     @available(*, deprecated, renamed: "catchAndReturn(_:)")
     func catchErrorJustReturn(_ element: Element) async
-        -> PrimitiveSequence<Trait, Element>
-    {
-        await self.catchAndReturn(element)
+        -> PrimitiveSequence<Trait, Element> {
+        await catchAndReturn(element)
     }
 
     /// Converts `self` to `Maybe` trait.
     ///
     /// - returns: Maybe trait that represents `self`.
     func asMaybe() -> Maybe<Element> {
-        Maybe(raw: self.primitiveSequence.source)
+        Maybe(raw: primitiveSequence.source)
     }
 
     /// Converts `self` to `Completable` trait, ignoring its emitted value if
@@ -411,6 +438,6 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
     ///
     /// - returns: Completable trait that represents `self`.
     func asCompletable() async -> Completable {
-        await self.primitiveSequence.source.ignoreElements().asCompletable()
+        await primitiveSequence.source.ignoreElements().asCompletable()
     }
 }
