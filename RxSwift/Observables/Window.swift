@@ -134,7 +134,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
             
             var newId = 0
             
-            await self.lock.performLocked {
+            await self.lock.performLocked(c.call()) { c in
                 if previousWindowId != self.windowId {
                     return
                 }

@@ -124,7 +124,7 @@ private final class AmbSink<Observer: ObserverType>: Sink<Observer> {
         }
 
         let decide = { (o: AmbObserverType, event: Event<Element>, me: AmbState, otherSubscription: Disposable) in
-            await self.lock.performLocked {
+            await self.lock.performLocked(c.call()) { c in
                 if self.choice == .neither {
                     self.choice = me
                     o.sink = forwardEvent

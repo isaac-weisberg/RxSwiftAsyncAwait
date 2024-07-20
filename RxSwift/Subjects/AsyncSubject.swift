@@ -23,7 +23,7 @@ public final class AsyncSubject<Element>:
 
     /// Indicates whether the subject has any observers
     public func hasObservers() async -> Bool {
-        await self.lock.performLocked {
+        await self.lock.performLocked(C()) { c in
             self.observers.count > 0
         }
     }
@@ -82,7 +82,7 @@ public final class AsyncSubject<Element>:
     }
 
     func synchronized_on(_ event: Event<Element>, _ c: C) async -> (Observers, Event<Element>) {
-        await self.lock.performLocked {
+        await self.lock.performLocked(c.call()) { c in
             if self.isStopped {
                 return (Observers(), .completed)
             }
@@ -120,7 +120,7 @@ public final class AsyncSubject<Element>:
     /// - parameter observer: Observer to subscribe to the subject.
     /// - returns: Disposable object that can be used to unsubscribe the observer from the subject.
     override public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
-        await self.lock.performLocked { await self.synchronized_subscribe(c.call(), observer) }
+        await self.lock.performLocked(c.call()) { c in await self.synchronized_subscribe(c.call(), observer) }
     }
 
     func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {

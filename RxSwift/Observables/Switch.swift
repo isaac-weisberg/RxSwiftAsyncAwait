@@ -96,7 +96,7 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
 
     @inline(__always)
     private final func nextElementArrived(element: Element, _ c: C) async -> (Int, Observable<Source.Element>)? {
-        await self.lock.performLocked {
+        await self.lock.performLocked(c.call()) { c in
             do {
                 let observable = try await self.performMap(element).asObservable()
                 self.hasLatest = true
@@ -124,12 +124,12 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
                 await d.setDisposable(disposable)
             }
         case .error(let error):
-            await self.lock.performLocked {
+            await self.lock.performLocked(c.call()) { c in
                 await self.forwardOn(.error(error), c.call())
                 await self.dispose()
             }
         case .completed:
-            await self.lock.performLocked {
+            await self.lock.performLocked(c.call()) { c in
                 self.stopped = true
 
                 await self.subscriptions.dispose()

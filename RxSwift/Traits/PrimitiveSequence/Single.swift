@@ -137,10 +137,11 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
             onFailure: ((Swift.Error) -> Void)? = nil,
             onDisposed: (() -> Void)? = nil,
             _ file: StaticString = #file,
+            _ function: StaticString = #function,
             _ line: UInt = #line
         )
             async -> Disposable {
-            let c = C(file, line)
+            let c = C(file, function, line)
             return await subscribe(c, onSuccess: onSuccess, onFailure: onFailure, onDisposed: onDisposed)
         }
     #else

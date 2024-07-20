@@ -206,7 +206,7 @@ private final class ShareReplay1WhileConnectedConnection<Element>:
     }
 
     final func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
-        await self.lock.performLocked {
+        await self.lock.performLocked(c.call()) { c in
             if let element = self.element {
                 await observer.on(.next(element), c.call())
             }
@@ -274,7 +274,7 @@ private final class ShareReplay1WhileConnected<Element>:
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
-        let (connection, count, disposable) = await self.lock.performLocked {
+        let (connection, count, disposable) = await self.lock.performLocked(c.call()) { c in
             let connection = await self.synchronized_subscribe(observer)
             let count = connection.observers.count
 

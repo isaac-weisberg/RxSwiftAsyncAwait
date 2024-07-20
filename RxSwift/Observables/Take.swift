@@ -160,7 +160,7 @@ private final class TakeTimeSink<Element, Observer: ObserverType>:
     }
 
     func tick(_ c: C) async {
-        await self.lock.performLocked {
+        await self.lock.performLocked(c.call()) { c in
             await self.forwardOn(.completed, c.call())
             await self.dispose()
         }

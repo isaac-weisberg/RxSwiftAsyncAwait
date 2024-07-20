@@ -70,7 +70,7 @@ public final class PublishSubject<Element>:
     }
 
     func synchronized_on(_ event: Event<Element>, _ c: C) async -> Observers {
-        await self.lock.performLocked {
+        await self.lock.performLocked(c.call()) { c in
             switch event {
             case .next:
                 let isDisposed = await self.isDisposed()
@@ -119,7 +119,9 @@ public final class PublishSubject<Element>:
     }
 
     func synchronizedUnsubscribe(_ disposeKey: DisposeKey) async {
-        await self.lock.performLocked { self.synchronized_unsubscribe(disposeKey) }
+        await self.lock.performLocked(C()) { c in
+            self.synchronized_unsubscribe(disposeKey)
+        }
     }
 
     func synchronized_unsubscribe(_ disposeKey: DisposeKey) {

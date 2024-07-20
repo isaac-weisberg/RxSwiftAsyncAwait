@@ -119,7 +119,7 @@ private class ReplayBufferBase<Element>:
         #if DEBUG
             await synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
-        await dispatch(synchronized_on(event, c.call()), event, c)
+        await dispatch(synchronized_on(event, c.call()), event, c.call())
         #if DEBUG
             await synchronizationTracker.unregister()
         #endif

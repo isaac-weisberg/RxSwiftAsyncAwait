@@ -126,7 +126,7 @@ private final class ThrottleSink<Observer: ObserverType>:
     }
 
     func propagate(_ c: C, _: Int) async -> Disposable {
-        await self.lock.performLocked {
+        await self.lock.performLocked(c.call()) { c in
             if let lastUnsentElement = self.lastUnsentElement {
                 await self.sendNow(element: lastUnsentElement, c.call())
             }

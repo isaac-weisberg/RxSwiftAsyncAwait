@@ -128,7 +128,7 @@ private final class BufferTimeCountSink<Element, Observer: ObserverType>:
         await self.timerD.setDisposable(nextTimer)
 
         let disposable = await self.parent.scheduler.scheduleRelative(windowID, c.call(), dueTime: self.parent.timeSpan) { c, previousWindowID in
-            await self.lock.performLocked {
+            await self.lock.performLocked(c.call()) { c in
                 if previousWindowID != self.windowID {
                     return
                 }

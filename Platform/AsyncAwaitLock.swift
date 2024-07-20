@@ -9,7 +9,7 @@
 import Foundation
 
 public final actor AsyncAwaitLock {
-    private var currentOwnerThread: UnsafeMutableRawPointer?
+    private var currentOwnerStack: C?
     private var latestTask: Task<Void, Never>?
     private var scheduledTasks = 0
     private var recursiveAcqisitions = 0
@@ -33,35 +33,45 @@ public final actor AsyncAwaitLock {
         shouldStopOnAcquire = bool
     }
 
-    @inline(__always)
-    private func currentThreadPointer() -> UnsafeMutableRawPointer {
-        Unmanaged.passUnretained(Thread.current).toOpaque()
-    }
+    #if VICIOUS_TRACING
+        public func performLocked<R>(
+            _ work: @escaping () async -> R,
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line
+        )
+            async -> R {
+            await performLocked(C(file, function, line)) { _ in
+                await work()
+            }
+        }
+    #else
+        public func performLocked<R>(
+            _ work: @escaping () async -> R,
+            _ file: StaticString = #file,
+            line: UInt = #line
+        )
+            async -> R {
+            await performLocked(C()) { _ in
+                await work()
+            }
+        }
+    #endif
 
     public func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R {
-        return await performLocked {
-            await work(c.call())
-        }
-    }
-
-    public func performLocked<R>(_ work: @escaping () async -> R) async -> R {
         if shouldStopOnAcquire {
             _ = 42;
         }
 
-        if let currentOwnerThread {
-            let currentThreadPointer = currentThreadPointer()
+        if let currentOwnerStack {
 
-            if shouldStopOnAcquire {
-                print("ASDF", currentOwnerThread, currentThreadPointer)
-            }
-            if currentOwnerThread == currentThreadPointer {
+            if c._includesLocksFrom(currentOwnerStack) {
                 recursiveAcqisitions += 1
 
                 #if TRACE_RESOURCES
                     _ = await Resources.incrementTotal()
                 #endif
-                let result = await work()
+                let result = await work(c.call())
 
                 #if TRACE_RESOURCES
                     _ = await Resources.decrementTotal()
@@ -79,20 +89,12 @@ public final actor AsyncAwaitLock {
         if let latestTask {
             theActualTask = Task {
                 _ = await latestTask.value
+                
+                let c = c.acquiringLock()
+                self.currentOwnerStack = c
 
-                self.currentOwnerThread = self.currentThreadPointer()
-
-                if shouldStopOnAcquire {
-                    print("ASDF will work")
-                }
-
-                let result = await work()
-
-                if shouldStopOnAcquire {
-                    print("ASDF finished work")
-                }
-
-                self.currentOwnerThread = nil
+                let result = await work(c.call())
+                self.currentOwnerStack = nil
 
                 if recursiveAcqisitions > 0 {
                     #if DEBUG
@@ -104,17 +106,12 @@ public final actor AsyncAwaitLock {
             }
         } else {
             theActualTask = Task {
-                self.currentOwnerThread = self.currentThreadPointer()
+                let c = c.acquiringLock()
+                self.currentOwnerStack = c
 
-                if shouldStopOnAcquire {
-                    print("ASDF will work")
-                }
-                let result = await work()
-                if shouldStopOnAcquire {
-                    print("ASDF finished work")
-                }
+                let result = await work(c.call())
 
-                self.currentOwnerThread = nil
+                self.currentOwnerStack = nil
 
                 if recursiveAcqisitions > 0 {
                     #if DEBUG
@@ -172,54 +169,118 @@ public final actor AsyncAwaitLock {
 }
 
 #if VICIOUS_TRACING
-public struct C {
-    struct Entry: Equatable {
-        static func == (lhs: Entry, rhs: Entry) -> Bool {
-            lhs.line == rhs.line && lhs.file.withUTF8Buffer { lhsBuffer in
-                rhs.file.withUTF8Buffer { rhsBuffer in
-                    lhsBuffer.baseAddress == rhsBuffer.baseAddress
-                }
+//    func twoStaticStringsAreEqual(_ lhs: StaticString, _ rhs: StaticString) -> Bool {
+//        lhs.withUTF8Buffer { lhsBuffer in
+//            rhs.withUTF8Buffer { rhsBuffer in
+//                lhsBuffer.baseAddress == rhsBuffer.baseAddress
+//            }
+//        }
+//    }
+
+    public struct C {
+        struct Entry {
+            let file: StaticString
+            let function: StaticString
+            let line: UInt
+
+            init(file: StaticString, function: StaticString, line: UInt) {
+                self.file = file
+                self.function = function
+                self.line = line
             }
         }
-
-        let file: StaticString
-        let line: UInt
-
-    }
-
-    let entries: [Entry]
-
-    public init(_ file: StaticString = #file, _ line: UInt = #line) {
-        let entry = Entry(file: file, line: line)
-        entries = [entry]
-    }
-    
-    private init(_ entries: [Entry]) {
-        self.entries = entries
-    }
-
-    public func call(
-        _ file: StaticString = #file,
-        _ line: UInt = #line
-    ) -> C {
-        let entry = Entry(file: file, line: line)
         
-        var entries = self.entries
-        entries.append(entry)
-        let stack = C(entries)
-        return stack
+        final class AcquiredLock {
+            
+        }
+
+        let entries: [Entry]
+        let acquiredLocks: [AcquiredLock]
+
+        public init(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line
+        ) {
+            let entry = Entry(file: file, function: function, line: line)
+            entries = [entry]
+            acquiredLocks = []
+        }
+
+        private init(
+            _ entries: [Entry],
+            _ acquiredLocks: [AcquiredLock]
+        ) {
+            self.entries = entries
+            self.acquiredLocks = acquiredLocks
+        }
+
+        func _includesLocksFrom(_ c: C) -> Bool {
+            var parentIdx = 0
+            var innerIdx = 0
+            let concecutiveHitsNeeded = c.acquiredLocks.count
+            var concecutiveHitsGotten = 0
+            while parentIdx < acquiredLocks.count {
+                let me = acquiredLocks[parentIdx]
+                let them = c.acquiredLocks[innerIdx]
+
+                if me === them {
+                    concecutiveHitsGotten += 1
+                    innerIdx += 1
+
+                    if concecutiveHitsGotten >= concecutiveHitsNeeded {
+                        return true
+                    }
+                } else {
+                    concecutiveHitsGotten = 0
+                    innerIdx = 0
+                }
+
+                parentIdx += 1
+            }
+            return false
+        }
+
+        public func call(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line
+        ) -> C {
+            let entry = Entry(file: file, function: function, line: line)
+
+            var entries = entries
+            entries.append(entry)
+
+            let c = C(entries, acquiredLocks)
+            return c
+        }
+        
+        internal func acquiringLock() -> C {
+            let acquiredLock = AcquiredLock()
+            var acquiredLocks = self.acquiredLocks
+            acquiredLocks.append(acquiredLock)
+            let c = C(entries, acquiredLocks)
+            return c
+        }
+
+        public func stackAsString() -> String {
+            entries.reversed().enumerated().map { index, entry in
+                let fileUrl = URL(string: String(describing: entry.file))!
+                let lastPath = fileUrl.lastPathComponent
+
+                return "\(index):\u{00A0}\(lastPath):\(entry.line) \(entry.function)"
+            }
+            .joined(separator: "\n")
+        }
     }
-}
 
 #else
-public struct C {
-    public init() {
-        
+    public struct C {
+        public init() {}
+
+        @inline(__always)
+        public func call() -> C {
+            self
+        }
     }
-    
-    @inline(__always)
-    public func call() -> C {
-        self
-    }
-}
 #endif

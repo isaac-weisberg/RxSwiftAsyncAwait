@@ -69,7 +69,7 @@ final class CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
     }
     
     func on(_ c: C, _ event: Event<SourceElement>, atIndex: Int) async {
-        await self.lock.performLocked {
+        await self.lock.performLocked(c.call()) { c in
             switch event {
             case .next(let element):
                 if self.values[atIndex] == nil {

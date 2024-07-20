@@ -62,7 +62,7 @@ public final class SerialDisposable: DisposeBase, Cancelable {
     }
 
     private func _dispose() async -> Disposable? {
-        await self.lock.performLocked {
+        await self.lock.performLocked(C()) { c in
             guard await !self.isDisposed() else { return nil }
 
             self.disposed = true

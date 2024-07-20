@@ -48,7 +48,7 @@ public final class RefCountDisposable: DisposeBase, Cancelable {
 
     /// Disposes the underlying disposable only when all dependent disposables have been disposed.
     public func dispose() async {
-        let oldDisposable: Disposable? = await self.lock.performLocked {
+        let oldDisposable: Disposable? = await self.lock.performLocked(C()) { c in
             if let oldDisposable = self.disposable, !self.primaryDisposed {
                 self.primaryDisposed = true
 

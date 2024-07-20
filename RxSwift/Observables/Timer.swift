@@ -65,7 +65,7 @@ private final class TimerSink<Observer: ObserverType>: Sink<Observer> where Obse
 
     func run(_ c: C) async -> Disposable {
         return await self.parent.scheduler.schedulePeriodic(0 as Observer.Element, c.call(), startAfter: self.parent.dueTime, period: self.parent.period!) { c, state in
-            await self.lock.performLocked {
+            await self.lock.performLocked(c.call()) { c in
                 await self.forwardOn(.next(state), c.call())
                 return state &+ 1
             }

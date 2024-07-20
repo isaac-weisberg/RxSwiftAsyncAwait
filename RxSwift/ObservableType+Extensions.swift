@@ -18,7 +18,7 @@ public extension ObservableType {
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
     func subscribe(_ c: C, _ on: @escaping (C, Event<Element>) async -> Void) async -> Disposable {
-        let observer = await AnonymousObserver { c, e in
+        let observer = await AnonymousObserver(c.call()) { c, e in
             await on(c.call(), e)
         }
         return await asObservable().subscribe(c.call(), observer)
@@ -79,9 +79,10 @@ public extension ObservableType {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    #if VICIOUS_TRACE
+    #if VICIOUS_TRACING
         func subscribe(
             _ file: StaticString = #file,
+            _ function: StaticString = #function,
             _ line: UInt = #line,
             onNext: ((Element) async -> Void)? = nil,
             onError: ((Swift.Error) async -> Void)? = nil,
@@ -89,7 +90,7 @@ public extension ObservableType {
             onDisposed: (() async -> Void)? = nil
         )
             async -> Disposable {
-            let c = C(file, line)
+            let c = C(file, function, line)
             return await subscribe(
                 c,
                 onNext: onNext,
@@ -132,7 +133,7 @@ public extension ObservableType {
 
         let callStack = Hooks.recordCallStackOnError ? await Hooks.getCustomCaptureSubscriptionCallstack()() : []
 
-        let observer = await AnonymousObserver<Element> { _, event in
+        let observer = await AnonymousObserver<Element>(c.call()) { _, event in
             #if DEBUG
                 await synchronizationTracker.register(synchronizationErrorMessage: .default)
             #endif
