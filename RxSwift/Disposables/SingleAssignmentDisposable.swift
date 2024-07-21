@@ -20,7 +20,7 @@ public final class SingleAssignmentDisposable: DisposeBase, Cancelable {
     }
 
     // state
-    private let state: AtomicInt
+    private let state: ActualAtomicInt
     private var disposable = nil as Disposable?
 
     /// - returns: A value that indicates whether the object is disposed.
@@ -30,7 +30,7 @@ public final class SingleAssignmentDisposable: DisposeBase, Cancelable {
 
     /// Initializes a new instance of the `SingleAssignmentDisposable`.
     override public init() async {
-        self.state = await AtomicInt(0)
+        self.state = await ActualAtomicInt(0)
         await super.init()
     }
 

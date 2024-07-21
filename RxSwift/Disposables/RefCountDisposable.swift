@@ -8,7 +8,7 @@
 
 /// Represents a disposable resource that only disposes its underlying disposable resource when all dependent disposable objects have been disposed.
 public final class RefCountDisposable: DisposeBase, Cancelable {
-    private let lock: SpinLock
+    private let lock: ActualNonRecursiveLock
     private var disposable = nil as Disposable?
     private var primaryDisposed = false
     private var count = 0
@@ -20,7 +20,7 @@ public final class RefCountDisposable: DisposeBase, Cancelable {
 
     /// Initializes a new instance of the `RefCountDisposable`.
     public init(disposable: Disposable) async {
-        self.lock = await SpinLock()
+        self.lock = await ActualNonRecursiveLock()
         self.disposable = disposable
         await super.init()
     }

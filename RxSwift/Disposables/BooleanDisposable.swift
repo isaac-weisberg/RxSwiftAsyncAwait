@@ -9,16 +9,16 @@
 /// Represents a disposable resource that can be checked for disposal status.
 public final class BooleanDisposable: Cancelable {
     static var BooleanDisposableTrue: BooleanDisposable!
-    private let disposed: AtomicInt
+    private let disposed: ActualAtomicInt
     
     /// Initializes a new instance of the `BooleanDisposable` class
     public init() async {
-        self.disposed = await AtomicInt(0)
+        self.disposed = await ActualAtomicInt(0)
     }
     
     /// Initializes a new instance of the `BooleanDisposable` class with given value
     public init(isDisposed: Bool) async {
-        self.disposed = await AtomicInt(isDisposed ? 1 : 0)
+        self.disposed = await ActualAtomicInt(isDisposed ? 1 : 0)
     }
     
     /// - returns: Was resource disposed.

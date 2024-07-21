@@ -9,13 +9,12 @@
 /// Represents an object that is both an observable sequence as well as an observer.
 ///
 /// Each notification is broadcasted to all subscribed observers.
-public final class PublishSubject<Element>:
-    Observable<Element>,
+public final actor PublishSubject<Element>:
+    ObservableType,
     SubjectType,
     Cancelable,
     ObserverType,
-    SynchronizedUnsubscribeType
-{
+    SynchronizedUnsubscribeType {
     public typealias SubjectObserverType = PublishSubject<Element>
 
     typealias Observers = AnyObserver<Element>.s
@@ -23,7 +22,7 @@ public final class PublishSubject<Element>:
 
     /// Indicates whether the subject has any observers
     public func hasObservers() async -> Bool {
-        await self.lock.performLocked { self.observers.count > 0 }
+        await lock.performLocked { self.observers.count > 0 }
     }
 
     private let lock: RecursiveLock
@@ -40,16 +39,17 @@ public final class PublishSubject<Element>:
 
     /// Indicates whether the subject has been isDisposed.
     public func isDisposed() async -> Bool {
-        self.disposed
+        disposed
     }
 
     /// Creates a subject.
-    override public init() async {
-        self.lock = await RecursiveLock()
+    public init() async {
+        await ObservableInit()
+        lock = await RecursiveLock()
         #if DEBUG
-            self.synchronizationTracker = await SynchronizationTracker()
+            synchronizationTracker = await SynchronizationTracker()
         #endif
-        await super.init()
+
         #if TRACE_RESOURCES
             _ = await Resources.incrementTotal()
         #endif
@@ -60,17 +60,17 @@ public final class PublishSubject<Element>:
     /// - parameter event: Event to send to the observers.
     public func on(_ event: Event<Element>, _ c: C) async {
         #if DEBUG
-            await self.synchronizationTracker.register(synchronizationErrorMessage: .default)
+            await synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
-        await dispatch(self.synchronized_on(event, c.call()), event, c.call())
+        await dispatch(synchronized_on(event, c.call()), event, c.call())
 
         #if DEBUG
-            await self.synchronizationTracker.unregister()
+            await synchronizationTracker.unregister()
         #endif
     }
 
     func synchronized_on(_ event: Event<Element>, _ c: C) async -> Observers {
-        await self.lock.performLocked(c.call()) { c in
+        await lock.performLocked(c.call()) { _ in
             switch event {
             case .next:
                 let isDisposed = await self.isDisposed()
@@ -99,56 +99,59 @@ public final class PublishSubject<Element>:
      - parameter observer: Observer to subscribe to the subject.
      - returns: Disposable object that can be used to unsubscribe the observer from the subject.
      */
-    override public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
-        await self.lock.performLocked { await self.synchronized_subscribe(c.call(), observer) }
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+        where Observer.Element == Element {
+        await synchronized_subscribe(c.call(), observer)
     }
 
-    func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
-        if let stoppedEvent = self.stoppedEvent {
+    func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+        where Observer.Element == Element {
+        if let stoppedEvent {
             await observer.on(stoppedEvent, c.call())
             return Disposables.create()
         }
 
-        if await self.isDisposed() {
+        if await isDisposed() {
             await observer.on(.error(RxError.disposed(object: self)), c.call())
             return Disposables.create()
         }
 
-        let key = self.observers.insert(observer.on)
+        let key = observers.insert(observer.on)
         return SubscriptionDisposable(owner: self, key: key)
     }
 
     func synchronizedUnsubscribe(_ disposeKey: DisposeKey) async {
-        await self.lock.performLocked(C()) { c in
+        await lock.performLocked(C()) { _ in
             self.synchronized_unsubscribe(disposeKey)
         }
     }
 
     func synchronized_unsubscribe(_ disposeKey: DisposeKey) {
-        _ = self.observers.removeKey(disposeKey)
+        _ = observers.removeKey(disposeKey)
     }
 
     /// Returns observer interface for subject.
-    public func asObserver() -> PublishSubject<Element> {
+    nonisolated public func asObserver() -> PublishSubject<Element> {
         self
     }
 
     /// Unsubscribe all observers and release resources.
     public func dispose() async {
-        await self.lock.performLocked { self.synchronized_dispose() }
+        await lock.performLocked { self.synchronized_dispose() }
     }
 
     final func synchronized_dispose() {
-        self.disposed = true
-        self.observers.removeAll()
-        self.stoppedEvent = nil
+        disposed = true
+        observers.removeAll()
+        stoppedEvent = nil
     }
 
-    #if TRACE_RESOURCES
-        deinit {
+    deinit {
+        ObservableDeinit()
+        #if TRACE_RESOURCES
             Task {
                 _ = await Resources.decrementTotal()
             }
-        }
-    #endif
+        #endif
+    }
 }

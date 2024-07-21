@@ -15,7 +15,7 @@ private let disposeScheduledDisposable: (C, ScheduledDisposable) async -> Dispos
 public final class ScheduledDisposable: Cancelable {
     public let scheduler: ImmediateSchedulerType
 
-    private let disposed: AtomicInt
+    private let disposed: ActualAtomicInt
 
     // state
     private var disposable: Disposable?
@@ -32,7 +32,7 @@ public final class ScheduledDisposable: Cancelable {
      - parameter disposable: Disposable resource to dispose on the given scheduler.
      */
     public init(scheduler: ImmediateSchedulerType, disposable: Disposable) async {
-        self.disposed = await AtomicInt(0)
+        self.disposed = await ActualAtomicInt(0)
         self.scheduler = scheduler
         self.disposable = disposable
     }

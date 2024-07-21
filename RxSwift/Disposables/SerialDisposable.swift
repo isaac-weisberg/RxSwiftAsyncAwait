@@ -8,7 +8,7 @@
 
 /// Represents a disposable resource whose underlying disposable resource can be replaced by another disposable resource, causing automatic disposal of the previous underlying disposable resource.
 public final class SerialDisposable: DisposeBase, Cancelable {
-    private let lock: SpinLock
+    private let lock: ActualNonRecursiveLock
     
     // state
     private var current = nil as Disposable?
@@ -21,7 +21,7 @@ public final class SerialDisposable: DisposeBase, Cancelable {
     
     /// Initializes a new instance of the `SerialDisposable`.
     override public init() async {
-        self.lock = await SpinLock()
+        self.lock = await ActualNonRecursiveLock()
         await super.init()
     }
     

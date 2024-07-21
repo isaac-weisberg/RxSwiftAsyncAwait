@@ -71,7 +71,6 @@ private final class WithLatestFromSink<FirstType, SecondType, Observer: Observer
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.lock.setShouldStopOnAcquire(true)
         await synchronizedOn(event, c.call())
     }
 
@@ -118,7 +117,6 @@ private final class WithLatestFromSecond<FirstType, SecondType, Observer: Observ
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await lock.setShouldStopOnAcquire(true)
         await synchronizedOn(event, c.call())
     }
 

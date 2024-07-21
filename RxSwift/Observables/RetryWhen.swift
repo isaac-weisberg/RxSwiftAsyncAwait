@@ -166,7 +166,7 @@ private final class RetryWhenSequenceSink<Sequence: Swift.Sequence, Observer: Ob
         self.notifier = await PublishSubject<TriggerObservable.Element>()
         self.lock = await RecursiveLock()
         self.parent = parent
-        self.handler = await parent.notificationHandler(self.errorSubject).asObservable()
+        self.handler = await parent.notificationHandler(self.errorSubject.asObservable()).asObservable()
         await super.init(observer: observer, cancel: cancel)
     }
 

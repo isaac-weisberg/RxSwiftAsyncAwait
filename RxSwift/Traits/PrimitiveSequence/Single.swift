@@ -50,7 +50,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      */
     func subscribe(_ c: C, _ observer: @escaping (SingleEvent<Element>) async -> Void) async -> Disposable {
         var stopped = false
-        return await primitiveSequence.asObservable().subscribe(c.call()) { _, event in
+        return await primitiveSequence.asObservable().subscribe(c.call()) { c, event in
+            _ = c
             if stopped { return }
             stopped = true
 
@@ -151,7 +152,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
             onDisposed: (() -> Void)? = nil
         )
             async -> Disposable {
-            return await subscribe(C(), onSuccess: onSuccess, onFailure: onFailure, onDisposed: onDisposed)
+            await subscribe(C(), onSuccess: onSuccess, onFailure: onFailure, onDisposed: onDisposed)
         }
     #endif
     func subscribe(

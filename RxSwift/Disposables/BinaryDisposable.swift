@@ -8,7 +8,7 @@
 
 /// Represents two disposable resources that are disposed together.
 private final class BinaryDisposable: DisposeBase, Cancelable {
-    private let disposed: AtomicInt
+    private let disposed: ActualAtomicInt
 
     // state
     private var disposable1: Disposable?
@@ -24,7 +24,7 @@ private final class BinaryDisposable: DisposeBase, Cancelable {
     /// - parameter disposable1: First disposable
     /// - parameter disposable2: Second disposable
     init(_ disposable1: Disposable, _ disposable2: Disposable) async {
-        self.disposed = await AtomicInt(0)
+        self.disposed = await ActualAtomicInt(0)
         self.disposable1 = disposable1
         self.disposable2 = disposable2
         await super.init()

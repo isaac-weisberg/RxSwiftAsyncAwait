@@ -12,11 +12,23 @@
 
 public typealias RxObservable<Element> = Observable<Element>
 
-public class Observable<Element>: ObservableType {
-    init() async {
+func ObservableInit() async {
 #if TRACE_RESOURCES
         _ = await Resources.incrementTotal()
 #endif
+}
+
+func ObservableDeinit() {
+#if TRACE_RESOURCES
+        Task {
+            _ = await Resources.decrementTotal()
+        }
+#endif
+}
+
+public class Observable<Element>: ObservableType {
+    init() async {
+        await ObservableInit()
     }
 
     public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
@@ -26,10 +38,6 @@ public class Observable<Element>: ObservableType {
     public func asObservable() -> Observable<Element> { self }
 
     deinit {
-#if TRACE_RESOURCES
-        Task {
-            _ = await Resources.decrementTotal()
-        }
-#endif
+        ObservableDeinit()
     }
 }

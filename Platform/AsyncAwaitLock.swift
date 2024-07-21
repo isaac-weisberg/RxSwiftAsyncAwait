@@ -8,11 +8,43 @@
 
 import Foundation
 
-public final actor AsyncAwaitLock {
-    private var currentOwnerStack: C?
+public final class AsyncAwaitLock {
+    public init() async {}
+    public init() {}
+    public func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R {
+        await work(c.call())
+    }
+
+    public func performLockedThrowing<R>(_ work: @escaping () async throws -> R) async throws -> R {
+        try await work()
+    }
+
+    #if VICIOUS_TRACING
+        public func performLocked<R>(
+            _ work: @escaping () async -> R,
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line
+        )
+            async -> R {
+            await work()
+        }
+    
+    #else
+        public func performLocked<R>(
+            _ work: @escaping () async -> R
+        )
+            async -> R {
+            await work()
+        }
+    #endif
+}
+
+public final actor ActualNonRecursiveLock {
+//    private var currentOwnerStack: C?
     private var latestTask: Task<Void, Never>?
     private var scheduledTasks = 0
-    private var recursiveAcqisitions = 0
+//    private var recursiveAcqisitions = 0
 
     public init() async {
         #if TRACE_RESOURCES
@@ -28,10 +60,10 @@ public final actor AsyncAwaitLock {
         #endif
     }
 
-    var shouldStopOnAcquire = false
-    func setShouldStopOnAcquire(_ bool: Bool) {
-        shouldStopOnAcquire = bool
-    }
+//    var shouldStopOnAcquire = false
+//    func setShouldStopOnAcquire(_ bool: Bool) {
+//        shouldStopOnAcquire = bool
+//    }
 
     #if VICIOUS_TRACING
         public func performLocked<R>(
@@ -49,39 +81,40 @@ public final actor AsyncAwaitLock {
         public func performLocked<R>(
             _ work: @escaping () async -> R,
             _ file: StaticString = #file,
-            line: UInt = #line
+            _ function: StaticString = #function,
+            _ line: UInt = #line
         )
             async -> R {
-            await performLocked(C()) { _ in
+            await performLocked(C(file, function, line)) { _ in
                 await work()
             }
         }
     #endif
 
     public func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R {
-        if shouldStopOnAcquire {
-            _ = 42;
-        }
-
-        if let currentOwnerStack {
-
-            if c._includesLocksFrom(currentOwnerStack) {
-                recursiveAcqisitions += 1
-
-                #if TRACE_RESOURCES
-                    _ = await Resources.incrementTotal()
-                #endif
-                let result = await work(c.call())
-
-                #if TRACE_RESOURCES
-                    _ = await Resources.decrementTotal()
-                #endif
-
-                recursiveAcqisitions -= 1
-
-                return result
-            }
-        }
+//        if shouldStopOnAcquire {
+//            _ = 42;
+//        }
+//
+//        if let currentOwnerStack {
+//
+//            if c._includesLocksFrom(currentOwnerStack) {
+//                recursiveAcqisitions += 1
+//
+//                #if TRACE_RESOURCES
+//                    _ = await Resources.incrementTotal()
+//                #endif
+//                let result = await work(c.call())
+//
+//                #if TRACE_RESOURCES
+//                    _ = await Resources.decrementTotal()
+//                #endif
+//
+//                recursiveAcqisitions -= 1
+//
+//                return result
+//            }
+//        }
 
         scheduledTasks += 1
 
@@ -89,35 +122,35 @@ public final actor AsyncAwaitLock {
         if let latestTask {
             theActualTask = Task {
                 _ = await latestTask.value
-                
-                let c = c.acquiringLock()
-                self.currentOwnerStack = c
+
+//                let c = c.acquiringLock()
+//                self.currentOwnerStack = c
 
                 let result = await work(c.call())
-                self.currentOwnerStack = nil
+//                self.currentOwnerStack = nil
 
-                if recursiveAcqisitions > 0 {
-                    #if DEBUG
-                        assertionFailure("How the fuck did you do it?")
-                    #endif
-                }
+//                if recursiveAcqisitions > 0 {
+//                    #if DEBUG
+//                        assertionFailure("How the fuck did you do it?")
+//                    #endif
+//                }
 
                 return result
             }
         } else {
             theActualTask = Task {
-                let c = c.acquiringLock()
-                self.currentOwnerStack = c
+//                let c = c.acquiringLock()
+//                self.currentOwnerStack = c
 
                 let result = await work(c.call())
 
-                self.currentOwnerStack = nil
+//                self.currentOwnerStack = nil
 
-                if recursiveAcqisitions > 0 {
-                    #if DEBUG
-                        assertionFailure("How the fuck did you do it?")
-                    #endif
-                }
+//                if recursiveAcqisitions > 0 {
+//                    #if DEBUG
+//                        assertionFailure("How the fuck did you do it?")
+//                    #endif
+//                }
                 return result
             }
         }
@@ -139,32 +172,6 @@ public final actor AsyncAwaitLock {
         scheduledTasks -= 1
 
         return actualTaskValue
-    }
-
-    public func performLockedThrowing<R>(_ work: @escaping () async throws -> R) async throws -> R {
-        let theActualTask: Task<R, Error> = Task { [self] in
-            if let latestTask {
-                _ = await latestTask.value
-            }
-
-            let result = try await work()
-
-            return result
-        }
-
-        let voidTask = Task<Void, Never> {
-            #if TRACE_RESOURCES
-                _ = await Resources.incrementTotal()
-            #endif
-            _ = try? await theActualTask.value
-
-            #if TRACE_RESOURCES
-                _ = await Resources.decrementTotal()
-            #endif
-        }
-        latestTask = voidTask
-
-        return try await theActualTask.value
     }
 }
 
@@ -189,13 +196,11 @@ public final actor AsyncAwaitLock {
                 self.line = line
             }
         }
-        
-        final class AcquiredLock {
-            
-        }
+
+//        final class AcquiredLock {}
 
         let entries: [Entry]
-        let acquiredLocks: [AcquiredLock]
+//        let acquiredLocks: [AcquiredLock]
 
         public init(
             _ file: StaticString = #file,
@@ -204,42 +209,42 @@ public final actor AsyncAwaitLock {
         ) {
             let entry = Entry(file: file, function: function, line: line)
             entries = [entry]
-            acquiredLocks = []
+//            acquiredLocks = []
         }
 
         private init(
-            _ entries: [Entry],
-            _ acquiredLocks: [AcquiredLock]
+            _ entries: [Entry]//,
+//            _ acquiredLocks: [AcquiredLock]
         ) {
             self.entries = entries
-            self.acquiredLocks = acquiredLocks
+//            self.acquiredLocks = acquiredLocks
         }
 
-        func _includesLocksFrom(_ c: C) -> Bool {
-            var parentIdx = 0
-            var innerIdx = 0
-            let concecutiveHitsNeeded = c.acquiredLocks.count
-            var concecutiveHitsGotten = 0
-            while parentIdx < acquiredLocks.count {
-                let me = acquiredLocks[parentIdx]
-                let them = c.acquiredLocks[innerIdx]
-
-                if me === them {
-                    concecutiveHitsGotten += 1
-                    innerIdx += 1
-
-                    if concecutiveHitsGotten >= concecutiveHitsNeeded {
-                        return true
-                    }
-                } else {
-                    concecutiveHitsGotten = 0
-                    innerIdx = 0
-                }
-
-                parentIdx += 1
-            }
-            return false
-        }
+//        func _includesLocksFrom(_ c: C) -> Bool {
+//            var parentIdx = 0
+//            var innerIdx = 0
+//            let concecutiveHitsNeeded = c.acquiredLocks.count
+//            var concecutiveHitsGotten = 0
+//            while parentIdx < acquiredLocks.count {
+//                let me = acquiredLocks[parentIdx]
+//                let them = c.acquiredLocks[innerIdx]
+//
+//                if me === them {
+//                    concecutiveHitsGotten += 1
+//                    innerIdx += 1
+//
+//                    if concecutiveHitsGotten >= concecutiveHitsNeeded {
+//                        return true
+//                    }
+//                } else {
+//                    concecutiveHitsGotten = 0
+//                    innerIdx = 0
+//                }
+//
+//                parentIdx += 1
+//            }
+//            return false
+//        }
 
         public func call(
             _ file: StaticString = #file,
@@ -251,17 +256,17 @@ public final actor AsyncAwaitLock {
             var entries = entries
             entries.append(entry)
 
-            let c = C(entries, acquiredLocks)
+            let c = C(entries)
             return c
         }
-        
-        internal func acquiringLock() -> C {
-            let acquiredLock = AcquiredLock()
-            var acquiredLocks = self.acquiredLocks
-            acquiredLocks.append(acquiredLock)
-            let c = C(entries, acquiredLocks)
-            return c
-        }
+//
+//        func acquiringLock() -> C {
+//            let acquiredLock = AcquiredLock()
+//            var acquiredLocks = acquiredLocks
+//            acquiredLocks.append(acquiredLock)
+//            let c = C(entries, acquiredLocks)
+//            return c
+//        }
 
         public func stackAsString() -> String {
             entries.reversed().enumerated().map { index, entry in

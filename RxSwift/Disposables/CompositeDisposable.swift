@@ -16,7 +16,7 @@ public final class CompositeDisposable: DisposeBase, Cancelable {
         }
     }
 
-    private let lock: SpinLock
+    private let lock: ActualNonRecursiveLock
     
     // state
     private var disposables: Bag<Disposable>? = Bag()
@@ -28,13 +28,13 @@ public final class CompositeDisposable: DisposeBase, Cancelable {
     }
     
     override public init() async {
-        self.lock = await SpinLock()
+        self.lock = await ActualNonRecursiveLock()
         await super.init()
     }
     
     /// Initializes a new instance of composite disposable with the specified number of disposables.
     public init(_ disposable1: Disposable, _ disposable2: Disposable) async {
-        self.lock = await SpinLock()
+        self.lock = await ActualNonRecursiveLock()
         // This overload is here to make sure we are using optimized version up to 4 arguments.
         _ = self.disposables!.insert(disposable1)
         _ = self.disposables!.insert(disposable2)
@@ -43,7 +43,7 @@ public final class CompositeDisposable: DisposeBase, Cancelable {
     
     /// Initializes a new instance of composite disposable with the specified number of disposables.
     public init(_ disposable1: Disposable, _ disposable2: Disposable, _ disposable3: Disposable) async {
-        self.lock = await SpinLock()
+        self.lock = await ActualNonRecursiveLock()
         // This overload is here to make sure we are using optimized version up to 4 arguments.
         _ = self.disposables!.insert(disposable1)
         _ = self.disposables!.insert(disposable2)
@@ -53,7 +53,7 @@ public final class CompositeDisposable: DisposeBase, Cancelable {
     
     /// Initializes a new instance of composite disposable with the specified number of disposables.
     public init(_ disposable1: Disposable, _ disposable2: Disposable, _ disposable3: Disposable, _ disposable4: Disposable, _ disposables: Disposable...) async {
-        self.lock = await SpinLock()
+        self.lock = await ActualNonRecursiveLock()
         // This overload is here to make sure we are using optimized version up to 4 arguments.
         _ = self.disposables!.insert(disposable1)
         _ = self.disposables!.insert(disposable2)
@@ -68,7 +68,7 @@ public final class CompositeDisposable: DisposeBase, Cancelable {
     
     /// Initializes a new instance of composite disposable with the specified number of disposables.
     public init(disposables: [Disposable]) async {
-        self.lock = await SpinLock()
+        self.lock = await ActualNonRecursiveLock()
         for disposable in disposables {
             _ = self.disposables!.insert(disposable)
         }

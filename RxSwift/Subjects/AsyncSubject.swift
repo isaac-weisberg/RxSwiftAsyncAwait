@@ -10,12 +10,11 @@
 /// and only after that source Observable completes.
 ///
 /// (If the source Observable does not emit any values, the AsyncSubject also completes without emitting any values.)
-public final class AsyncSubject<Element>:
-    Observable<Element>,
+public final actor AsyncSubject<Element>:
+    ObservableType,
     SubjectType,
     ObserverType,
-    SynchronizedUnsubscribeType
-{
+    SynchronizedUnsubscribeType {
     public typealias SubjectObserverType = AsyncSubject<Element>
 
     typealias Observers = AnyObserver<Element>.s
@@ -23,19 +22,15 @@ public final class AsyncSubject<Element>:
 
     /// Indicates whether the subject has any observers
     public func hasObservers() async -> Bool {
-        await self.lock.performLocked(C()) { c in
-            self.observers.count > 0
-        }
+        observers.count > 0
     }
-
-    let lock: RecursiveLock
 
     // state
     private var observers = Observers()
     private var isStopped = false
     private var stoppedEvent = nil as Event<Element>? {
         didSet {
-            self.isStopped = self.stoppedEvent != nil
+            isStopped = stoppedEvent != nil
         }
     }
 
@@ -46,15 +41,14 @@ public final class AsyncSubject<Element>:
     #endif
 
     /// Creates a subject.
-    override public init() async {
-        self.lock = await RecursiveLock()
+    public init() async {
         #if TRACE_RESOURCES
             _ = await Resources.incrementTotal()
         #endif
         #if DEBUG
-            self.synchronizationTracker = await SynchronizationTracker()
+            synchronizationTracker = await SynchronizationTracker()
         #endif
-        await super.init()
+        await ObservableInit()
     }
 
     /// Notifies all subscribed observers about next event.
@@ -62,7 +56,7 @@ public final class AsyncSubject<Element>:
     /// - parameter event: Event to send to the observers.
     public func on(_ event: Event<Element>, _ c: C) async {
         #if DEBUG
-            await self.synchronizationTracker.register(synchronizationErrorMessage: .default)
+            await synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
         await scope {
             let (observers, event) = await self.synchronized_on(event, c.call())
@@ -77,40 +71,37 @@ public final class AsyncSubject<Element>:
             }
         }
         #if DEBUG
-            await self.synchronizationTracker.unregister()
+            await synchronizationTracker.unregister()
         #endif
     }
 
     func synchronized_on(_ event: Event<Element>, _ c: C) async -> (Observers, Event<Element>) {
-        await self.lock.performLocked(c.call()) { c in
-            if self.isStopped {
-                return (Observers(), .completed)
-            }
+        if isStopped {
+            return (Observers(), .completed)
+        }
 
-            switch event {
-            case .next(let element):
-                self.lastElement = element
-                return (Observers(), .completed)
-            case .error:
-                self.stoppedEvent = event
+        switch event {
+        case .next(let element):
+            lastElement = element
+            return (Observers(), .completed)
+        case .error:
+            stoppedEvent = event
 
-                let observers = self.observers
-                self.observers.removeAll()
+            let observers = observers
+            self.observers.removeAll()
 
-                return (observers, event)
-            case .completed:
+            return (observers, event)
+        case .completed:
 
-                let observers = self.observers
-                self.observers.removeAll()
+            let observers = observers
+            self.observers.removeAll()
 
-                if let lastElement = self.lastElement {
-                    self.stoppedEvent = .next(lastElement)
-                    return (observers, .next(lastElement))
-                }
-                else {
-                    self.stoppedEvent = event
-                    return (observers, .completed)
-                }
+            if let lastElement {
+                stoppedEvent = .next(lastElement)
+                return (observers, .next(lastElement))
+            } else {
+                stoppedEvent = event
+                return (observers, .completed)
             }
         }
     }
@@ -119,12 +110,14 @@ public final class AsyncSubject<Element>:
     ///
     /// - parameter observer: Observer to subscribe to the subject.
     /// - returns: Disposable object that can be used to unsubscribe the observer from the subject.
-    override public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
-        await self.lock.performLocked(c.call()) { c in await self.synchronized_subscribe(c.call(), observer) }
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+        where Observer.Element == Element {
+        await synchronized_subscribe(c.call(), observer)
     }
 
-    func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
-        if let stoppedEvent = self.stoppedEvent {
+    func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+        where Observer.Element == Element {
+        if let stoppedEvent {
             switch stoppedEvent {
             case .next:
                 await observer.on(stoppedEvent, c.call())
@@ -137,29 +130,30 @@ public final class AsyncSubject<Element>:
             return Disposables.create()
         }
 
-        let key = self.observers.insert(observer.on)
+        let key = observers.insert(observer.on)
 
         return SubscriptionDisposable(owner: self, key: key)
     }
 
     func synchronizedUnsubscribe(_ disposeKey: DisposeKey) async {
-        await self.lock.performLocked { self.synchronized_unsubscribe(disposeKey) }
+        synchronized_unsubscribe(disposeKey)
     }
 
     func synchronized_unsubscribe(_ disposeKey: DisposeKey) {
-        _ = self.observers.removeKey(disposeKey)
+        _ = observers.removeKey(disposeKey)
     }
 
     /// Returns observer interface for subject.
-    public func asObserver() -> AsyncSubject<Element> {
+    nonisolated public func asObserver() -> AsyncSubject<Element> {
         self
     }
 
-    #if TRACE_RESOURCES
-        deinit {
+    deinit {
+        ObservableDeinit()
+        #if TRACE_RESOURCES
             Task {
                 _ = await Resources.decrementTotal()
             }
-        }
-    #endif
+        #endif
+    }
 }

@@ -12,7 +12,7 @@
 private final class AnonymousDisposable: DisposeBase, Cancelable {
     public typealias DisposeAction = () async -> Void
 
-    private let disposed: AtomicInt
+    private let disposed: ActualAtomicInt
     private var disposeAction: DisposeAction?
 
     /// - returns: Was resource disposed.
@@ -24,7 +24,7 @@ private final class AnonymousDisposable: DisposeBase, Cancelable {
     ///
     /// - parameter disposeAction: Disposal action which will be run upon calling `dispose`.
     private init(_ disposeAction: @escaping DisposeAction) async {
-        disposed = await AtomicInt(0)
+        disposed = await ActualAtomicInt(0)
         self.disposeAction = disposeAction
         await super.init()
     }
@@ -32,7 +32,7 @@ private final class AnonymousDisposable: DisposeBase, Cancelable {
     // Non-deprecated version of the constructor, used by `Disposables.create(with:)`
     fileprivate init(disposeAction: @escaping DisposeAction) async {
         self.disposeAction = disposeAction
-        disposed = await AtomicInt(0)
+        disposed = await ActualAtomicInt(0)
         await super.init()
     }
 

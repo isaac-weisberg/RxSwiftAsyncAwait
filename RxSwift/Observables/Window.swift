@@ -60,7 +60,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
     }
     
     func run(_ c: C) async -> Disposable {
-        await self.forwardOn(.next(AddRef(source: self.subject, refCount: self.refCountDisposable).asObservable()), c.call())
+        await self.forwardOn(.next(AddRef(source: self.subject.asObservable(), refCount: self.refCountDisposable).asObservable()), c.call())
         await self.createTimer(c.call(), self.windowId)
         
         _ = await self.groupDisposable.insert(self.parent.source.subscribe(c.call(), self))
@@ -71,7 +71,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
         await self.subject.on(.completed, c.call())
         self.subject = await PublishSubject<Element>()
         
-        await self.forwardOn(.next(AddRef(source: self.subject, refCount: self.refCountDisposable).asObservable()), c.call())
+        await self.forwardOn(.next(AddRef(source: self.subject.asObservable(), refCount: self.refCountDisposable).asObservable()), c.call())
     }
 
     func on(_ event: Event<Element>, _ c: C) async {

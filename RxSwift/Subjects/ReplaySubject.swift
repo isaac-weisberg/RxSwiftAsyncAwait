@@ -80,6 +80,7 @@ public class ReplaySubject<Element>:
     }
 
     override init() async {
+        fatalError("not impelement in the new model of lock acquisition, needs to be actor, need to refactor the inheritance")
         #if DEBUG
             synchronizationTracker = await SynchronizationTracker()
         #endif

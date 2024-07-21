@@ -44,7 +44,7 @@ public final class DisposeBag {
 
 
 public final class DisposeBagUnderThehood: DisposeBase {
-    fileprivate var lock: SpinLock
+    fileprivate var lock: ActualNonRecursiveLock
 
     // state
     fileprivate var disposables = [Disposable]()
@@ -52,7 +52,7 @@ public final class DisposeBagUnderThehood: DisposeBase {
 
     /// Constructs new empty dispose bag.
     override public init() async {
-        self.lock = await SpinLock()
+        self.lock = await ActualNonRecursiveLock()
         await super.init()
     }
 
