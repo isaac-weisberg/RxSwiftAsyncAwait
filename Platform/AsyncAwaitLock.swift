@@ -29,7 +29,7 @@ public final class AsyncAwaitLock {
             async -> R {
             await work()
         }
-    
+
     #else
         public func performLocked<R>(
             _ work: @escaping () async -> R
@@ -185,6 +185,32 @@ public final actor ActualNonRecursiveLock {
 //    }
 
     public struct C {
+        public static func with<R>(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            _ work: @escaping (C) async -> R
+        )
+            async -> R {
+            let lock = await ActualNonRecursiveLock()
+
+            let c = C(file, function, line)
+            return await lock.performLocked(c) { _ in
+                await work(c)
+            }
+        }
+
+        static func withNoLock<R>(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            _ work: @escaping (C) async -> R
+        )
+            async -> R {
+            let c = C(file, function, line)
+            return await work(c)
+        }
+
         struct Entry {
             let file: StaticString
             let function: StaticString
@@ -202,7 +228,7 @@ public final actor ActualNonRecursiveLock {
         let entries: [Entry]
 //        let acquiredLocks: [AcquiredLock]
 
-        public init(
+        fileprivate init(
             _ file: StaticString = #file,
             _ function: StaticString = #function,
             _ line: UInt = #line
@@ -213,7 +239,7 @@ public final actor ActualNonRecursiveLock {
         }
 
         private init(
-            _ entries: [Entry]//,
+            _ entries: [Entry] // ,
 //            _ acquiredLocks: [AcquiredLock]
         ) {
             self.entries = entries
@@ -259,6 +285,7 @@ public final actor ActualNonRecursiveLock {
             let c = C(entries)
             return c
         }
+
 //
 //        func acquiringLock() -> C {
 //            let acquiredLock = AcquiredLock()
