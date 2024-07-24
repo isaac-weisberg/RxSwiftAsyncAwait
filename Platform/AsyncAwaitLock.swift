@@ -79,13 +79,10 @@ public final actor ActualNonRecursiveLock {
         }
     #else
         public func performLocked<R>(
-            _ work: @escaping () async -> R,
-            _ file: StaticString = #file,
-            _ function: StaticString = #function,
-            _ line: UInt = #line
+            _ work: @escaping () async -> R
         )
             async -> R {
-            await performLocked(C(file, function, line)) { _ in
+            await performLocked(C()) { _ in
                 await work()
             }
         }

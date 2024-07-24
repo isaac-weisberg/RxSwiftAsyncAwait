@@ -16,14 +16,15 @@ enum TailRecursiveSinkCommand {
 #endif
 
 /// This class is usually used with `Generator` version of the operators.
-class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
-    Sink<Observer>,
+final class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
+    Sink,
     InvocableWithValueType where Sequence.Element: ObservableConvertibleType,
     Sequence.Element.Element == Observer.Element {
     typealias Value = TailRecursiveSinkCommand
     typealias Element = Observer.Element
     typealias SequenceGenerator = (generator: Sequence.Iterator, remaining: IntMax?)
 
+    let baseSink: BaseSink<TailRecursiveSink<Sequence, Observer>>
     var generators: [SequenceGenerator] = []
     var disposed = false
     var subscription: SerialDisposable
@@ -31,10 +32,10 @@ class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
     // this is thread safe object
     let gate: AsyncLock<InvocableScheduledItem<TailRecursiveSink<Sequence, Observer>>>
 
-    override init(observer: Observer, cancel: Cancelable) async {
+    init(observer: Observer, cancel: Cancelable) async {
         gate = await AsyncLock<InvocableScheduledItem<TailRecursiveSink<Sequence, Observer>>>()
         subscription = await SerialDisposable()
-        await super.init(observer: observer, cancel: cancel)
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C, _ sources: SequenceGenerator) async -> Disposable {
@@ -78,7 +79,7 @@ class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
                 break
             }
 
-            if await isDisposed() {
+            if isDisposed() {
                 return
             }
 
@@ -140,8 +141,13 @@ class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
         generators.removeAll(keepingCapacity: false)
     }
 
-    override func dispose() async {
-        await super.dispose()
+    func isDisposed() -> Bool {
+        baseSink.isDisposed()
+    }
+
+    func dispose() async {
+        baseSink.setDisposedSync()
+        await baseSink.dispose()
 
         await subscription.dispose()
         await gate.dispose()

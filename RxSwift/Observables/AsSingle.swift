@@ -6,32 +6,37 @@
 //  Copyright © 2017 Krunoslav Zaher. All rights reserved.
 //
 
-private final class AsSingleSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor AsSingleSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
 
+    let baseSink: BaseSink<AsSingleSink<Observer>>
+
     private var element: Event<Element>?
+
+    init(observer: Observer, cancel: Cancelable) async {
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
+    }
 
     func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            if self.element != nil {
-                await self.forwardOn(.error(RxError.moreThanOneElement), c.call())
-                await self.dispose()
+            if element != nil {
+                await forwardOn(.error(RxError.moreThanOneElement), c.call())
+                await dispose()
             }
 
-            self.element = event
+            element = event
         case .error:
-            await self.forwardOn(event, c.call())
-            await self.dispose()
+            await forwardOn(event, c.call())
+            await dispose()
         case .completed:
-            if let element = self.element {
-                await self.forwardOn(element, c.call())
-                await self.forwardOn(.completed, c.call())
+            if let element {
+                await forwardOn(element, c.call())
+                await forwardOn(.completed, c.call())
+            } else {
+                await forwardOn(.error(RxError.noElements), c.call())
             }
-            else {
-                await self.forwardOn(.error(RxError.noElements), c.call())
-            }
-            await self.dispose()
+            await dispose()
         }
     }
 }
@@ -44,9 +49,14 @@ final class AsSingle<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: Cancelable
+    )
+        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await AsSingleSink(observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(c.call(), sink)
+        let subscription = await source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

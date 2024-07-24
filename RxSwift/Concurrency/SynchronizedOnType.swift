@@ -12,6 +12,6 @@ protocol SynchronizedOnType: AnyObject, ObserverType {
 
 extension SynchronizedOnType {
     func synchronizedOn(_ event: Event<Element>, _ c: C) async {
-        await synchronized_on(event, c.call())
+        await synchronized_on(event, c)
     }
 }

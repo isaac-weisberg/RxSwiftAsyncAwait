@@ -11,54 +11,65 @@ class Producer<Element>: Observable<Element> {
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+        where Observer.Element == Element {
         if !CurrentThreadScheduler.isScheduleRequired {
             // The returned disposable needs to release all references once it was disposed.
-            let disposer = await SinkDisposer()
-            let sinkAndSubscription = await self.run(c.call(), observer, cancel: disposer)
-            await disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
+            let disposer = SinkDisposer()
+            let sinkAndSubscription = await run(c.call(), observer, cancel: disposer)
+            await disposer.setSinkAndSubscription(
+                sink: sinkAndSubscription.sink,
+                subscription: sinkAndSubscription.subscription
+            )
 
             return disposer
-        }
-        else {
+        } else {
             return await CurrentThreadScheduler.instance.schedule((), c.call()) { c, _ in
-                let disposer = await SinkDisposer()
+                let disposer = SinkDisposer()
                 let sinkAndSubscription = await self.run(c.call(), observer, cancel: disposer)
-                await disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
+                await disposer.setSinkAndSubscription(
+                    sink: sinkAndSubscription.sink,
+                    subscription: sinkAndSubscription.subscription
+                )
 
                 return disposer
             }
         }
     }
 
-    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: Cancelable
+    )
+        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         rxAbstractMethod()
     }
 }
 
-private final class SinkDisposer: Cancelable {
+private final actor SinkDisposer: Cancelable {
     private enum DisposeState: Int32 {
         case disposed = 1
         case sinkAndSubscriptionSet = 2
     }
 
-    private let state: AtomicInt
+    private let state: NonAtomicInt
     private var sink: Disposable?
     private var subscription: Disposable?
 
-    init() async {
-        self.state = await AtomicInt(0)
+    init() {
+        state = NonAtomicInt(0)
     }
 
-    func isDisposed() async -> Bool {
-        await isFlagSet(self.state, DisposeState.disposed.rawValue)
+    func isDisposed() -> Bool {
+        isFlagSet(state, DisposeState.disposed.rawValue)
     }
 
     func setSinkAndSubscription(sink: Disposable, subscription: Disposable) async {
         self.sink = sink
         self.subscription = subscription
 
-        let previousState = await fetchOr(self.state, DisposeState.sinkAndSubscriptionSet.rawValue)
+        let previousState = fetchOr(state, DisposeState.sinkAndSubscriptionSet.rawValue)
         if (previousState & DisposeState.sinkAndSubscriptionSet.rawValue) != 0 {
             rxFatalError("Sink and subscription were already set")
         }
@@ -71,18 +82,18 @@ private final class SinkDisposer: Cancelable {
         }
     }
 
-    func dispose() async {
-        let previousState = await fetchOr(self.state, DisposeState.disposed.rawValue)
+    func dispose() {
+        let previousState = fetchOr(state, DisposeState.disposed.rawValue)
 
         if (previousState & DisposeState.disposed.rawValue) != 0 {
             return
         }
 
         if (previousState & DisposeState.sinkAndSubscriptionSet.rawValue) != 0 {
-            guard let sink = self.sink else {
+            guard let sink else {
                 rxFatalError("Sink not set")
             }
-            guard let subscription = self.subscription else {
+            guard let subscription else {
                 rxFatalError("Subscription not set")
             }
 

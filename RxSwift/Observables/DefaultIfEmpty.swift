@@ -16,34 +16,35 @@ public extension ObservableType {
      - returns: An observable sequence which emits default element end completes in case the original sequence is empty
      */
     func ifEmpty(default: Element) async -> Observable<Element> {
-        await DefaultIfEmpty(source: self.asObservable(), default: `default`)
+        await DefaultIfEmpty(source: asObservable(), default: `default`)
     }
 }
 
-private final class DefaultIfEmptySink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor DefaultIfEmptySink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
     private let `default`: Element
     private var isEmpty = true
+    let baseSink: BaseSink<DefaultIfEmptySink<Observer>>
 
     init(default: Element, observer: Observer, cancel: Cancelable) async {
         self.default = `default`
-        await super.init(observer: observer, cancel: cancel)
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            self.isEmpty = false
-            await self.forwardOn(event, c.call())
+            isEmpty = false
+            await forwardOn(event, c.call())
         case .error:
-            await self.forwardOn(event, c.call())
-            await self.dispose()
+            await forwardOn(event, c.call())
+            await dispose()
         case .completed:
-            if self.isEmpty {
-                await self.forwardOn(.next(self.default), c.call())
+            if isEmpty {
+                await forwardOn(.next(self.default), c.call())
             }
-            await self.forwardOn(.completed, c.call())
-            await self.dispose()
+            await forwardOn(.completed, c.call())
+            await dispose()
         }
     }
 }
@@ -58,9 +59,14 @@ private final class DefaultIfEmpty<SourceType>: Producer<SourceType> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceType {
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: Cancelable
+    )
+        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceType {
         let sink = await DefaultIfEmptySink(default: self.default, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(c.call(), sink)
+        let subscription = await source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

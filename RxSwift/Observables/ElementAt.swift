@@ -17,9 +17,8 @@ public extension ObservableType {
      */
     @available(*, deprecated, renamed: "element(at:)")
     func elementAt(_ index: Int) async
-        -> Observable<Element>
-    {
-        await self.element(at: index)
+        -> Observable<Element> {
+        await element(at: index)
     }
 
     /**
@@ -31,38 +30,38 @@ public extension ObservableType {
      - returns: An observable sequence that emits the desired element as its own sole emission.
      */
     func element(at index: Int) async
-        -> Observable<Element>
-    {
-        await ElementAt(source: self.asObservable(), index: index, throwOnEmpty: true)
+        -> Observable<Element> {
+        await ElementAt(source: asObservable(), index: index, throwOnEmpty: true)
     }
 }
 
-private final class ElementAtSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor ElementAtSink<Observer: ObserverType>: Sink, ObserverType {
     typealias SourceType = Observer.Element
     typealias Parent = ElementAt<SourceType>
+
+    let baseSink: BaseSink<ElementAtSink<Observer>>
 
     let parent: Parent
     var i: Int
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        self.i = parent.index
+        i = parent.index
 
-        await super.init(observer: observer, cancel: cancel)
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<SourceType>, _ c: C) async {
         switch event {
         case .next:
-
-            if self.i == 0 {
-                await self.forwardOn(event, c.call())
-                await self.forwardOn(.completed, c.call())
-                await self.dispose()
+            if i == 0 {
+                await forwardOn(event, c.call())
+                await forwardOn(.completed, c.call())
+                await dispose()
             }
 
             do {
-                _ = try decrementChecked(&self.i)
+                _ = try decrementChecked(&i)
             } catch let e {
                 await self.forwardOn(.error(e), c.call())
                 await self.dispose()
@@ -70,17 +69,17 @@ private final class ElementAtSink<Observer: ObserverType>: Sink<Observer>, Obser
             }
 
         case .error(let e):
-            await self.forwardOn(.error(e), c.call())
-            await self.dispose()
+            await forwardOn(.error(e), c.call())
+            await dispose()
 
         case .completed:
-            if self.parent.throwOnEmpty {
-                await self.forwardOn(.error(RxError.argumentOutOfRange), c.call())
+            if parent.throwOnEmpty {
+                await forwardOn(.error(RxError.argumentOutOfRange), c.call())
             } else {
-                await self.forwardOn(.completed, c.call())
+                await forwardOn(.completed, c.call())
             }
 
-            await self.dispose()
+            await dispose()
         }
     }
 }
@@ -101,9 +100,14 @@ private final class ElementAt<SourceType>: Producer<SourceType> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceType {
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: Cancelable
+    )
+        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceType {
         let sink = await ElementAtSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(c.call(), sink)
+        let subscription = await source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

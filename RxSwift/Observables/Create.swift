@@ -17,50 +17,53 @@ public extension ObservableType {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(_ subscribe: @escaping (C, AnyObserver<Element>) async -> Disposable) async -> Observable<Element> {
+    static func create(_ subscribe: @escaping (C, AnyObserver<Element>) async -> Disposable) async
+        -> Observable<Element> {
         await AnonymousObservable(subscribe)
     }
 }
 
-private final class AnonymousObservableSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor AnonymousObservableSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
     typealias Parent = AnonymousObservable<Element>
 
+    let baseSink: BaseSink<AnonymousObservableSink<Observer>>
+
     // state
-    private let isStopped: AtomicInt
+    private let isStopped: NonAtomicInt
 
     #if DEBUG
         private let synchronizationTracker: SynchronizationTracker
     #endif
 
-    override init(observer: Observer, cancel: Cancelable) async {
-        self.isStopped = await AtomicInt(0)
+    init(observer: Observer, cancel: Cancelable) async {
+        isStopped = NonAtomicInt(0)
         #if DEBUG
-            self.synchronizationTracker = await SynchronizationTracker()
+            synchronizationTracker = await SynchronizationTracker()
         #endif
-        await super.init(observer: observer, cancel: cancel)
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
         #if DEBUG
-            await self.synchronizationTracker.register(synchronizationErrorMessage: .default)
+            await synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
         await scope {
             switch event {
             case .next:
-                if await load(self.isStopped) == 1 {
+                if load(self.isStopped) == 1 {
                     return
                 }
                 await self.forwardOn(event, c.call())
             case .error, .completed:
-                if await fetchOr(self.isStopped, 1) == 0 {
+                if fetchOr(self.isStopped, 1) == 0 {
                     await self.forwardOn(event, c.call())
                     await self.dispose()
                 }
             }
         }
         #if DEBUG
-            await self.synchronizationTracker.unregister()
+            await synchronizationTracker.unregister()
         #endif
     }
 
@@ -79,7 +82,12 @@ private final class AnonymousObservable<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: Cancelable
+    )
+        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await AnonymousObservableSink(observer: observer, cancel: cancel)
         let subscription = await sink.run(self, c.call())
         return (sink: sink, subscription: subscription)

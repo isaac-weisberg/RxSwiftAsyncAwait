@@ -19,24 +19,21 @@ public extension ObservableType {
      - returns: The throttled sequence.
      */
     func debounce(_ dueTime: RxTimeInterval, scheduler: SchedulerType) async
-        -> Observable<Element>
-    {
-        return await Debounce(source: self.asObservable(), dueTime: dueTime, scheduler: scheduler)
+        -> Observable<Element> {
+        await Debounce(source: asObservable(), dueTime: dueTime, scheduler: scheduler)
     }
 }
 
-private final class DebounceSink<Observer: ObserverType>:
-    Sink<Observer>,
+private final actor DebounceSink<Observer: ObserverType>:
+    Sink,
     ObserverType,
-    LockOwnerType,
-    SynchronizedOnType
-{
+    SynchronizedOnType {
     typealias Element = Observer.Element
     typealias ParentType = Debounce<Element>
 
-    private let parent: ParentType
+    let baseSink: BaseSink<DebounceSink<Observer>>
 
-    let lock: RecursiveLock
+    private let parent: ParentType
 
     // state
     private var id = 0 as UInt64
@@ -45,61 +42,58 @@ private final class DebounceSink<Observer: ObserverType>:
     let cancellable: SerialDisposable
 
     init(parent: ParentType, observer: Observer, cancel: Cancelable) async {
-        self.cancellable = await SerialDisposable()
-        self.lock = await RecursiveLock()
+        cancellable = await SerialDisposable()
         self.parent = parent
 
-        await super.init(observer: observer, cancel: cancel)
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C) async -> Disposable {
-        let subscription = await self.parent.source.subscribe(c.call(), self)
+        let subscription = await parent.source.subscribe(c.call(), self)
 
-        return await Disposables.create(subscription, self.cancellable)
+        return await Disposables.create(subscription, cancellable)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.synchronizedOn(event, c.call())
+        await synchronizedOn(event, c.call())
     }
 
     func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
-            self.id = self.id &+ 1
-            let currentId = self.id
-            self.value = element
+            id = id &+ 1
+            let currentId = id
+            value = element
 
-            let scheduler = self.parent.scheduler
-            let dueTime = self.parent.dueTime
+            let scheduler = parent.scheduler
+            let dueTime = parent.dueTime
 
             let d = await SingleAssignmentDisposable()
-            await self.cancellable.setDisposable(d)
-            await d.setDisposable(scheduler.scheduleRelative(currentId, c.call(), dueTime: dueTime, action: self.propagate))
+            await cancellable.setDisposable(d)
+            await d.setDisposable(scheduler.scheduleRelative(currentId, c.call(), dueTime: dueTime, action: propagate))
         case .error:
-            self.value = nil
-            await self.forwardOn(event, c.call())
-            await self.dispose()
+            value = nil
+            await forwardOn(event, c.call())
+            await dispose()
         case .completed:
-            if let value = self.value {
+            if let value {
                 self.value = nil
-                await self.forwardOn(.next(value), c.call())
+                await forwardOn(.next(value), c.call())
             }
-            await self.forwardOn(.completed, c.call())
-            await self.dispose()
+            await forwardOn(.completed, c.call())
+            await dispose()
         }
     }
 
     func propagate(c: C, _ currentId: UInt64) async -> Disposable {
-        await self.lock.performLocked(c.call()) { c in
-            let originalValue = self.value
+        let originalValue = value
 
-            if let value = originalValue, self.id == currentId {
-                self.value = nil
-                await self.forwardOn(.next(value), c.call())
-            }
-
-            return Disposables.create()
+        if let value = originalValue, id == currentId {
+            self.value = nil
+            await forwardOn(.next(value), c.call())
         }
+
+        return Disposables.create()
     }
 }
 
@@ -115,7 +109,12 @@ private final class Debounce<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: Cancelable
+    )
+        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await DebounceSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

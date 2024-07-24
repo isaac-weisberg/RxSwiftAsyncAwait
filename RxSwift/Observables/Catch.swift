@@ -150,17 +150,18 @@ private final class CatchSinkProxy<Observer: ObserverType>: ObserverType {
     }
 }
 
-private final class CatchSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor CatchSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
     typealias Parent = Catch<Element>
 
+    let baseSink: BaseSink<CatchSink<Observer>>
     private let parent: Parent
     private let subscription: SerialDisposable
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
         self.subscription = await SerialDisposable()
-        await super.init(observer: observer, cancel: cancel)
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C) async -> Disposable {
@@ -215,7 +216,7 @@ private final class Catch<Element>: Producer<Element> {
 
 // catch enumerable
 
-private final class CatchSequenceSink<Sequence: Swift.Sequence, Observer: ObserverType>:
+private final actor CatchSequenceSink<Sequence: Swift.Sequence, Observer: ObserverType>:
     TailRecursiveSink<Sequence, Observer>,
     ObserverType where Sequence.Element: ObservableConvertibleType, Sequence.Element.Element == Observer.Element
 {

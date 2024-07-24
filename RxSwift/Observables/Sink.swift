@@ -11,8 +11,6 @@ protocol Sink: Disposable, AnyObject {
 
     var baseSink: BaseSink<Self> { get }
 
-    init(observer: Observer, cancel: Cancelable) async
-
     func forwardOn(_ event: Event<Observer.Element>, _ c: C) async
 }
 
