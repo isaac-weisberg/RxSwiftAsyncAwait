@@ -6,16 +6,22 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-final class AddRefSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+final actor AddRefSink<Observer: ObserverType>: Sink, ObserverType {
+    let baseSink: BaseSink<AddRefSink<Observer>>
+
+    init(observer: Observer, cancel: any Cancelable) async {
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
+    }
+
     typealias Element = Observer.Element
 
     func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            await self.forwardOn(event, c.call())
+            await forwardOn(event, c.call())
         case .completed, .error:
-            await self.forwardOn(event, c.call())
-            await self.dispose()
+            await forwardOn(event, c.call())
+            await dispose()
         }
     }
 }
@@ -30,10 +36,15 @@ final class AddRef<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        let releaseDisposable = await self.refCount.retain()
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: Cancelable
+    )
+        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+        let releaseDisposable = await refCount.retain()
         let sink = await AddRefSink(observer: observer, cancel: cancel)
-        let subscription = await Disposables.create(releaseDisposable, await self.source.subscribe(c.call(), sink))
+        let subscription = await Disposables.create(releaseDisposable, source.subscribe(c.call(), sink))
 
         return (sink: sink, subscription: subscription)
     }

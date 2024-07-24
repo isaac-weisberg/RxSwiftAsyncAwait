@@ -153,7 +153,7 @@ extension Bag {
         let value0 = _value0
         let dictionary = _dictionary
 
-        if let value0 = value0 {
+        if let value0 {
             await action(value0)
         }
 
@@ -175,6 +175,6 @@ extension BagKey: Hashable {
     }
 }
 
-func ==(lhs: BagKey, rhs: BagKey) -> Bool {
+func == (lhs: BagKey, rhs: BagKey) -> Bool {
     lhs.rawValue == rhs.rawValue
 }

@@ -21,7 +21,7 @@ public final actor BehaviorSubject<Element>:
     typealias DisposeKey = Observers.KeyType
 
     /// Indicates whether the subject has any observers
-    public func hasObservers() async -> Bool {
+    public func hasObservers() -> Bool {
         observers.count > 0
     }
 
@@ -36,7 +36,7 @@ public final actor BehaviorSubject<Element>:
     #endif
 
     /// Indicates whether the subject has been disposed.
-    public func isDisposed() async -> Bool {
+    public func isDisposed() -> Bool {
         disposed
     }
 
@@ -60,8 +60,8 @@ public final actor BehaviorSubject<Element>:
     ///
     /// - returns: Latest value.
     public var value: Element {
-        get async throws {
-            if await isDisposed() {
+        get throws {
+            if isDisposed() {
                 throw RxError.disposed(object: self)
             }
 
@@ -81,18 +81,23 @@ public final actor BehaviorSubject<Element>:
         #if DEBUG
             await synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
-        await dispatch(synchronized_on(event, c.call()), event, c.call())
+        let observers = synchronized_on(event, c.call())
+
+        for observer in observers {
+            await observer(event, c.call())
+        }
+
         #if DEBUG
             await synchronizationTracker.unregister()
         #endif
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async -> Observers {
+    func synchronized_on(_ event: Event<Element>, _ c: C) -> Observers {
         if stoppedEvent != nil {
             return Observers()
         }
 
-        if await isDisposed() {
+        if isDisposed() {
             return Observers()
         }
 
@@ -117,7 +122,7 @@ public final actor BehaviorSubject<Element>:
 
     func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
         where Observer.Element == Element {
-        if await isDisposed() {
+        if isDisposed() {
             await observer.on(.error(RxError.disposed(object: self)), c.call())
             return Disposables.create()
         }
@@ -133,12 +138,12 @@ public final actor BehaviorSubject<Element>:
         return SubscriptionDisposable(owner: self, key: key)
     }
 
-    func synchronizedUnsubscribe(_ disposeKey: DisposeKey) async {
-        await synchronized_unsubscribe(disposeKey)
+    func synchronizedUnsubscribe(_ disposeKey: DisposeKey) {
+        synchronized_unsubscribe(disposeKey)
     }
 
-    func synchronized_unsubscribe(_ disposeKey: DisposeKey) async {
-        if await isDisposed() {
+    func synchronized_unsubscribe(_ disposeKey: DisposeKey) {
+        if isDisposed() {
             return
         }
 
@@ -151,7 +156,7 @@ public final actor BehaviorSubject<Element>:
     }
 
     /// Unsubscribe all observers and release resources.
-    public func dispose() async {
+    public func dispose() {
         disposed = true
         observers.removeAll()
         stoppedEvent = nil

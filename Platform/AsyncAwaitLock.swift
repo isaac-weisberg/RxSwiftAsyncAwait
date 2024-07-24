@@ -192,12 +192,8 @@ public final actor ActualNonRecursiveLock {
             _ work: @escaping (C) async -> R
         )
             async -> R {
-            let lock = await ActualNonRecursiveLock()
-
             let c = C(file, function, line)
-            return await lock.performLocked(c) { _ in
-                await work(c)
-            }
+            return await work(c)
         }
 
         static func withNoLock<R>(
@@ -228,7 +224,7 @@ public final actor ActualNonRecursiveLock {
         let entries: [Entry]
 //        let acquiredLocks: [AcquiredLock]
 
-        fileprivate init(
+        public init(
             _ file: StaticString = #file,
             _ function: StaticString = #function,
             _ line: UInt = #line

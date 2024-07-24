@@ -21,11 +21,9 @@ public final actor PublishSubject<Element>:
     typealias DisposeKey = Observers.KeyType
 
     /// Indicates whether the subject has any observers
-    public func hasObservers() async -> Bool {
-        await lock.performLocked { self.observers.count > 0 }
+    public func hasObservers() -> Bool {
+        observers.count > 0
     }
-
-    private let lock: RecursiveLock
 
     // state
     private var disposed = false
@@ -38,14 +36,13 @@ public final actor PublishSubject<Element>:
     #endif
 
     /// Indicates whether the subject has been isDisposed.
-    public func isDisposed() async -> Bool {
+    public func isDisposed() -> Bool {
         disposed
     }
 
     /// Creates a subject.
     public init() async {
         await ObservableInit()
-        lock = await RecursiveLock()
         #if DEBUG
             synchronizationTracker = await SynchronizationTracker()
         #endif
@@ -62,34 +59,35 @@ public final actor PublishSubject<Element>:
         #if DEBUG
             await synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
-        await dispatch(synchronized_on(event, c.call()), event, c.call())
+        let observers = synchronized_on(event)
+        for observer in observers {
+            await observer(event, c.call())
+        }
 
         #if DEBUG
             await synchronizationTracker.unregister()
         #endif
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async -> Observers {
-        await lock.performLocked(c.call()) { _ in
-            switch event {
-            case .next:
-                let isDisposed = await self.isDisposed()
-                if isDisposed || self.stopped {
-                    return Observers()
-                }
-
-                return self.observers
-            case .completed, .error:
-                if self.stoppedEvent == nil {
-                    self.stoppedEvent = event
-                    self.stopped = true
-                    let observers = self.observers
-                    self.observers.removeAll()
-                    return observers
-                }
-
+    func synchronized_on(_ event: Event<Element>) -> Observers {
+        switch event {
+        case .next:
+            let isDisposed = isDisposed()
+            if isDisposed || stopped {
                 return Observers()
             }
+
+            return observers
+        case .completed, .error:
+            if stoppedEvent == nil {
+                stoppedEvent = event
+                stopped = true
+                let observers = observers
+                self.observers.removeAll()
+                return observers
+            }
+
+            return Observers()
         }
     }
 
@@ -111,7 +109,7 @@ public final actor PublishSubject<Element>:
             return Disposables.create()
         }
 
-        if await isDisposed() {
+        if isDisposed() {
             await observer.on(.error(RxError.disposed(object: self)), c.call())
             return Disposables.create()
         }
@@ -120,10 +118,8 @@ public final actor PublishSubject<Element>:
         return SubscriptionDisposable(owner: self, key: key)
     }
 
-    func synchronizedUnsubscribe(_ disposeKey: DisposeKey) async {
-        await lock.performLocked(C()) { _ in
-            self.synchronized_unsubscribe(disposeKey)
-        }
+    func synchronizedUnsubscribe(_ disposeKey: DisposeKey) {
+        synchronized_unsubscribe(disposeKey)
     }
 
     func synchronized_unsubscribe(_ disposeKey: DisposeKey) {
@@ -131,13 +127,13 @@ public final actor PublishSubject<Element>:
     }
 
     /// Returns observer interface for subject.
-    nonisolated public func asObserver() -> PublishSubject<Element> {
+    public nonisolated func asObserver() -> PublishSubject<Element> {
         self
     }
 
     /// Unsubscribe all observers and release resources.
-    public func dispose() async {
-        await lock.performLocked { self.synchronized_dispose() }
+    public func dispose() {
+        synchronized_dispose()
     }
 
     final func synchronized_dispose() {

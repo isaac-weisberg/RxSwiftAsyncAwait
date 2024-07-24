@@ -47,3 +47,57 @@ func disposeAll(in bag: Bag<Disposable>) async {
         }
     }
 }
+
+extension Bag: Sequence {
+    func makeIterator() -> BagIterator<T> {
+        BagIterator(self)
+    }
+}
+
+struct BagIterator<T>: IteratorProtocol {
+    typealias Element = T
+    let bag: Bag<T>
+    let sortedKeysOfDictCount: Int
+    let sortedKeysOfDict: [BagKey]!
+
+    init(_ bag: Bag<T>) {
+        self.bag = bag
+        let sortedKeysOfDict = bag._dictionary.map { dict in
+            Array(dict.keys)
+        }
+        self.sortedKeysOfDict = sortedKeysOfDict
+        sortedKeysOfDictCount = sortedKeysOfDict?.count ?? 0
+    }
+
+    var itemEmission = 0
+
+    mutating func next() -> T? {
+        let element = {
+            if itemEmission == 0 {
+                return bag._value0
+            } else {
+                if bag._onlyFastPath {
+                    return nil
+                }
+
+                let pairIndex = itemEmission - 1 //
+                if pairIndex < bag._pairs.count {
+                    return bag._pairs[pairIndex].value
+                }
+
+                let dictIndex = itemEmission - bag._pairs.count - 1
+
+                if dictIndex < sortedKeysOfDictCount {
+                    let key = sortedKeysOfDict![dictIndex]
+                    return bag._dictionary?[key]
+                }
+
+                return nil
+            }
+        }()
+
+        itemEmission += 1
+
+        return element
+    }
+}
