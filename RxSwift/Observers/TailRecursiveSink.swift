@@ -18,9 +18,8 @@ enum TailRecursiveSinkCommand {
 /// This class is usually used with `Generator` version of the operators.
 final class TailRecursiveSink<Sequence: Swift.Sequence, TheSink: Sink & InvocableWithValueType>:
     BaseSinkProtocol where Sequence.Element: ObservableConvertibleType,
-                           Sequence.Element.Element == TheSink.Observer.Element {
-    
-    
+    Sequence.Element.Element == TheSink.Observer.Element {
+
     func beforeForwardOn() {
         baseSink.beforeForwardOn()
     }
@@ -33,9 +32,8 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, TheSink: Sink & Invocabl
         baseSink.afterForwardOn()
     }
 
-    var observer: TheSink.Observer
-
-    var cancel: any Cancelable
+    let observer: TheSink.Observer
+    let cancel: any Cancelable
 
     typealias Observer = TheSink.Observer
     typealias Value = TailRecursiveSinkCommand
@@ -53,8 +51,9 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, TheSink: Sink & Invocabl
         gate = AsyncLock<InvocableScheduledItem<TheSink>>()
         subscription = await SerialDisposable()
         baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.observer = observer
+        self.cancel = cancel
     }
-
 
     // simple implementation for now
     func schedule(_ command: InvocableScheduledItem<TheSink>) -> AsyncLockIterator<InvocableScheduledItem<TheSink>> {
@@ -78,7 +77,10 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, TheSink: Sink & Invocabl
         CandidatesForExtractionIterator(source: self)
     }
 
-    func moveNextAppendGeneratorOrUseCandidate(_ nextGenerator: SequenceGenerator?, _ nextCandidate: Observable<Element>) -> Observable<Element>? {
+    func moveNextAppendGeneratorOrUseCandidate(
+        _ nextGenerator: SequenceGenerator?,
+        _ nextCandidate: Observable<Element>
+    ) -> Observable<Element>? {
         if let nextGenerator {
             generators.append(nextGenerator)
             #if DEBUG || TRACE_RESOURCES
@@ -153,11 +155,10 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, TheSink: Sink & Invocabl
 //        await disposable.setDisposable(subscribeToNext(c.call(), existingNext))
 //    }
 
-
     func isDisposed() -> Bool {
         baseSink.isDisposed()
     }
-    
+
     func setDisposedSyncPre() {
         baseSink.setDisposedSync()
     }
@@ -167,7 +168,7 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, TheSink: Sink & Invocabl
 
         await subscription.dispose()
     }
-    
+
     func setDisposedSyncPost() {
         gate.dispose()
     }
