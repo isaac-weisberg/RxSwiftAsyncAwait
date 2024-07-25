@@ -11,3 +11,7 @@ public protocol Disposable {
     /// Dispose resource.
     func dispose() async
 }
+
+public protocol SyncDisposable {
+    func dispose()
+}

@@ -8,8 +8,9 @@
 
 protocol Sink: Disposable, AnyObject {
     associatedtype Observer: ObserverType
+    associatedtype TheBaseSink: BaseSinkProtocol where TheBaseSink.TheSink == Self
 
-    var baseSink: BaseSink<Self> { get }
+    var baseSink: TheBaseSink { get }
 
     func forwardOn(_ event: Event<Observer.Element>, _ c: C) async
 }
@@ -33,11 +34,23 @@ extension Sink {
     }
 }
 
-final class BaseSink<TheSink: Sink> {
+protocol BaseSinkProtocol {
+    associatedtype TheSink: Sink
+    func beforeForwardOn()
+    func setDisposedSync()
+    func afterForwardOn()
+    func isDisposed() -> Bool
+    func dispose() async
+    func forwardOn(_ event: Event<TheSink.Observer.Element>, _ c: C) async
+    var observer: TheSink.Observer { get }
+    var cancel: Cancelable { get }
+}
+
+final class BaseSink<TheSink: Sink>: BaseSinkProtocol {
     typealias Observer = TheSink.Observer
 
-    fileprivate let observer: Observer
-    fileprivate let cancel: Cancelable
+    let observer: Observer
+    let cancel: Cancelable
     private let disposed: NonAtomicInt
 
     #if DEBUG

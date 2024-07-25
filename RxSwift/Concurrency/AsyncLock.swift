@@ -17,93 +17,84 @@
  That means that enqueued work could possibly be executed later on a different thread.
  */
 final class AsyncLock<I: InvocableType>:
-    Disposable,
-    Lock,
-    SynchronizedDisposeType
-{
-    typealias Action = () -> Void
+    SyncDisposable {
+    typealias Element = I
 
-    private var _lock: SpinLock
+    typealias Action = () -> Void
 
     private var queue: Queue<I> = Queue(capacity: 0)
 
-    private var isExecuting: Bool = false
-    private var hasFaulted: Bool = false
+    private var isExecuting = false
+    private var hasFaulted = false
 
-    init() async {
-        self._lock = await SpinLock()
+    init() {}
+
+    fileprivate func enqueue(_ action: I) -> I? {
+        if hasFaulted {
+            return nil
+        }
+
+        if isExecuting {
+            queue.enqueue(action)
+            return nil
+        }
+
+        isExecuting = true
+
+        return action
     }
 
-    func performLocked<R>(_ work: @escaping () async -> R) async -> R {
-        await self._lock.performLocked {
-            await work()
+    fileprivate func dequeue() -> I? {
+        if !queue.isEmpty {
+            return queue.dequeue()
+        } else {
+            isExecuting = false
+            return nil
         }
     }
-    
-    func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R {
-        await self._lock.performLocked(c.call()) { c in
-            await work(c.call())
-        }
+
+    func schedule(_ action: I) -> AsyncLockIterator<I> {
+        AsyncLockIterator(self, action)
     }
 
-    private func enqueue(_ action: I) async -> I? {
-        return await self.performLocked {
-            if self.hasFaulted {
+    func dispose() {
+        queue = Queue(capacity: 0)
+        hasFaulted = true
+    }
+}
+
+struct AsyncLockIterator<I: InvocableType>: IteratorProtocol, Sequence {
+    typealias Element = I
+
+    let source: AsyncLock<I>
+    let action: I
+
+    init(_ source: AsyncLock<I>, _ action: I) {
+        self.source = source
+        self.action = action
+    }
+
+    var firstIteration = true
+
+    mutating func next() -> Element? {
+        if firstIteration {
+            firstIteration = false
+            let firstEnqueuedAction = source.enqueue(action)
+
+            if let firstEnqueuedAction {
+                return firstEnqueuedAction
+            } else {
+                // action is enqueued, it's somebody else's concern now
                 return nil
             }
+        } else {
+            let nextAction = source.dequeue()
 
-            if self.isExecuting {
-                self.queue.enqueue(action)
-                return nil
-            }
-
-            self.isExecuting = true
-
-            return action
-        }
-    }
-
-    private func dequeue() async -> I? {
-        return await self.performLocked {
-            if !self.queue.isEmpty {
-                return self.queue.dequeue()
-            }
-            else {
-                self.isExecuting = false
+            if let nextAction {
+                return nextAction
+            } else {
                 return nil
             }
         }
-    }
-
-    func invoke(_ c: C, _ action: I) async {
-        let firstEnqueuedAction = await self.enqueue(action)
-
-        if let firstEnqueuedAction = firstEnqueuedAction {
-            await firstEnqueuedAction.invoke(c.call())
-        }
-        else {
-            // action is enqueued, it's somebody else's concern now
-            return
-        }
-
-        while true {
-            let nextAction = await self.dequeue()
-
-            if let nextAction = nextAction {
-                await nextAction.invoke(c.call())
-            }
-            else {
-                return
-            }
-        }
-    }
-
-    func dispose() async {
-        await self.synchronizedDispose()
-    }
-
-    func synchronized_dispose() {
-        self.queue = Queue(capacity: 0)
-        self.hasFaulted = true
     }
 }
