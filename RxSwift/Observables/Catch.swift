@@ -217,9 +217,9 @@ private final actor CatchSequenceSink<
     Sequence: Swift.Sequence,
     Observer: ObserverType
 >: Sink, ObserverType, InvocableWithValueType
-where Sequence.Element: ObservableConvertibleType, Sequence.Element.Element == Observer.Element {
+    where Sequence.Element: ObservableConvertibleType, Sequence.Element.Element == Observer.Element {
     typealias Observer = Observer
-    
+
     typealias TheBaseSink = TailRecursiveSink<Sequence, CatchSequenceSink<Sequence, Observer>>
 
     typealias Element = Observer.Element
@@ -258,47 +258,55 @@ where Sequence.Element: ObservableConvertibleType, Sequence.Element.Element == O
             await item.invoke(c.call())
         }
     }
+    
+    func scheduleDispose(_ c: C) async {
+        let iterator = baseSink.schedule(InvocableScheduledItem<CatchSequenceSink<Sequence, Observer>>(
+            invocable: self,
+            state: .dispose
+        ))
+        for item in iterator {
+            await item.invoke(c.call())
+        }
+    }
 
     func invoke(_ c: C, _ value: TailRecursiveSinkCommand) async {
         switch value {
         case .dispose:
-            break
+            disposeCommand()
         case .moveNext:
-            for nextCandidate in baseSink.moveNextCandidatesForExtraction() {
-                switch nextCandidate {
-                case .noMoreCandidates:
-                    await done(c.call())
-                case .nextCandidate(let nextCandidate):
-                    let nextGenerator = extract(nextCandidate)
-
-                    guard let existingNext = baseSink.moveNextAppendGeneratorOrUseCandidate(nextGenerator, nextCandidate) else {
+            var next: Observable<Element>?
+            repeat {
+                for nextCandidate in baseSink.moveNextCandidatesForExtraction() {
+                    switch nextCandidate {
+                    case .noMoreCandidates:
                         await done(c.call())
-                        return
+                    case .nextCandidate(let nextCandidate):
+                        let nextGenerator = extract(nextCandidate)
+
+                        if let existingNext = baseSink.moveNextAppendGeneratorOrUseCandidate(
+                            nextGenerator,
+                            nextCandidate
+                        ) {
+                            next = existingNext
+                        }
                     }
-
-                    let disposable = await SingleAssignmentDisposable()
-                    await baseSink.subscription.setDisposable(disposable)
-                    await disposable.setDisposable(subscribeToNext(c.call(), existingNext))
                 }
+            } while next == nil
+
+            guard let existingNext = next else {
+                await done(c.call())
+                return
             }
+
+            let disposable = await SingleAssignmentDisposable()
+            await baseSink.subscription.setDisposable(disposable)
+            await disposable.setDisposable(subscribeToNext(c.call(), existingNext))
         }
     }
 
-    func forwarder() -> SinkForward<CatchSequenceSink<Sequence, Observer>> {
-        SinkForward(forward: self)
-    }
-
-    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
-        baseSink.beforeForwardOn()
-        if !baseSink.isDisposed() {
-            await baseSink.forwardOn(event, c.call())
-        }
-        baseSink.afterForwardOn()
-    }
-
-    func dispose() async {
-        baseSink.setDisposedSync()
-        await baseSink.dispose()
+    func disposeCommand() {
+        baseSink.disposed = true
+        baseSink.generators.removeAll(keepingCapacity: false)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -326,6 +334,14 @@ where Sequence.Element: ObservableConvertibleType, Sequence.Element.Element == O
         }
 
         await dispose()
+    }
+
+    /* override */ func dispose() async {
+        baseSink.setDisposedSyncPre()
+        await baseSink.dispose()
+        baseSink.setDisposedSyncPost()
+
+        await scheduleDispose(C())
     }
 
     private func extract(_ observable: Observable<Element>)
