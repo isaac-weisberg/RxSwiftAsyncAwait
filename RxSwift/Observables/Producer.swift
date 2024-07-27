@@ -82,7 +82,7 @@ private final actor SinkDisposer: Cancelable {
         }
     }
 
-    func dispose() {
+    func dispose() async {
         let previousState = fetchOr(state, DisposeState.disposed.rawValue)
 
         if (previousState & DisposeState.disposed.rawValue) != 0 {

@@ -43,18 +43,19 @@ public extension ObservableType {
     }
 }
 
-private final class ReduceSink<SourceType, AccumulateType, Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor ReduceSink<SourceType, AccumulateType, Observer: ObserverType>: Sink, ObserverType {
     typealias ResultType = Observer.Element
     typealias Parent = Reduce<SourceType, AccumulateType, ResultType>
 
     private let parent: Parent
     private var accumulation: AccumulateType
+    
+    let baseSink: BaseSink<ReduceSink<SourceType, AccumulateType, Observer>>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
         self.parent = parent
         self.accumulation = parent.seed
-
-        await super.init(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<SourceType>, _ c: C) async {

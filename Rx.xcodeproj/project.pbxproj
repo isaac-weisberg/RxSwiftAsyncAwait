@@ -81,11 +81,11 @@
 		A2FD4E9E225D050B00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
 		A2FD4E9F225D050B00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
 		A4687D032C43DD8600FF1DEE /* Binder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4687D022C43DD8600FF1DEE /* Binder.swift */; };
+		A47E0C9D2C5555B000B56BE4 /* AsyncAwaitLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A47E0C9C2C5555B000B56BE4 /* AsyncAwaitLock.swift */; };
 		A4B9B2A42C43DF5C007CF0AC /* AsyncAwaitLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B9B2A32C43DF5C007CF0AC /* AsyncAwaitLock.swift */; };
 		A4B9B2A52C43DF5C007CF0AC /* AsyncAwaitLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B9B2A32C43DF5C007CF0AC /* AsyncAwaitLock.swift */; };
 		A4B9B2A62C43DF5C007CF0AC /* AsyncAwaitLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B9B2A32C43DF5C007CF0AC /* AsyncAwaitLock.swift */; };
 		A4D3BE312C43C79900E6D717 /* AsyncAwaitLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4D3BE302C43C79800E6D717 /* AsyncAwaitLock.swift */; };
-		A4EF0BE82C4114D9009EE9DE /* AsyncAwaitLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4EF0BE72C4114D9009EE9DE /* AsyncAwaitLock.swift */; };
 		C801DE361F6EAD3C008DB060 /* SingleTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C801DE351F6EAD3C008DB060 /* SingleTest.swift */; };
 		C801DE371F6EAD3C008DB060 /* SingleTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C801DE351F6EAD3C008DB060 /* SingleTest.swift */; };
 		C801DE381F6EAD3C008DB060 /* SingleTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C801DE351F6EAD3C008DB060 /* SingleTest.swift */; };
@@ -758,6 +758,7 @@
 		A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Observable+RelayBindTests.swift"; sourceTree = "<group>"; };
 		A2FD4EA4225D0A8100288525 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A4687D022C43DD8600FF1DEE /* Binder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Binder.swift; sourceTree = "<group>"; };
+		A47E0C9C2C5555B000B56BE4 /* AsyncAwaitLock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AsyncAwaitLock.swift; sourceTree = "<group>"; };
 		A4B9B2A32C43DF5C007CF0AC /* AsyncAwaitLock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AsyncAwaitLock.swift; sourceTree = "<group>"; };
 		A4D3BE302C43C79800E6D717 /* AsyncAwaitLock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AsyncAwaitLock.swift; sourceTree = "<group>"; };
 		A4EF0BE72C4114D9009EE9DE /* AsyncAwaitLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncAwaitLock.swift; sourceTree = "<group>"; };
@@ -993,7 +994,7 @@
 		C85B01681DB2ACAF006043C3 /* Platform.Linux.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Platform.Linux.swift; sourceTree = "<group>"; };
 		C85B01721DB2ACF2006043C3 /* Platform.Darwin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Platform.Darwin.swift; sourceTree = "<group>"; };
 		C85B01731DB2ACF2006043C3 /* Platform.Linux.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Platform.Linux.swift; sourceTree = "<group>"; };
-		C85BA04B1C3878740075D68E /* PerformanceTests.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = PerformanceTests.app; path = Microoptimizations.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C85BA04B1C3878740075D68E /* Microoptimizations.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Microoptimizations.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C86781471DB8119900B2029A /* Bag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bag.swift; sourceTree = "<group>"; };
 		C86781481DB8119900B2029A /* InfiniteSequence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfiniteSequence.swift; sourceTree = "<group>"; };
 		C86781491DB8119900B2029A /* PriorityQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriorityQueue.swift; sourceTree = "<group>"; };
@@ -1748,7 +1749,7 @@
 				C83508C31C386F6F0027C24C /* AllTests-iOS.xctest */,
 				C83509841C38740E0027C24C /* AllTests-tvOS.xctest */,
 				C83509941C38742C0027C24C /* AllTests-macOS.xctest */,
-				C85BA04B1C3878740075D68E /* PerformanceTests.app */,
+				C85BA04B1C3878740075D68E /* Microoptimizations.app */,
 				C8E8BA551E2C181A00A4AC2C /* Benchmarks.xctest */,
 				A2897D53225CA1E7004EA481 /* RxRelay.framework */,
 			);
@@ -1758,6 +1759,7 @@
 		C8BF34C81C2E426800416CAE /* Platform */ = {
 			isa = PBXGroup;
 			children = (
+				A47E0C9C2C5555B000B56BE4 /* AsyncAwaitLock.swift */,
 				C8165ACA21891BBF00494BEF /* AtomicInt.swift */,
 				C867816B1DB8129E00B2029A /* DataStructures */,
 				C8BF34C91C2E426800416CAE /* Platform.Darwin.swift */,
@@ -1973,7 +1975,7 @@
 			);
 			name = Microoptimizations;
 			productName = PerformanceTests;
-			productReference = C85BA04B1C3878740075D68E /* PerformanceTests.app */;
+			productReference = C85BA04B1C3878740075D68E /* Microoptimizations.app */;
 			productType = "com.apple.product-type.application";
 		};
 		C88FA4FD1C25C44800CCFEA4 /* RxTest */ = {
@@ -2748,6 +2750,7 @@
 				C89814781E75A7D70035949C /* PrimitiveSequence+Zip+arity.swift in Sources */,
 				C849BE2B1BAB5D070019AD27 /* ObservableConvertibleType.swift in Sources */,
 				C8093D9B1B8A72BE0088E94D /* SchedulerServices+Emulation.swift in Sources */,
+				A47E0C9D2C5555B000B56BE4 /* AsyncAwaitLock.swift in Sources */,
 				C820A8B81EB4DA5A00D431BC /* Concat.swift in Sources */,
 				C820A8301EB4DA5900D431BC /* Switch.swift in Sources */,
 				601AE3DA1EE24E4F00617386 /* SwiftSupport.swift in Sources */,
@@ -2757,7 +2760,6 @@
 				C820A8841EB4DA5A00D431BC /* Dematerialize.swift in Sources */,
 				C820A8941EB4DA5A00D431BC /* RetryWhen.swift in Sources */,
 				C820A8441EB4DA5900D431BC /* DelaySubscription.swift in Sources */,
-				A4EF0BE82C4114D9009EE9DE /* AsyncAwaitLock.swift in Sources */,
 				C820A8E81EB4DA5A00D431BC /* Just.swift in Sources */,
 				C8093D691B8A72BE0088E94D /* AnyObserver.swift in Sources */,
 				C8B144FB1BD2D44500267DCE /* ConcurrentMainScheduler.swift in Sources */,
