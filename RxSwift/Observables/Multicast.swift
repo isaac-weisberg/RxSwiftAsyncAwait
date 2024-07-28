@@ -238,7 +238,7 @@ final private class ConnectableObservableAdapter<Subject: SubjectType>
         return subject
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Subject.Element {
+    override func subscribe<Observer: SynchronizedObserver>(_ observer: Observer) -> Disposable where Observer.Element == Subject.Element {
         self.lazySubject.subscribe(observer)
     }
 }

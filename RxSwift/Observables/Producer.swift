@@ -11,27 +11,36 @@ class Producer<Element>: Observable<Element> {
         super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: SynchronizedObserver>(_ observer: Observer) -> Disposable
+        where Observer.Element == Element {
         if !CurrentThreadScheduler.isScheduleRequired {
             // The returned disposable needs to release all references once it was disposed.
             let disposer = SinkDisposer()
-            let sinkAndSubscription = self.run(observer, cancel: disposer)
-            disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
+            let sinkAndSubscription = run(observer, cancel: disposer)
+            disposer.setSinkAndSubscription(
+                sink: sinkAndSubscription.sink,
+                subscription: sinkAndSubscription.subscription
+            )
 
             return disposer
-        }
-        else {
+        } else {
             return CurrentThreadScheduler.instance.schedule(()) { _ in
                 let disposer = SinkDisposer()
                 let sinkAndSubscription = self.run(observer, cancel: disposer)
-                disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
+                disposer.setSinkAndSubscription(
+                    sink: sinkAndSubscription.sink,
+                    subscription: sinkAndSubscription.subscription
+                )
 
                 return disposer
             }
         }
     }
 
-    func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    func run<Observer: ObserverType>(
+        _ observer: Observer,
+        cancel: Cancelable
+    ) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         rxAbstractMethod()
     }
 }
@@ -47,14 +56,14 @@ private final class SinkDisposer: Cancelable {
     private var subscription: Disposable?
 
     var isDisposed: Bool {
-        isFlagSet(self.state, DisposeState.disposed.rawValue)
+        isFlagSet(state, DisposeState.disposed.rawValue)
     }
 
     func setSinkAndSubscription(sink: Disposable, subscription: Disposable) {
         self.sink = sink
         self.subscription = subscription
 
-        let previousState = fetchOr(self.state, DisposeState.sinkAndSubscriptionSet.rawValue)
+        let previousState = fetchOr(state, DisposeState.sinkAndSubscriptionSet.rawValue)
         if (previousState & DisposeState.sinkAndSubscriptionSet.rawValue) != 0 {
             rxFatalError("Sink and subscription were already set")
         }
@@ -68,17 +77,17 @@ private final class SinkDisposer: Cancelable {
     }
 
     func dispose() {
-        let previousState = fetchOr(self.state, DisposeState.disposed.rawValue)
+        let previousState = fetchOr(state, DisposeState.disposed.rawValue)
 
         if (previousState & DisposeState.disposed.rawValue) != 0 {
             return
         }
 
         if (previousState & DisposeState.sinkAndSubscriptionSet.rawValue) != 0 {
-            guard let sink = self.sink else {
+            guard let sink else {
                 rxFatalError("Sink not set")
             }
-            guard let subscription = self.subscription else {
+            guard let subscription else {
                 rxFatalError("Subscription not set")
             }
 

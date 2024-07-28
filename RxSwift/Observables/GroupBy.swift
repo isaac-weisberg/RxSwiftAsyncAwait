@@ -30,7 +30,7 @@ final private class GroupedObservableImpl<Element>: Observable<Element> {
         self.refCount = refCount
     }
 
-    override public func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override public func subscribe<Observer: SynchronizedObserver>(_ observer: Observer) -> Disposable where Observer.Element == Element {
         let release = self.refCount.retain()
         let subscription = self.subject.subscribe(observer)
         return Disposables.create(release, subscription)
@@ -48,17 +48,19 @@ final private class GroupBySink<Key: Hashable, Element, Observer: ObserverType>
     private let subscription = SingleAssignmentDisposable()
     private var refCountDisposable: RefCountDisposable!
     private var groupedSubjectTable: [Key: PublishSubject<Element>]
+    private let lock = ActorLock()
     
     init(parent: Parent, observer: Observer, cancel: Cancelable) {
         self.parent = parent
         self.groupedSubjectTable = [Key: PublishSubject<Element>]()
+    
         super.init(observer: observer, cancel: cancel)
     }
     
     func run() -> Disposable {
         self.refCountDisposable = RefCountDisposable(disposable: self.subscription)
         
-        self.subscription.setDisposable(self.parent.source.subscribe(self))
+        self.subscription.setDisposable(self.parent.source.subscribe(SynchronizedObserverImpl(lock: lock, observer: self)))
         
         return self.refCountDisposable
     }

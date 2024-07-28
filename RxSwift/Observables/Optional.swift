@@ -85,7 +85,7 @@ final private class ObservableOptional<Element>: Producer<Element> {
         self.optional = optional
     }
     
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: SynchronizedObserver>(_ observer: Observer) -> Disposable where Observer.Element == Element {
         if let element = self.optional {
             observer.on(.next(element))
         }

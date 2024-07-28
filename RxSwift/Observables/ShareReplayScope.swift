@@ -269,7 +269,7 @@ final private class ShareReplay1WhileConnected<Element>
         self.source = source
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: SynchronizedObserver>(_ observer: Observer) -> Disposable where Observer.Element == Element {
         self.lock.lock()
         let connection = self.synchronized_subscribe(observer)
         let count = connection.observers.count
@@ -409,7 +409,7 @@ final private class ShareWhileConnected<Element>
         self.source = source
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: SynchronizedObserver>(_ observer: Observer) -> Disposable where Observer.Element == Element {
         self.lock.lock()
         let connection = self.synchronized_subscribe(observer)
         let count = connection.observers.count
