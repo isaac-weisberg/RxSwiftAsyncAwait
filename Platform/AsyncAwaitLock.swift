@@ -9,7 +9,36 @@
 import Foundation
 
 public final actor AsyncAwaitLock {
-    private var currentOwnerStack: C?
+    final class Executor: SerialExecutor {
+        func asUnownedSerialExecutor() -> UnownedSerialExecutor {
+            UnownedSerialExecutor(ordinary: self)
+        }
+
+        var runningThread: Thread?
+        var latestTask: Task<Void, Never>?
+        func enqueue(_ job: UnownedJob) {
+            let executor = asUnownedSerialExecutor()
+            if Thread.current == runningThread {
+                job.runSynchronously(on: executor)
+            } else {
+                let latestTask = self.latestTask
+                let newTask = Task {
+                    await latestTask?.value
+                    
+                    runningThread = Thread.current
+                    job.runSynchronously(on: executor)
+                    runningThread = nil
+                }
+                self.latestTask = latestTask
+            }
+        }
+    }
+
+    public nonisolated var unownedExecutor: UnownedSerialExecutor {
+        executor.asUnownedSerialExecutor()
+    }
+
+    private let executor = Executor()
     private var latestTask: Task<Void, Never>?
     private var scheduledTasks = 0
     private var recursiveAcqisitions = 0
@@ -63,38 +92,14 @@ public final actor AsyncAwaitLock {
             _ = 42;
         }
 
-        if let currentOwnerStack {
-
-            if c._includesLocksFrom(currentOwnerStack) {
-                recursiveAcqisitions += 1
-
-                #if TRACE_RESOURCES
-                    _ = await Resources.incrementTotal()
-                #endif
-                let result = await work(c.call())
-
-                #if TRACE_RESOURCES
-                    _ = await Resources.decrementTotal()
-                #endif
-
-                recursiveAcqisitions -= 1
-
-                return result
-            }
-        }
-
         scheduledTasks += 1
 
         let theActualTask: Task<R, Never>
         if let latestTask {
             theActualTask = Task {
                 _ = await latestTask.value
-                
-                let c = c.acquiringLock()
-                self.currentOwnerStack = c
 
                 let result = await work(c.call())
-                self.currentOwnerStack = nil
 
                 if recursiveAcqisitions > 0 {
                     #if DEBUG
@@ -106,12 +111,8 @@ public final actor AsyncAwaitLock {
             }
         } else {
             theActualTask = Task {
-                let c = c.acquiringLock()
-                self.currentOwnerStack = c
 
                 let result = await work(c.call())
-
-                self.currentOwnerStack = nil
 
                 if recursiveAcqisitions > 0 {
                     #if DEBUG
@@ -189,13 +190,8 @@ public final actor AsyncAwaitLock {
                 self.line = line
             }
         }
-        
-        final class AcquiredLock {
-            
-        }
 
         let entries: [Entry]
-        let acquiredLocks: [AcquiredLock]
 
         public init(
             _ file: StaticString = #file,
@@ -204,41 +200,12 @@ public final actor AsyncAwaitLock {
         ) {
             let entry = Entry(file: file, function: function, line: line)
             entries = [entry]
-            acquiredLocks = []
         }
 
         private init(
-            _ entries: [Entry],
-            _ acquiredLocks: [AcquiredLock]
+            _ entries: [Entry]
         ) {
             self.entries = entries
-            self.acquiredLocks = acquiredLocks
-        }
-
-        func _includesLocksFrom(_ c: C) -> Bool {
-            var parentIdx = 0
-            var innerIdx = 0
-            let concecutiveHitsNeeded = c.acquiredLocks.count
-            var concecutiveHitsGotten = 0
-            while parentIdx < acquiredLocks.count {
-                let me = acquiredLocks[parentIdx]
-                let them = c.acquiredLocks[innerIdx]
-
-                if me === them {
-                    concecutiveHitsGotten += 1
-                    innerIdx += 1
-
-                    if concecutiveHitsGotten >= concecutiveHitsNeeded {
-                        return true
-                    }
-                } else {
-                    concecutiveHitsGotten = 0
-                    innerIdx = 0
-                }
-
-                parentIdx += 1
-            }
-            return false
         }
 
         public func call(
@@ -251,15 +218,7 @@ public final actor AsyncAwaitLock {
             var entries = entries
             entries.append(entry)
 
-            let c = C(entries, acquiredLocks)
-            return c
-        }
-        
-        internal func acquiringLock() -> C {
-            let acquiredLock = AcquiredLock()
-            var acquiredLocks = self.acquiredLocks
-            acquiredLocks.append(acquiredLock)
-            let c = C(entries, acquiredLocks)
+            let c = C(entries)
             return c
         }
 
