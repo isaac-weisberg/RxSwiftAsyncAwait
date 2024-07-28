@@ -39,7 +39,7 @@ private final actor ElementAtSink<Observer: ObserverType>: Sink, ObserverType {
     typealias SourceType = Observer.Element
     typealias Parent = ElementAt<SourceType>
 
-    let baseSink: BaseSink<ElementAtSink<Observer>>
+    let baseSink: BaseSink<Observer>
 
     let parent: Parent
     var i: Int

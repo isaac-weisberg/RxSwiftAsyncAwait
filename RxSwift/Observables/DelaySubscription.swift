@@ -26,9 +26,15 @@ public extension ObservableType {
 }
 
 private final class DelaySubscriptionSink<Observer: ObserverType>:
-    Sink<Observer>, ObserverType
+    Sink, ObserverType
 {
     typealias Element = Observer.Element
+    
+    let baseSink: BaseSink<Observer>
+    
+    init(observer: Observer, cancel: Cancelable) async {
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
+    }
 
     func on(_ event: Event<Element>, _ c: C) async {
         await self.forwardOn(event, c.call())

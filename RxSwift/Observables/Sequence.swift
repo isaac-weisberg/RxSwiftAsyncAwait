@@ -47,14 +47,15 @@ public extension ObservableType {
     }
 }
 
-private final class ObservableSequenceSink<Sequence: Swift.Sequence, Observer: ObserverType>: Sink<Observer> where Sequence.Element == Observer.Element {
+private final actor ObservableSequenceSink<Sequence: Swift.Sequence, Observer: ObserverType>: Sink where Sequence.Element == Observer.Element {
     typealias Parent = ObservableSequence<Sequence>
 
     private let parent: Parent
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C) async -> Disposable {

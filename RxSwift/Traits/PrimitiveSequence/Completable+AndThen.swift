@@ -77,8 +77,8 @@ private final class ConcatCompletable<Element>: Producer<Element> {
     }
 }
 
-private final class ConcatCompletableSink<Observer: ObserverType>:
-    Sink<Observer>,
+private final actor ConcatCompletableSink<Observer: ObserverType>:
+    Sink,
     ObserverType
 {
     typealias Element = Never
@@ -86,11 +86,12 @@ private final class ConcatCompletableSink<Observer: ObserverType>:
 
     private let parent: Parent
     private let subscription: SerialDisposable
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.subscription = await SerialDisposable()
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {

@@ -24,7 +24,7 @@ private final actor DefaultIfEmptySink<Observer: ObserverType>: Sink, ObserverTy
     typealias Element = Observer.Element
     private let `default`: Element
     private var isEmpty = true
-    let baseSink: BaseSink<DefaultIfEmptySink<Observer>>
+    let baseSink: BaseSink<Observer>
 
     init(default: Element, observer: Observer, cancel: Cancelable) async {
         self.default = `default`

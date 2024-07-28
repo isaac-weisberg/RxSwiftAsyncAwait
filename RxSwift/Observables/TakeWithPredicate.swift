@@ -165,7 +165,7 @@ private final class TakeUntilSinkOther<Other, Observer: ObserverType>:
 }
 
 private final class TakeUntilSink<Other, Observer: ObserverType>:
-    Sink<Observer>,
+    Sink,
     LockOwnerType,
     ObserverType,
     SynchronizedOnType
@@ -180,7 +180,7 @@ private final class TakeUntilSink<Other, Observer: ObserverType>:
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.lock = await RecursiveLock()
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -230,7 +230,7 @@ private final class TakeUntil<Element, Other>: Producer<Element> {
 // MARK: - TakeUntil Predicate
 
 private final class TakeUntilPredicateSink<Observer: ObserverType>:
-    Sink<Observer>, ObserverType
+    Sink, ObserverType
 {
     typealias Element = Observer.Element
     typealias Parent = TakeUntilPredicate<Element>
@@ -240,7 +240,7 @@ private final class TakeUntilPredicateSink<Observer: ObserverType>:
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {

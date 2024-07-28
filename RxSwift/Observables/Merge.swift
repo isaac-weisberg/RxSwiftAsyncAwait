@@ -212,7 +212,7 @@ private final class MergeLimitedBasicSink<
 }
 
 private class MergeLimitedSink<SourceElement, SourceSequence: ObservableConvertibleType, Observer: ObserverType>:
-    Sink<Observer>,
+    Sink,
     ObserverType where Observer.Element == SourceSequence.Element {
     typealias QueueType = Queue<SourceSequence>
     
@@ -235,7 +235,7 @@ private class MergeLimitedSink<SourceElement, SourceSequence: ObservableConverti
         sourceSubscription = await SingleAssignmentDisposable()
         group = await CompositeDisposable()
         self.maxConcurrent = maxConcurrent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ source: Observable<SourceElement>, _ c: C) async -> Disposable {
@@ -372,7 +372,7 @@ private final class FlatMapSink<
 
     init(selector: @escaping Selector, observer: Observer, cancel: Cancelable) async {
         self.selector = selector
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     override func performMap(_ element: SourceElement) async throws -> SourceSequence {
@@ -397,7 +397,7 @@ private final class FlatMapFirstSink<
 
     init(selector: @escaping Selector, observer: Observer, cancel: Cancelable) async {
         self.selector = selector
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     override func performMap(_ element: SourceElement) async throws -> SourceSequence {
@@ -440,7 +440,7 @@ private final class MergeSinkIter<
 }
 
 private class MergeSink<SourceElement, SourceSequence: ObservableConvertibleType, Observer: ObserverType>:
-    Sink<Observer>,
+    Sink,
     ObserverType where Observer.Element == SourceSequence.Element {
     typealias ResultType = Observer.Element
     typealias Element = SourceElement
@@ -462,7 +462,7 @@ private class MergeSink<SourceElement, SourceSequence: ObservableConvertibleType
         lock = await RecursiveLock()
         group = await CompositeDisposable()
         sourceSubscription = await SingleAssignmentDisposable()
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func performMap(_ element: SourceElement) async throws -> SourceSequence {

@@ -24,7 +24,7 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
     typealias Element = Observer.Element
     typealias SequenceGenerator = (generator: Sequence.Iterator, remaining: IntMax?)
 
-    let baseSink: BaseSink<TailRecursiveSink<Sequence, Observer>>
+    let baseSink: BaseSink<Observer>
     var generators: [SequenceGenerator] = []
     var disposed = false
     var subscription: SerialDisposable

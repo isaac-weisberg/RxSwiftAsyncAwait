@@ -27,7 +27,7 @@ public extension ObservableType {
 }
 
 private final class WindowTimeCountSink<Element, Observer: ObserverType>:
-    Sink<Observer>,
+    Sink,
     ObserverType,
     LockOwnerType,
     SynchronizedOnType where Observer.Element == Observable<Element>
@@ -56,7 +56,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
         _ = await self.groupDisposable.insert(self.timerD)
         
         self.refCountDisposable = await RefCountDisposable(disposable: self.groupDisposable)
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
     
     func run(_ c: C) async -> Disposable {
@@ -168,7 +168,7 @@ private final class WindowTimeCount<Element>: Producer<Observable<Element>> {
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Observable<Element> {
+    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Observable<Element> {
         let sink = await WindowTimeCountSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

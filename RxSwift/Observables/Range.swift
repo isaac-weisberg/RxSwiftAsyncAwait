@@ -49,14 +49,14 @@ private final class RangeProducer<Element: RxAbstractInteger>: Producer<Element>
     }
 }
 
-private final class RangeSink<Observer: ObserverType>: Sink<Observer> where Observer.Element: RxAbstractInteger {
+private final class RangeSink<Observer: ObserverType>: Sink where Observer.Element: RxAbstractInteger {
     typealias Parent = RangeProducer<Observer.Element>
 
     private let parent: Parent
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C) async -> Disposable {

@@ -25,7 +25,7 @@ public extension ObservableType {
 }
 
 private final class DelaySink<Observer: ObserverType>:
-    Sink<Observer>,
+    Sink,
     ObserverType {
     typealias Element = Observer.Element
     typealias Source = Observable<Element>
@@ -54,7 +54,7 @@ private final class DelaySink<Observer: ObserverType>:
         cancelable = await SerialDisposable()
         self.dueTime = dueTime
         self.scheduler = scheduler
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     // All of these complications in this method are caused by the fact that

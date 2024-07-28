@@ -37,19 +37,14 @@ public extension ObservableType {
     }
 }
 
-private final class SkipUntilSinkOther<Other, Observer: ObserverType>:
+private final actor SkipUntilSinkOther<Other, Observer: ObserverType>:
     ObserverType,
-    LockOwnerType,
     SynchronizedOnType
 {
     typealias Parent = SkipUntilSink<Other, Observer>
     typealias Element = Other
 
     private let parent: Parent
-
-    var lock: RecursiveLock {
-        self.parent.lock
-    }
 
     let subscription: SingleAssignmentDisposable
 
@@ -68,7 +63,7 @@ private final class SkipUntilSinkOther<Other, Observer: ObserverType>:
     func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            self.parent.forwardElements = true
+            await self.parent.setForwardElements(true)
             await self.subscription.dispose()
         case .error(let e):
             await self.parent.forwardOn(.error(e), c.call())
@@ -87,26 +82,27 @@ private final class SkipUntilSinkOther<Other, Observer: ObserverType>:
     #endif
 }
 
-private final class SkipUntilSink<Other, Observer: ObserverType>:
-    Sink<Observer>,
+private final actor SkipUntilSink<Other, Observer: ObserverType>:
+    Sink,
     ObserverType,
-    LockOwnerType,
     SynchronizedOnType
 {
     typealias Element = Observer.Element
     typealias Parent = SkipUntil<Element, Other>
 
-    let lock: RecursiveLock
     private let parent: Parent
     fileprivate var forwardElements = false
+    func setForwardElements(_ newValue: Bool) {
+        forwardElements = newValue
+    }
+    let baseSink: BaseSink<Observer>
 
     private let sourceSubscription: SingleAssignmentDisposable
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.sourceSubscription = await SingleAssignmentDisposable()
         self.parent = parent
-        self.lock = await RecursiveLock()
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {

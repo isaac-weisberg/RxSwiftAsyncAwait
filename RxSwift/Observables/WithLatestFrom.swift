@@ -39,10 +39,9 @@ public extension ObservableType {
     }
 }
 
-private final class WithLatestFromSink<FirstType, SecondType, Observer: ObserverType>:
-    Sink<Observer>,
+private final actor WithLatestFromSink<FirstType, SecondType, Observer: ObserverType>:
+    Sink,
     ObserverType,
-    LockOwnerType,
     SynchronizedOnType {
     typealias ResultType = Observer.Element
     typealias Parent = WithLatestFrom<FirstType, SecondType, ResultType>
@@ -50,14 +49,16 @@ private final class WithLatestFromSink<FirstType, SecondType, Observer: Observer
 
     private let parent: Parent
 
-    fileprivate let lock: RecursiveLock
     fileprivate var latest: SecondType?
+    func setLatest(_ newValue: SecondType?) {
+        latest = newValue
+    }
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        lock = await RecursiveLock()
 
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C) async -> Disposable {
@@ -98,7 +99,6 @@ private final class WithLatestFromSink<FirstType, SecondType, Observer: Observer
 
 private final class WithLatestFromSecond<FirstType, SecondType, Observer: ObserverType>:
     ObserverType,
-    LockOwnerType,
     SynchronizedOnType {
     typealias ResultType = Observer.Element
     typealias Parent = WithLatestFromSink<FirstType, SecondType, Observer>
@@ -106,10 +106,6 @@ private final class WithLatestFromSecond<FirstType, SecondType, Observer: Observ
 
     private let parent: Parent
     private let disposable: Disposable
-
-    var lock: RecursiveLock {
-        parent.lock
-    }
 
     init(parent: Parent, disposable: Disposable) {
         self.parent = parent
@@ -123,7 +119,7 @@ private final class WithLatestFromSecond<FirstType, SecondType, Observer: Observ
     func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
-            parent.latest = value
+            await parent.setLatest(value)
         case .completed:
             await disposable.dispose()
         case .error(let error):

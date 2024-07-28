@@ -31,7 +31,7 @@ private final actor DebounceSink<Observer: ObserverType>:
     typealias Element = Observer.Element
     typealias ParentType = Debounce<Element>
 
-    let baseSink: BaseSink<DebounceSink<Observer>>
+    let baseSink: BaseSink<Observer>
 
     private let parent: ParentType
 

@@ -9,7 +9,7 @@
 private final actor AsSingleSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
 
-    let baseSink: BaseSink<AsSingleSink<Observer>>
+    let baseSink: BaseSink<Observer>
 
     private var element: Event<Element>?
 

@@ -7,7 +7,7 @@
 //
 
 final actor AddRefSink<Observer: ObserverType>: Sink, ObserverType {
-    let baseSink: BaseSink<AddRefSink<Observer>>
+    let baseSink: BaseSink<Observer>
 
     init(observer: Observer, cancel: any Cancelable) async {
         baseSink = await BaseSink(observer: observer, cancel: cancel)

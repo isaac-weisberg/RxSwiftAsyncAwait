@@ -48,7 +48,7 @@ public extension ObservableType {
     }
 }
 
-private final class DoSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final class DoSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
     typealias EventHandler = (Event<Element>) async throws -> Void
     typealias AfterEventHandler = (Event<Element>) async throws -> Void
@@ -59,7 +59,7 @@ private final class DoSink<Observer: ObserverType>: Sink<Observer>, ObserverType
     init(eventHandler: @escaping EventHandler, afterEventHandler: @escaping AfterEventHandler, observer: Observer, cancel: Cancelable) async {
         self.eventHandler = eventHandler
         self.afterEventHandler = afterEventHandler
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {

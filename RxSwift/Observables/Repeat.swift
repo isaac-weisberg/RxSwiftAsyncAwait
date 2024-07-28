@@ -39,14 +39,14 @@ private final class RepeatElement<Element>: Producer<Element> {
     }
 }
 
-private final class RepeatElementSink<Observer: ObserverType>: Sink<Observer> {
+private final class RepeatElementSink<Observer: ObserverType>: Sink {
     typealias Parent = RepeatElement<Observer.Element>
 
     private let parent: Parent
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C) async -> Disposable {

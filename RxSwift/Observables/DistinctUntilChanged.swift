@@ -79,7 +79,7 @@ public extension ObservableType {
     }
 }
 
-private final class DistinctUntilChangedSink<Observer: ObserverType, Key>: Sink<Observer>, ObserverType {
+private final class DistinctUntilChangedSink<Observer: ObserverType, Key>: Sink, ObserverType {
     typealias Element = Observer.Element
 
     private let parent: DistinctUntilChanged<Element, Key>
@@ -87,7 +87,7 @@ private final class DistinctUntilChangedSink<Observer: ObserverType, Key>: Sink<
 
     init(parent: DistinctUntilChanged<Element, Key>, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {

@@ -37,15 +37,17 @@ public extension ObservableType {
     }
 }
 
-private final class FilterSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor FilterSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Predicate = (Element) async throws -> Bool
     typealias Element = Observer.Element
 
     private let predicate: Predicate
+    let baseSink: BaseSink<Observer>
 
     init(predicate: @escaping Predicate, observer: Observer, cancel: Cancelable) async {
         self.predicate = predicate
-        await super.init(observer: observer, cancel: cancel)
+        
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {

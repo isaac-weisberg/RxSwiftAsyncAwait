@@ -17,7 +17,14 @@ public extension ObservableType where Element: EventConvertible {
     }
 }
 
-private final class DematerializeSink<T: EventConvertible, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == T.Element {
+private final actor DematerializeSink<T: EventConvertible, Observer: ObserverType>: Sink, ObserverType where Observer.Element == T.Element {
+    
+    let baseSink: BaseSink<Observer>
+    
+    init(observer: Observer, cancel: Cancelable) async {
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
+    }
+    
     fileprivate func on(_ event: Event<T>, _ c: C) async {
         switch event {
         case .next(let element):

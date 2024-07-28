@@ -23,16 +23,17 @@ public extension ObservableType {
     }
 }
 
-private final class ToArraySink<SourceType, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == [SourceType] {
+private final actor ToArraySink<SourceType, Observer: ObserverType>: Sink, ObserverType where Observer.Element == [SourceType] {
     typealias Parent = ToArray<SourceType>
     
     let parent: Parent
     var list = [SourceType]()
+    let baseSink: BaseSink<Observer>
     
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
         
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
     
     func on(_ event: Event<SourceType>, _ c: C) async {

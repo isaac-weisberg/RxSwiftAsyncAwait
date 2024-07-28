@@ -40,7 +40,7 @@ private final class SwitchIfEmpty<Element>: Producer<Element> {
     }
 }
 
-private final class SwitchIfEmptySink<Observer: ObserverType>: Sink<Observer>,
+private final actor SwitchIfEmptySink<Observer: ObserverType>: Sink,
     ObserverType
 {
     typealias Element = Observer.Element
@@ -48,11 +48,12 @@ private final class SwitchIfEmptySink<Observer: ObserverType>: Sink<Observer>,
     private let ifEmpty: Observable<Element>
     private var isEmpty = true
     private let ifEmptySubscription: SingleAssignmentDisposable
+    let baseSink: BaseSink<Observer>
     
     init(ifEmpty: Observable<Element>, observer: Observer, cancel: Cancelable) async {
         self.ifEmpty = ifEmpty
         self.ifEmptySubscription = await SingleAssignmentDisposable()
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
     
     func run(_ source: Observable<Observer.Element>, _ c: C) async -> Disposable {

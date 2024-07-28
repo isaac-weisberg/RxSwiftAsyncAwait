@@ -62,7 +62,7 @@ public extension ObservableType where Element: ObservableConvertibleType {
 }
 
 private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer: ObserverType>:
-    Sink<Observer>,
+    Sink,
     ObserverType where Source.Element == Observer.Element
 {
     typealias Element = SourceType
@@ -81,7 +81,7 @@ private class SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
         self.subscriptions = await SingleAssignmentDisposable()
         self.innerSubscription = await SerialDisposable()
         self.lock = await RecursiveLock()
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ source: Observable<SourceType>, _ c: C) async -> Disposable {
@@ -202,7 +202,7 @@ private final class SwitchIdentitySink<Source: ObservableConvertibleType, Observ
     where Observer.Element == Source.Element
 {
     override init(observer: Observer, cancel: Cancelable) async {
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     override func performMap(_ element: Source) async throws -> Source {
@@ -217,7 +217,7 @@ private final class MapSwitchSink<SourceType, Source: ObservableConvertibleType,
 
     init(selector: @escaping Selector, observer: Observer, cancel: Cancelable) async {
         self.selector = selector
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     override func performMap(_ element: SourceType) async throws -> Source {
@@ -235,7 +235,7 @@ private final class Switch<Source: ObservableConvertibleType>: Producer<Source.E
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
+    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = await SwitchIdentitySink<Source, Observer>(observer: observer, cancel: cancel)
         let subscription = await sink.run(self.source, c.call())
         return (sink: sink, subscription: subscription)
@@ -254,7 +254,7 @@ private final class FlatMapLatest<SourceType, Source: ObservableConvertibleType>
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
+    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = await MapSwitchSink<SourceType, Source, Observer>(selector: self.selector, observer: observer, cancel: cancel)
         let subscription = await sink.run(self.source, c.call())
         return (sink: sink, subscription: subscription)

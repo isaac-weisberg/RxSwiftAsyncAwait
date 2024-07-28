@@ -24,18 +24,19 @@ public extension ObservableType {
     }
 }
 
-private final class TakeLastSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor TakeLastSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
     typealias Parent = TakeLast<Element>
 
     private let parent: Parent
 
     private var elements: Queue<Element>
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
         self.elements = Queue<Element>(capacity: parent.count + 1)
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {

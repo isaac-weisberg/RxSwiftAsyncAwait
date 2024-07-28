@@ -12,7 +12,7 @@ protocol ZipSinkProtocol: AnyObject {
     func done(_ c: C, _ index: Int) async
 }
 
-class ZipSink<Observer: ObserverType>: Sink<Observer>, ZipSinkProtocol {
+class ZipSink<Observer: ObserverType>: Sink, ZipSinkProtocol {
     typealias Element = Observer.Element
     
     let arity: Int
@@ -27,7 +27,7 @@ class ZipSink<Observer: ObserverType>: Sink<Observer>, ZipSinkProtocol {
         self.isDone = [Bool](repeating: false, count: arity)
         self.arity = arity
         
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func getResult() throws -> Element {

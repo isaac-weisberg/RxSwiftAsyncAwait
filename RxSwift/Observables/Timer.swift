@@ -17,9 +17,8 @@ public extension ObservableType where Element: RxAbstractInteger {
      - returns: An observable sequence that produces a value after each period.
      */
     static func interval(_ period: RxTimeInterval, scheduler: SchedulerType) async
-        -> Observable<Element>
-    {
-        return await Timer(
+        -> Observable<Element> {
+        await Timer(
             dueTime: period,
             period: period,
             scheduler: scheduler
@@ -39,9 +38,8 @@ public extension ObservableType where Element: RxAbstractInteger {
      - returns: An observable sequence that produces a value after due time has elapsed and then each period.
      */
     static func timer(_ dueTime: RxTimeInterval, period: RxTimeInterval? = nil, scheduler: SchedulerType) async
-        -> Observable<Element>
-    {
-        return await Timer(
+        -> Observable<Element> {
+        await Timer(
             dueTime: dueTime,
             period: period,
             scheduler: scheduler
@@ -51,46 +49,50 @@ public extension ObservableType where Element: RxAbstractInteger {
 
 import Foundation
 
-private final class TimerSink<Observer: ObserverType>: Sink<Observer> where Observer.Element: RxAbstractInteger {
+private final actor TimerSink<Observer: ObserverType>: Sink where Observer.Element: RxAbstractInteger {
     typealias Parent = Timer<Observer.Element>
 
     private let parent: Parent
-    private let lock: RecursiveLock
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        self.lock = await RecursiveLock()
-        await super.init(observer: observer, cancel: cancel)
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C) async -> Disposable {
-        return await self.parent.scheduler.schedulePeriodic(0 as Observer.Element, c.call(), startAfter: self.parent.dueTime, period: self.parent.period!) { c, state in
-            await self.lock.performLocked(c.call()) { c in
-                await self.forwardOn(.next(state), c.call())
-                return state &+ 1
-            }
+        await parent.scheduler.schedulePeriodic(
+            0 as Observer.Element,
+            c.call(),
+            startAfter: parent.dueTime,
+            period: parent.period!
+        ) { c, state in
+            await self.forwardOn(.next(state), c.call())
+            return state &+ 1
         }
     }
 }
 
-private final class TimerOneOffSink<Observer: ObserverType>: Sink<Observer> where Observer.Element: RxAbstractInteger {
+private final actor TimerOneOffSink<Observer: ObserverType>: Sink where Observer.Element: RxAbstractInteger {
     typealias Parent = Timer<Observer.Element>
 
     private let parent: Parent
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C) async -> Disposable {
-        return await self.parent.scheduler.scheduleRelative(self, c.call(), dueTime: self.parent.dueTime) { [unowned self] c, _ -> Disposable in
-            await self.forwardOn(.next(0), c.call())
-            await self.forwardOn(.completed, c.call())
-            await self.dispose()
+        await parent.scheduler
+            .scheduleRelative(self, c.call(), dueTime: parent.dueTime) { [unowned self] c, _ -> Disposable in
+                await forwardOn(.next(0), c.call())
+                await forwardOn(.completed, c.call())
+                await dispose()
 
-            return Disposables.create()
-        }
+                return Disposables.create()
+            }
     }
 }
 
@@ -106,13 +108,17 @@ private final class Timer<Element: RxAbstractInteger>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        if self.period != nil {
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: Cancelable
+    )
+        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+        if period != nil {
             let sink = await TimerSink(parent: self, observer: observer, cancel: cancel)
             let subscription = await sink.run(c.call())
             return (sink: sink, subscription: subscription)
-        }
-        else {
+        } else {
             let sink = await TimerOneOffSink(parent: self, observer: observer, cancel: cancel)
             let subscription = await sink.run(c.call())
             return (sink: sink, subscription: subscription)

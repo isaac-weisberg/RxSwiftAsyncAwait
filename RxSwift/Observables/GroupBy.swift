@@ -45,7 +45,7 @@ private final actor GroupBySink<Key: Hashable, Element, Observer: ObserverType>:
     typealias ResultType = Observer.Element
     typealias Parent = GroupBy<Key, Element>
 
-    let baseSink: BaseSink<GroupBySink<Key, Element, Observer>>
+    let baseSink: BaseSink<Observer>
     private let parent: Parent
     private let subscription: SingleAssignmentDisposable
     private var refCountDisposable: RefCountDisposable!

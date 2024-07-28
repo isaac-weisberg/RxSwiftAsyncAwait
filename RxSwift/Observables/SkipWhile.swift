@@ -33,16 +33,17 @@ public extension ObservableType {
     }
 }
 
-private final class SkipWhileSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor SkipWhileSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
     typealias Parent = SkipWhile<Element>
 
     private let parent: Parent
     private var running = false
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {

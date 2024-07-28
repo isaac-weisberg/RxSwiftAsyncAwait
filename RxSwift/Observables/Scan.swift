@@ -35,34 +35,35 @@ public extension ObservableType {
      - parameter accumulator: An accumulator function to be invoked on each element.
      - returns: An observable sequence containing the accumulated values.
      */
-    func scan<A>(_ seed: A, accumulator: @escaping (A, Element) async throws -> A) async
+    func scan<A>(_ seed: A, accumulator: @escaping (A, Element) throws -> A) async
         -> Observable<A>
     {
         return await Scan(source: self.asObservable(), seed: seed) { acc, element in
             let currentAcc = acc
-            acc = try await accumulator(currentAcc, element)
+            acc = try accumulator(currentAcc, element)
         }
     }
 }
 
-private final class ScanSink<Element, Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor ScanSink<Element, Observer: ObserverType>: Sink, ObserverType {
     typealias Accumulate = Observer.Element
     typealias Parent = Scan<Element, Accumulate>
 
     private let parent: Parent
     private var accumulate: Accumulate
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
         self.accumulate = parent.seed
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
             do {
-                try await self.parent.accumulator(&self.accumulate, element)
+                try self.parent.accumulator(&accumulate, element)
                 await self.forwardOn(.next(self.accumulate), c.call())
             }
             catch {
@@ -80,7 +81,7 @@ private final class ScanSink<Element, Observer: ObserverType>: Sink<Observer>, O
 }
 
 private final class Scan<Element, Accumulate>: Producer<Accumulate> {
-    typealias Accumulator = (inout Accumulate, Element) async throws -> Void
+    typealias Accumulator = (inout Accumulate, Element) throws -> Void
 
     private let source: Observable<Element>
     fileprivate let seed: Accumulate

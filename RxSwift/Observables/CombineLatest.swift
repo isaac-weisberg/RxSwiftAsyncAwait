@@ -12,27 +12,26 @@ protocol CombineLatestProtocol: AnyObject {
     func done(_ c: C, _ index: Int) async
 }
 
-class CombineLatestSink<Observer: ObserverType>:
-    Sink<Observer>,
+actor CombineLatestSink<Observer: ObserverType>:
+    Sink,
     CombineLatestProtocol
 {
     typealias Element = Observer.Element
-   
-    let lock: RecursiveLock
 
     private let arity: Int
     private var numberOfValues = 0
     private var numberOfDone = 0
     private var hasValue: [Bool]
     private var isDone: [Bool]
+    
+    let baseSink: BaseSink<Observer>
    
     init(arity: Int, observer: Observer, cancel: Cancelable) async {
-        self.lock = await RecursiveLock()
         self.arity = arity
         self.hasValue = [Bool](repeating: false, count: arity)
         self.isDone = [Bool](repeating: false, count: arity)
         
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
     
     func getResult() async throws -> Element {
@@ -92,22 +91,19 @@ class CombineLatestSink<Observer: ObserverType>:
     }
 }
 
-final class CombineLatestObserver<Element>:
+final actor CombineLatestObserver<Element>:
     ObserverType,
-    LockOwnerType,
     SynchronizedOnType
 {
     typealias ValueSetter = (Element) -> Void
     
     private let parent: CombineLatestProtocol
     
-    let lock: RecursiveLock
     private let index: Int
     private let this: Disposable
     private let setLatestValue: ValueSetter
     
-    init(lock: RecursiveLock, parent: CombineLatestProtocol, index: Int, setLatestValue: @escaping ValueSetter, this: Disposable) {
-        self.lock = lock
+    init(parent: CombineLatestProtocol, index: Int, setLatestValue: @escaping ValueSetter, this: Disposable) {
         self.parent = parent
         self.index = index
         self.this = this

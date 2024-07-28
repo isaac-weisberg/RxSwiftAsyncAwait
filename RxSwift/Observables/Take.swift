@@ -18,13 +18,11 @@ public extension ObservableType {
      - returns: An observable sequence that contains the specified number of elements from the start of the input sequence.
      */
     func take(_ count: Int) async
-        -> Observable<Element>
-    {
+        -> Observable<Element> {
         if count == 0 {
             return await Observable.empty()
-        }
-        else {
-            return await TakeCount(source: self.asObservable(), count: count)
+        } else {
+            return await TakeCount(source: asObservable(), count: count)
         }
     }
 }
@@ -39,10 +37,12 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run the timer on.
      - returns: An observable sequence with the elements taken during the specified duration from the start of the source sequence.
      */
-    func take(for duration: RxTimeInterval, scheduler: SchedulerType) async
-        -> Observable<Element>
-    {
-        await TakeTime(source: self.asObservable(), duration: duration, scheduler: scheduler)
+    func take(_ c: C, for duration: RxTimeInterval, scheduler: SchedulerType) async
+        -> Observable<Element> {
+        let take = await TakeTime(source: asObservable(), duration: duration, scheduler: scheduler)
+
+        await take.subscribe(c.call(), AnonymousObserver(c.call()) { _, _ in })
+        return take
     }
 
     /**
@@ -56,15 +56,16 @@ public extension ObservableType {
      */
     @available(*, deprecated, renamed: "take(for:scheduler:)")
     func take(_ duration: RxTimeInterval, scheduler: SchedulerType) async
-        -> Observable<Element>
-    {
-        await self.take(for: duration, scheduler: scheduler)
+        -> Observable<Element> {
+        await take(<#C#>, for: duration, scheduler: scheduler)
     }
 }
 
 // count version
 
-private final class TakeCountSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor TakeCountSink<Observer: ObserverType>: Sink, ObserverType {
+    let baseSink: BaseSink<Observer>
+
     typealias Element = Observer.Element
     typealias Parent = TakeCount<Element>
 
@@ -74,30 +75,30 @@ private final class TakeCountSink<Observer: ObserverType>: Sink<Observer>, Obser
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        self.remaining = parent.count
-        await super.init(observer: observer, cancel: cancel)
+        remaining = parent.count
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
 
-            if self.remaining > 0 {
-                self.remaining -= 1
+            if remaining > 0 {
+                remaining -= 1
 
-                await self.forwardOn(.next(value), c.call())
+                await forwardOn(.next(value), c.call())
 
-                if self.remaining == 0 {
-                    await self.forwardOn(.completed, c.call())
-                    await self.dispose()
+                if remaining == 0 {
+                    await forwardOn(.completed, c.call())
+                    await dispose()
                 }
             }
         case .error:
-            await self.forwardOn(event, c.call())
-            await self.dispose()
+            await forwardOn(event, c.call())
+            await dispose()
         case .completed:
-            await self.forwardOn(event, c.call())
-            await self.dispose()
+            await forwardOn(event, c.call())
+            await dispose()
         }
     }
 }
@@ -115,64 +116,64 @@ private final class TakeCount<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: Cancelable
+    )
+        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await TakeCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(c.call(), sink)
+        let subscription = await source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)
     }
 }
 
 // time version
 
-private final class TakeTimeSink<Element, Observer: ObserverType>:
-    Sink<Observer>,
-    LockOwnerType,
+private final actor TakeTimeSink<Element, Observer: ObserverType>:
+    Sink,
     ObserverType,
-    SynchronizedOnType where Observer.Element == Element
-{
+    SynchronizedOnType where Observer.Element == Element {
+    let baseSink: BaseSink<Observer>
+
     typealias Parent = TakeTime<Element>
 
     private let parent: Parent
 
-    let lock: RecursiveLock
-
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
-        self.lock = await RecursiveLock()
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.synchronizedOn(event, c.call())
+        await synchronizedOn(event, c.call())
     }
 
     func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
-            await self.forwardOn(.next(value), c.call())
+            await forwardOn(.next(value), c.call())
         case .error:
-            await self.forwardOn(event, c.call())
-            await self.dispose()
+            await forwardOn(event, c.call())
+            await dispose()
         case .completed:
-            await self.forwardOn(event, c.call())
-            await self.dispose()
+            await forwardOn(event, c.call())
+            await dispose()
         }
     }
 
     func tick(_ c: C) async {
-        await self.lock.performLocked(c.call()) { c in
-            await self.forwardOn(.completed, c.call())
-            await self.dispose()
-        }
+        await forwardOn(.completed, c.call())
+        await dispose()
     }
 
     func run(_ c: C) async -> Disposable {
-        let disposeTimer = await self.parent.scheduler.scheduleRelative((), c.call(), dueTime: self.parent.duration) { c, _ in
+        let disposeTimer = await parent.scheduler.scheduleRelative((), c.call(), dueTime: parent.duration) { c, _ in
             await self.tick(c.call())
             return Disposables.create()
         }
 
-        let disposeSubscription = await self.parent.source.subscribe(c.call(), self)
+        let disposeSubscription = await parent.source.subscribe(c.call(), self)
 
         return await Disposables.create(disposeTimer, disposeSubscription)
     }
@@ -192,7 +193,12 @@ private final class TakeTime<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: Cancelable
+    )
+        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = await TakeTimeSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

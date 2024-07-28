@@ -22,9 +22,14 @@ public extension ObservableType {
     }
 }
 
-private final class DeferredSink<Source: ObservableType, Observer: ObserverType>: Sink<Observer>, ObserverType where Source.Element == Observer.Element {
+private final actor DeferredSink<Source: ObservableType, Observer: ObserverType>: Sink, ObserverType where Source.Element == Observer.Element {
     typealias Element = Observer.Element
     typealias Parent = Deferred<Source>
+    let baseSink: BaseSink<Observer>
+    
+    init(observer: Observer, cancel: Cancelable) async {
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
+    }
 
     func run(_ c: C, _ parent: Parent) async -> Disposable {
         do {

@@ -33,14 +33,15 @@ public extension ObservableType {
     }
 }
 
-private final class JustScheduledSink<Observer: ObserverType>: Sink<Observer> {
+private final actor JustScheduledSink<Observer: ObserverType>: Sink {
     typealias Parent = JustScheduled<Observer.Element>
 
     private let parent: Parent
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C) async -> Disposable {

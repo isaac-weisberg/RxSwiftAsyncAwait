@@ -17,7 +17,11 @@ public extension ObservableType {
     }
 }
 
-private final class MaterializeSink<Element, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == Event<Element> {
+private final actor MaterializeSink<Element, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Event<Element> {
+    let baseSink: BaseSink<Observer>
+    init(observer: Observer, cancel: Cancelable) async {
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+    }
     func on(_ event: Event<Element>, _ c: C) async {
         await self.forwardOn(.next(event), c.call())
         if event.isStopEvent {

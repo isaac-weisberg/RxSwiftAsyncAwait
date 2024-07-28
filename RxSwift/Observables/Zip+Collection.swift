@@ -36,7 +36,7 @@ public extension ObservableType {
 }
 
 private final class ZipCollectionTypeSink<Collection: Swift.Collection, Observer: ObserverType>:
-    Sink<Observer> where Collection.Element: ObservableConvertibleType
+    Sink where Collection.Element: ObservableConvertibleType
 {
     typealias Result = Observer.Element
     typealias Parent = ZipCollectionType<Collection, Result>
@@ -65,7 +65,7 @@ private final class ZipCollectionTypeSink<Collection: Swift.Collection, Observer
             await self.subscriptions.append(SingleAssignmentDisposable())
         }
         
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
     
     func on(_ c: C, _ event: Event<SourceElement>, atIndex: Int) async {
@@ -166,7 +166,7 @@ private final class ZipCollectionType<Collection: Swift.Collection, Result>: Pro
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = await ZipCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

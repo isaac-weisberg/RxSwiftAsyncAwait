@@ -9,7 +9,7 @@
 protocol Sink: Disposable, AnyObject {
     associatedtype Observer: ObserverType
 
-    var baseSink: BaseSink<Self> { get }
+    var baseSink: BaseSink<Observer> { get }
 
     func forwardOn(_ event: Event<Observer.Element>, _ c: C) async
 }
@@ -33,9 +33,7 @@ extension Sink {
     }
 }
 
-final class BaseSink<TheSink: Sink> {
-    typealias Observer = TheSink.Observer
-
+final class BaseSink<Observer: ObserverType> {
     fileprivate let observer: Observer
     fileprivate let cancel: Cancelable
     private let disposed: NonAtomicInt

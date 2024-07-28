@@ -28,9 +28,8 @@ public extension ObservableType {
     }
 }
 
-private final class SamplerSink<Observer: ObserverType, SampleType>:
+private final actor SamplerSink<Observer: ObserverType, SampleType>:
     ObserverType,
-    LockOwnerType,
     SynchronizedOnType
 {
     typealias Element = SampleType
@@ -38,10 +37,6 @@ private final class SamplerSink<Observer: ObserverType, SampleType>:
     typealias Parent = SampleSequenceSink<Observer, SampleType>
 
     private let parent: Parent
-
-    var lock: RecursiveLock {
-        self.parent.lock
-    }
 
     init(parent: Parent) {
         self.parent = parent
@@ -54,12 +49,12 @@ private final class SamplerSink<Observer: ObserverType, SampleType>:
     func synchronized_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next, .completed:
-            if let element = parent.element ?? self.parent.defaultValue {
-                self.parent.element = nil
+            if let element = await parent.element ?? self.parent.defaultValue {
+                await self.parent.setElement(nil)
                 await self.parent.forwardOn(.next(element), c.call())
             }
 
-            if self.parent.atEnd {
+            if await self.parent.atEnd {
                 await self.parent.forwardOn(.completed, c.call())
                 await self.parent.dispose()
             }
@@ -70,10 +65,9 @@ private final class SamplerSink<Observer: ObserverType, SampleType>:
     }
 }
 
-private final class SampleSequenceSink<Observer: ObserverType, SampleType>:
-    Sink<Observer>,
+private final actor SampleSequenceSink<Observer: ObserverType, SampleType>:
+    Sink,
     ObserverType,
-    LockOwnerType,
     SynchronizedOnType
 {
     typealias Element = Observer.Element
@@ -82,20 +76,22 @@ private final class SampleSequenceSink<Observer: ObserverType, SampleType>:
     fileprivate let parent: Parent
     fileprivate let defaultValue: Element?
 
-    let lock: RecursiveLock
-
+    let baseSink: BaseSink<Observer>
+    
     // state
     fileprivate var element = nil as Element?
+    func setElement(_ element: Element?) {
+        self.element = element
+    }
     fileprivate var atEnd = false
 
     private let sourceSubscription: SingleAssignmentDisposable
 
     init(parent: Parent, observer: Observer, cancel: Cancelable, defaultValue: Element? = nil) async {
         self.sourceSubscription = await SingleAssignmentDisposable()
-        self.lock = await RecursiveLock()
         self.parent = parent
         self.defaultValue = defaultValue
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func run(_ c: C) async -> Disposable {

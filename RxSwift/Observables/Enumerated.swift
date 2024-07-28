@@ -21,8 +21,14 @@ public extension ObservableType {
     }
 }
 
-private final class EnumeratedSink<Element, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == (index: Int, element: Element) {
+private final actor EnumeratedSink<Element, Observer: ObserverType>: Sink, ObserverType where Observer.Element == (index: Int, element: Element) {
     var index = 0
+    
+    let baseSink: BaseSink<Observer>
+    
+    init(observer: Observer, cancel: Cancelable) async {
+        baseSink = await BaseSink(observer: observer, cancel: cancel)
+    }
 
     func on(_ event: Event<Element>, _ c: C) async {
         switch event {

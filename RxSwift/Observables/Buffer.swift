@@ -61,7 +61,7 @@ private final actor BufferTimeCountSink<Element, Observer: ObserverType>:
 
     private let parent: Parent
 
-    let baseSink: BaseSink<BufferTimeCountSink<Element, Observer>>
+    let baseSink: BaseSink<Observer>
 
     // state
     private let timerD: SerialDisposable

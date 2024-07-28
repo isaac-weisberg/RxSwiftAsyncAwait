@@ -43,7 +43,7 @@ public extension ObservableType {
 
 // count version
 
-private final class SkipCountSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final class SkipCountSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
     typealias Parent = SkipCount<Element>
 
@@ -54,7 +54,7 @@ private final class SkipCountSink<Observer: ObserverType>: Sink<Observer>, Obser
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
         self.remaining = parent.count
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -97,7 +97,7 @@ private final class SkipCount<Element>: Producer<Element> {
 
 // time version
 
-private final class SkipTimeSink<Element, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == Element {
+private final class SkipTimeSink<Element, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Element {
     typealias Parent = SkipTime<Element>
 
     let parent: Parent
@@ -107,7 +107,7 @@ private final class SkipTimeSink<Element, Observer: ObserverType>: Sink<Observer
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {

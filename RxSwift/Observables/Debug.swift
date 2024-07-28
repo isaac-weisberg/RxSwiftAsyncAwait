@@ -31,7 +31,7 @@ private func logEvent(_ identifier: String, dateFormat: DateFormatter, content: 
     print("\(dateFormat.string(from: Date())): \(identifier) -> \(content)")
 }
 
-private final class DebugSink<Source: ObservableType, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == Source.Element {
+private final class DebugSink<Source: ObservableType, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Source.Element {
     typealias Element = Observer.Element
     typealias Parent = Debug<Source>
 
@@ -44,7 +44,7 @@ private final class DebugSink<Source: ObservableType, Observer: ObserverType>: S
 
         logEvent(self.parent.identifier, dateFormat: self.timestampFormatter, content: "subscribed")
 
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -95,7 +95,7 @@ private final class Debug<Source: ObservableType>: Producer<Source.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
+    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = await DebugSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await self.source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)

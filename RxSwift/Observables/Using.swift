@@ -21,7 +21,7 @@ public extension ObservableType {
     }
 }
 
-private final class UsingSink<ResourceType: Disposable, Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final class UsingSink<ResourceType: Disposable, Observer: ObserverType>: Sink, ObserverType {
     typealias SourceType = Observer.Element
     typealias Parent = Using<SourceType, ResourceType>
 
@@ -29,7 +29,7 @@ private final class UsingSink<ResourceType: Disposable, Observer: ObserverType>:
     
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
     
     func run(_ c: C) async -> Disposable {
@@ -66,7 +66,7 @@ private final class UsingSink<ResourceType: Disposable, Observer: ObserverType>:
     }
 }
 
-private final class Using<SourceType, ResourceType: Disposable>: Producer<SourceType> {
+private final class Using<SourceType, ResourceType: Disposable>: Observable<SourceType>, Producer<SourceType> {
     typealias Element = SourceType
     
     typealias ResourceFactory = () async throws -> ResourceType

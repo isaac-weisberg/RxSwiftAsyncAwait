@@ -21,17 +21,18 @@ public extension ObservableType {
     }
 }
 
-private final class CompactMapSink<SourceType, Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final class CompactMapSink<SourceType, Observer: ObserverType>: Sink, ObserverType {
     typealias Transform = (SourceType) async throws -> ResultType?
 
     typealias ResultType = Observer.Element
     typealias Element = SourceType
 
     private let transform: Transform
+    let baseSink: BaseSink<Observer>
 
     init(transform: @escaping Transform, observer: Observer, cancel: Cancelable) async {
         self.transform = transform
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
     func on(_ event: Event<SourceType>, _ c: C) async {

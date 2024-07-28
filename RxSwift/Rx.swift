@@ -133,13 +133,13 @@ func decrementChecked(_ i: inout Int) throws -> Int {
 
         func register(synchronizationErrorMessage: SynchronizationTrackerSync.SynchronizationErrorMessages) async {
             await lock.performLocked { [self] in
-                synchronizationTrackerSync.registerSync(synchronizationErrorMessage: synchronizationErrorMessage)
+                synchronizationTrackerSync.register(synchronizationErrorMessage: synchronizationErrorMessage)
             }
         }
 
         func unregister() async {
             await lock.performLocked { [self] in
-                synchronizationTrackerSync.unregisterSync()
+                synchronizationTrackerSync.unregister()
             }
         }
     }

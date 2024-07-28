@@ -27,7 +27,7 @@ private final actor AnonymousObservableSink<Observer: ObserverType>: Sink, Obser
     typealias Element = Observer.Element
     typealias Parent = AnonymousObservable<Element>
 
-    let baseSink: BaseSink<AnonymousObservableSink<Observer>>
+    let baseSink: BaseSink<Observer>
 
     // state
     private let isStopped: NonAtomicInt

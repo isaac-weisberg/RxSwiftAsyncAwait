@@ -39,7 +39,7 @@ public extension ObservableType {
 private final actor GenerateSink<Sequence, Observer: ObserverType>: Sink {
     typealias Parent = Generate<Sequence, Observer.Element>
 
-    let baseSink: BaseSink<GenerateSink<Sequence, Observer>>
+    let baseSink: BaseSink<Observer>
 
     private let parent: Parent
 

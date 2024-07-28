@@ -41,7 +41,7 @@ public extension ObservableType {
     }
 }
 
-private final class TimeoutSink<Observer: ObserverType>: Sink<Observer>, LockOwnerType, ObserverType {
+private final class TimeoutSink<Observer: ObserverType>: Sink, LockOwnerType, ObserverType {
     typealias Element = Observer.Element
     typealias Parent = Timeout<Element>
     
@@ -60,7 +60,7 @@ private final class TimeoutSink<Observer: ObserverType>: Sink<Observer>, LockOwn
         self.timerD = await SerialDisposable()
         self.subscription = await SerialDisposable()
         self.parent = parent
-        await super.init(observer: observer, cancel: cancel)
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
     
     func run(_ c: C) async -> Disposable {
