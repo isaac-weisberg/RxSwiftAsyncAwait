@@ -220,11 +220,11 @@ public extension PrimitiveSequence
      - parameter maxAttemptCount: Maximum number of times to attempt the sequence subscription.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully.
      */
-    func retry(_ maxAttemptCount: Int) async
-        -> PrimitiveSequence<Trait, Element>
-    {
-        await PrimitiveSequence(raw: self.source.retry(maxAttemptCount))
-    }
+//    func retry(_ maxAttemptCount: Int) async
+//        -> PrimitiveSequence<Trait, Element>
+//    {
+//        await PrimitiveSequence(raw: self.source.retry(maxAttemptCount))
+//    }
 
     /**
      Repeats the source observable sequence on error when the notifier emits a next value.
@@ -235,11 +235,11 @@ public extension PrimitiveSequence
      - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
-    func retry<TriggerObservable: ObservableType, Error: Swift.Error>(when notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async
-        -> PrimitiveSequence<Trait, Element>
-    {
-        await PrimitiveSequence(raw: self.source.retry(when: notificationHandler))
-    }
+//    func retry<TriggerObservable: ObservableType, Error: Swift.Error>(when notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async
+//        -> PrimitiveSequence<Trait, Element>
+//    {
+//        await PrimitiveSequence(raw: self.source.retry(when: notificationHandler))
+//    }
 
     /**
      Repeats the source observable sequence on error when the notifier emits a next value.
@@ -250,12 +250,12 @@ public extension PrimitiveSequence
      - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
-    @available(*, deprecated, renamed: "retry(when:)")
-    func retryWhen<TriggerObservable: ObservableType, Error: Swift.Error>(_ notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async
-        -> PrimitiveSequence<Trait, Element>
-    {
-        await self.retry(when: notificationHandler)
-    }
+//    @available(*, deprecated, renamed: "retry(when:)")
+//    func retryWhen<TriggerObservable: ObservableType, Error: Swift.Error>(_ notificationHandler: @escaping (Observable<Error>) -> TriggerObservable) async
+//        -> PrimitiveSequence<Trait, Element>
+//    {
+//        await self.retry(when: notificationHandler)
+//    }
 
     /**
      Repeats the source observable sequence on error when the notifier emits a next value.
@@ -266,11 +266,11 @@ public extension PrimitiveSequence
      - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
-    func retry<TriggerObservable: ObservableType>(when notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable) async
-        -> PrimitiveSequence<Trait, Element>
-    {
-        await PrimitiveSequence(raw: self.source.retry(when: notificationHandler))
-    }
+//    func retry<TriggerObservable: ObservableType>(when notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable) async
+//        -> PrimitiveSequence<Trait, Element>
+//    {
+//        await PrimitiveSequence(raw: self.source.retry(when: notificationHandler))
+//    }
 
     /**
      Repeats the source observable sequence on error when the notifier emits a next value.
@@ -281,12 +281,12 @@ public extension PrimitiveSequence
      - parameter notificationHandler: A handler that is passed an observable sequence of errors raised by the source observable and returns and observable that either continues, completes or errors. This behavior is then applied to the source observable.
      - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully or is notified to error or complete.
      */
-    @available(*, deprecated, renamed: "retry(when:)")
-    func retryWhen<TriggerObservable: ObservableType>(_ notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable) async
-        -> PrimitiveSequence<Trait, Element>
-    {
-        await self.retry(when: notificationHandler)
-    }
+//    @available(*, deprecated, renamed: "retry(when:)")
+//    func retryWhen<TriggerObservable: ObservableType>(_ notificationHandler: @escaping (Observable<Swift.Error>) -> TriggerObservable) async
+//        -> PrimitiveSequence<Trait, Element>
+//    {
+//        await self.retry(when: notificationHandler)
+//    }
 
     /**
      Prints received events for all observers on standard output.

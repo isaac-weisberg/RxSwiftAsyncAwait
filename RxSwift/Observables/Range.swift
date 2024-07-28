@@ -49,10 +49,11 @@ private final class RangeProducer<Element: RxAbstractInteger>: Producer<Element>
     }
 }
 
-private final class RangeSink<Observer: ObserverType>: Sink where Observer.Element: RxAbstractInteger {
+private final actor RangeSink<Observer: ObserverType>: Sink where Observer.Element: RxAbstractInteger {
     typealias Parent = RangeProducer<Observer.Element>
 
     private let parent: Parent
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent

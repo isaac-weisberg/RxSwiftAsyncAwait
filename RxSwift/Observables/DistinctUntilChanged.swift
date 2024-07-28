@@ -79,11 +79,12 @@ public extension ObservableType {
     }
 }
 
-private final class DistinctUntilChangedSink<Observer: ObserverType, Key>: Sink, ObserverType {
+private final actor DistinctUntilChangedSink<Observer: ObserverType, Key>: Sink, ObserverType {
     typealias Element = Observer.Element
 
     private let parent: DistinctUntilChanged<Element, Key>
     private var currentKey: Key?
+    let baseSink: BaseSink<Observer>
 
     init(parent: DistinctUntilChanged<Element, Key>, observer: Observer, cancel: Cancelable) async {
         self.parent = parent

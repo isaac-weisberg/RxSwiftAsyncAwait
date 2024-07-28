@@ -37,12 +37,9 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run the timer on.
      - returns: An observable sequence with the elements taken during the specified duration from the start of the source sequence.
      */
-    func take(_ c: C, for duration: RxTimeInterval, scheduler: SchedulerType) async
+    func take(for duration: RxTimeInterval, scheduler: SchedulerType) async
         -> Observable<Element> {
-        let take = await TakeTime(source: asObservable(), duration: duration, scheduler: scheduler)
-
-        await take.subscribe(c.call(), AnonymousObserver(c.call()) { _, _ in })
-        return take
+        await TakeTime(source: asObservable(), duration: duration, scheduler: scheduler)
     }
 
     /**
@@ -57,7 +54,7 @@ public extension ObservableType {
     @available(*, deprecated, renamed: "take(for:scheduler:)")
     func take(_ duration: RxTimeInterval, scheduler: SchedulerType) async
         -> Observable<Element> {
-        await take(<#C#>, for: duration, scheduler: scheduler)
+        await take(for: duration, scheduler: scheduler)
     }
 }
 

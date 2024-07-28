@@ -280,19 +280,19 @@ public extension InfallibleType {
 // MARK: - FlatMap
 
 public extension InfallibleType {
-    /**
-     Projects each element of an observable sequence to an observable sequence and merges the resulting observable sequences into one observable sequence.
-
-     - seealso: [flatMap operator on reactivex.io](http://reactivex.io/documentation/operators/flatmap.html)
-
-     - parameter selector: A transform function to apply to each element.
-     - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
-     */
-    func flatMap<Source: ObservableConvertibleType>(_ selector: @escaping (Element) -> Source) async
-        -> Infallible<Source.Element>
-    {
-        await Infallible(asObservable().flatMap(selector))
-    }
+//    /**
+//     Projects each element of an observable sequence to an observable sequence and merges the resulting observable sequences into one observable sequence.
+//
+//     - seealso: [flatMap operator on reactivex.io](http://reactivex.io/documentation/operators/flatmap.html)
+//
+//     - parameter selector: A transform function to apply to each element.
+//     - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
+//     */
+//    func flatMap<Source: ObservableConvertibleType>(_ selector: @escaping (Element) -> Source) async
+//        -> Infallible<Source.Element>
+//    {
+//        await Infallible(asObservable().flatMap(selector))
+//    }
 
     /**
      Projects each element of an observable sequence into a new sequence of observable sequences and then
@@ -306,26 +306,26 @@ public extension InfallibleType {
      - returns: An observable sequence whose elements are the result of invoking the transform function on each element of source producing an
      Observable of Observable sequences and that at any point in time produces the elements of the most recent inner observable sequence that has been received.
      */
-    func flatMapLatest<Source: ObservableConvertibleType>(_ selector: @escaping (Element) -> Source) async
-        -> Infallible<Source.Element>
-    {
-        await Infallible(asObservable().flatMapLatest(selector))
-    }
+//    func flatMapLatest<Source: ObservableConvertibleType>(_ selector: @escaping (Element) -> Source) async
+//        -> Infallible<Source.Element>
+//    {
+//        await Infallible(asObservable().flatMapLatest(selector))
+//    }
 
-    /**
-     Projects each element of an observable sequence to an observable sequence and merges the resulting observable sequences into one observable sequence.
-     If element is received while there is some projected observable sequence being merged it will simply be ignored.
-
-     - seealso: [flatMapFirst operator on reactivex.io](http://reactivex.io/documentation/operators/flatmap.html)
-
-     - parameter selector: A transform function to apply to element that was observed while no observable is executing in parallel.
-     - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence that was received while no other sequence was being calculated.
-     */
-    func flatMapFirst<Source: ObservableConvertibleType>(_ selector: @escaping (Element) -> Source) async
-        -> Infallible<Source.Element>
-    {
-        await Infallible(asObservable().flatMapFirst(selector))
-    }
+//    /**
+//     Projects each element of an observable sequence to an observable sequence and merges the resulting observable sequences into one observable sequence.
+//     If element is received while there is some projected observable sequence being merged it will simply be ignored.
+//
+//     - seealso: [flatMapFirst operator on reactivex.io](http://reactivex.io/documentation/operators/flatmap.html)
+//
+//     - parameter selector: A transform function to apply to element that was observed while no observable is executing in parallel.
+//     - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence that was received while no other sequence was being calculated.
+//     */
+//    func flatMapFirst<Source: ObservableConvertibleType>(_ selector: @escaping (Element) -> Source) async
+//        -> Infallible<Source.Element>
+//    {
+//        await Infallible(asObservable().flatMapFirst(selector))
+//    }
 }
 
 // MARK: - Concat
@@ -339,9 +339,9 @@ public extension InfallibleType {
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    func concat<Source: ObservableConvertibleType>(_ second: Source) async -> Infallible<Element> where Source.Element == Element {
-        await Infallible(Observable.concat([self.asObservable(), second.asObservable()]))
-    }
+//    func concat<Source: ObservableConvertibleType>(_ second: Source) async -> Infallible<Element> where Source.Element == Element {
+//        await Infallible(Observable.concat([self.asObservable(), second.asObservable()]))
+//    }
 
     /**
      Concatenates all observable sequences in the given sequence, as long as the previous observable sequence terminated successfully.
@@ -356,11 +356,11 @@ public extension InfallibleType {
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat<Sequence: Swift.Sequence>(_ sequence: Sequence) async -> Infallible<Element>
-        where Sequence.Element == Infallible<Element>
-    {
-        await Infallible(Observable.concat(sequence.map { $0.asObservable() }))
-    }
+//    static func concat<Sequence: Swift.Sequence>(_ sequence: Sequence) async -> Infallible<Element>
+//        where Sequence.Element == Infallible<Element>
+//    {
+//        await Infallible(Observable.concat(sequence.map { $0.asObservable() }))
+//    }
 
     /**
      Concatenates all observable sequences in the given collection, as long as the previous observable sequence terminated successfully.
@@ -375,11 +375,11 @@ public extension InfallibleType {
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat<Collection: Swift.Collection>(_ collection: Collection) async -> Infallible<Element>
-        where Collection.Element == Infallible<Element>
-    {
-        await Infallible(Observable.concat(collection.map { $0.asObservable() }))
-    }
+//    static func concat<Collection: Swift.Collection>(_ collection: Collection) async -> Infallible<Element>
+//        where Collection.Element == Infallible<Element>
+//    {
+//        await Infallible(Observable.concat(collection.map { $0.asObservable() }))
+//    }
 
     /**
      Concatenates all observable sequences in the given collection, as long as the previous observable sequence terminated successfully.
@@ -394,9 +394,9 @@ public extension InfallibleType {
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat(_ sources: Infallible<Element> ...) async -> Infallible<Element> {
-        await Infallible(Observable.concat(sources.map { $0.asObservable() }))
-    }
+//    static func concat(_ sources: Infallible<Element> ...) async -> Infallible<Element> {
+//        await Infallible(Observable.concat(sources.map { $0.asObservable() }))
+//    }
 
     /**
      Projects each element of an observable sequence to an observable sequence and concatenates the resulting observable sequences into one observable sequence.
@@ -405,11 +405,11 @@ public extension InfallibleType {
 
      - returns: An observable sequence that contains the elements of each observed inner sequence, in sequential order.
      */
-    func concatMap<Source: ObservableConvertibleType>(_ selector: @escaping (Element) -> Source) async
-        -> Infallible<Source.Element>
-    {
-        await Infallible(asObservable().concatMap(selector))
-    }
+//    func concatMap<Source: ObservableConvertibleType>(_ selector: @escaping (Element) -> Source) async
+//        -> Infallible<Source.Element>
+//    {
+//        await Infallible(asObservable().concatMap(selector))
+//    }
 }
 
 // MARK: - Merge
@@ -423,9 +423,9 @@ public extension InfallibleType {
      - parameter sources: Collection of observable sequences to merge.
      - returns: The observable sequence that merges the elements of the observable sequences.
      */
-    static func merge<Collection: Swift.Collection>(_ sources: Collection) async -> Infallible<Element> where Collection.Element == Infallible<Element> {
-        await Infallible(Observable.concat(sources.map { $0.asObservable() }))
-    }
+//    static func merge<Collection: Swift.Collection>(_ sources: Collection) async -> Infallible<Element> where Collection.Element == Infallible<Element> {
+//        await Infallible(Observable.concat(sources.map { $0.asObservable() }))
+//    }
 
     /**
      Merges elements from all infallible sequences from array into a single infallible sequence.
@@ -435,9 +435,9 @@ public extension InfallibleType {
      - parameter sources: Array of infallible sequences to merge.
      - returns: The infallible sequence that merges the elements of the infallible sequences.
      */
-    static func merge(_ sources: [Infallible<Element>]) async -> Infallible<Element> {
-        await Infallible(Observable.merge(sources.map { $0.asObservable() }))
-    }
+//    static func merge(_ sources: [Infallible<Element>]) async -> Infallible<Element> {
+//        await Infallible(Observable.merge(sources.map { $0.asObservable() }))
+//    }
 
     /**
      Merges elements from all infallible sequences into a single infallible sequence.
@@ -447,9 +447,9 @@ public extension InfallibleType {
      - parameter sources: Collection of infallible sequences to merge.
      - returns: The infallible sequence that merges the elements of the infallible sequences.
      */
-    static func merge(_ sources: Infallible<Element>...) async -> Infallible<Element> {
-        await Infallible(Observable.merge(sources.map { $0.asObservable() }))
-    }
+//    static func merge(_ sources: Infallible<Element>...) async -> Infallible<Element> {
+//        await Infallible(Observable.merge(sources.map { $0.asObservable() }))
+//    }
 }
 
 // MARK: - Do

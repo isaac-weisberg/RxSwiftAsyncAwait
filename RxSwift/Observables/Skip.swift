@@ -43,11 +43,12 @@ public extension ObservableType {
 
 // count version
 
-private final class SkipCountSink<Observer: ObserverType>: Sink, ObserverType {
+private final actor SkipCountSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
     typealias Parent = SkipCount<Element>
 
     let parent: Parent
+    let baseSink: BaseSink<Observer>
 
     var remaining: Int
 
@@ -97,10 +98,11 @@ private final class SkipCount<Element>: Producer<Element> {
 
 // time version
 
-private final class SkipTimeSink<Element, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Element {
+private final actor SkipTimeSink<Element, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Element {
     typealias Parent = SkipTime<Element>
 
     let parent: Parent
+    let baseSink: BaseSink<Observer>
 
     // state
     var open = false

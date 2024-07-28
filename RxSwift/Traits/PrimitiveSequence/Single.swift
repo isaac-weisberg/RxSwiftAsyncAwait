@@ -331,10 +331,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-    func flatMap<Result>(_ selector: @escaping (Element) async throws -> Single<Result>) async
-        -> Single<Result> {
-        await Single<Result>(raw: primitiveSequence.source.flatMap(selector))
-    }
+//    func flatMap<Result>(_ selector: @escaping (Element) async throws -> Single<Result>) async
+//        -> Single<Result> {
+//        await Single<Result>(raw: primitiveSequence.source.flatMap(selector))
+//    }
 
     /**
      Projects each element of an observable sequence to an observable sequence and merges the resulting observable sequences into one observable sequence.
@@ -344,10 +344,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-    func flatMapMaybe<Result>(_ selector: @escaping (Element) async throws -> Maybe<Result>) async
-        -> Maybe<Result> {
-        await Maybe<Result>(raw: primitiveSequence.source.flatMap(selector))
-    }
+//    func flatMapMaybe<Result>(_ selector: @escaping (Element) async throws -> Maybe<Result>) async
+//        -> Maybe<Result> {
+//        await Maybe<Result>(raw: primitiveSequence.source.flatMap(selector))
+//    }
 
     /**
      Projects each element of an observable sequence to an observable sequence and merges the resulting observable sequences into one observable sequence.
@@ -357,10 +357,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-    func flatMapCompletable(_ selector: @escaping (Element) async throws -> Completable) async
-        -> Completable {
-        await Completable(raw: primitiveSequence.source.flatMap(selector))
-    }
+//    func flatMapCompletable(_ selector: @escaping (Element) async throws -> Completable) async
+//        -> Completable {
+//        await Completable(raw: primitiveSequence.source.flatMap(selector))
+//    }
 
     /**
      Merges the specified observable sequences into one observable sequence by using the selector function whenever all of the observable sequences have produced an element at a corresponding index.
@@ -368,38 +368,38 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter resultSelector: Function to invoke for each series of elements at corresponding indexes in the sources.
      - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
      */
-    static func zip<Collection: Swift.Collection, Result>(
-        _ collection: Collection,
-        resultSelector: @escaping ([Element]) throws -> Result
-    )
-        async -> PrimitiveSequence<Trait, Result> where Collection.Element == PrimitiveSequence<Trait, Element> {
-        if collection.isEmpty {
-            return await PrimitiveSequence<Trait, Result>.deferred {
-                try await PrimitiveSequence<Trait, Result>(raw: .just(resultSelector([])))
-            }
-        }
-
-        let raw = await Observable.zip(collection.map { $0.asObservable() }, resultSelector: resultSelector)
-        return PrimitiveSequence<Trait, Result>(raw: raw)
-    }
+//    static func zip<Collection: Swift.Collection, Result>(
+//        _ collection: Collection,
+//        resultSelector: @escaping ([Element]) throws -> Result
+//    )
+//        async -> PrimitiveSequence<Trait, Result> where Collection.Element == PrimitiveSequence<Trait, Element> {
+//        if collection.isEmpty {
+//            return await PrimitiveSequence<Trait, Result>.deferred {
+//                try await PrimitiveSequence<Trait, Result>(raw: .just(resultSelector([])))
+//            }
+//        }
+//
+//        let raw = await Observable.zip(collection.map { $0.asObservable() }, resultSelector: resultSelector)
+//        return PrimitiveSequence<Trait, Result>(raw: raw)
+//    }
 
     /**
      Merges the specified observable sequences into one observable sequence all of the observable sequences have produced an element at a corresponding index.
 
      - returns: An observable sequence containing the result of combining elements of the sources.
      */
-    static func zip<Collection: Swift.Collection>(_ collection: Collection) async
-        -> PrimitiveSequence<Trait, [Element]> where Collection.Element == PrimitiveSequence<
-            Trait,
-            Element
-        > {
-        if collection.isEmpty {
-            return await PrimitiveSequence<Trait, [Element]>(raw: .just([]))
-        }
-
-        let raw = await Observable.zip(collection.map { $0.asObservable() })
-        return PrimitiveSequence(raw: raw)
-    }
+//    static func zip<Collection: Swift.Collection>(_ collection: Collection) async
+//        -> PrimitiveSequence<Trait, [Element]> where Collection.Element == PrimitiveSequence<
+//            Trait,
+//            Element
+//        > {
+//        if collection.isEmpty {
+//            return await PrimitiveSequence<Trait, [Element]>(raw: .just([]))
+//        }
+//
+//        let raw = await Observable.zip(collection.map { $0.asObservable() })
+//        return PrimitiveSequence(raw: raw)
+//    }
 
     /**
      Continues an observable sequence that is terminated by an error with a single element.

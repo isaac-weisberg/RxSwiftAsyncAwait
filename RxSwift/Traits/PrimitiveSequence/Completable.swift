@@ -237,9 +237,9 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - parameter second: Second observable sequence.
      - returns: An observable sequence that contains the elements of `self`, followed by those of the second sequence.
      */
-    func concat(_ second: Completable) async -> Completable {
-        await Completable.concat(self.primitiveSequence, second)
-    }
+//    func concat(_ second: Completable) async -> Completable {
+//        await Completable.concat(self.primitiveSequence, second)
+//    }
 
     /**
      Concatenates all observable sequences in the given sequence, as long as the previous observable sequence terminated successfully.
@@ -248,12 +248,12 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat<Sequence: Swift.Sequence>(_ sequence: Sequence) async -> Completable
-        where Sequence.Element == Completable
-    {
-        let source = await Observable.concat(sequence.lazy.map { $0.asObservable() })
-        return Completable(raw: source)
-    }
+//    static func concat<Sequence: Swift.Sequence>(_ sequence: Sequence) async -> Completable
+//        where Sequence.Element == Completable
+//    {
+//        let source = await Observable.concat(sequence.lazy.map { $0.asObservable() })
+//        return Completable(raw: source)
+//    }
 
     /**
      Concatenates all observable sequences in the given sequence, as long as the previous observable sequence terminated successfully.
@@ -262,12 +262,12 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat<Collection: Swift.Collection>(_ collection: Collection) async -> Completable
-        where Collection.Element == Completable
-    {
-        let source = await Observable.concat(collection.map { $0.asObservable() })
-        return Completable(raw: source)
-    }
+//    static func concat<Collection: Swift.Collection>(_ collection: Collection) async -> Completable
+//        where Collection.Element == Completable
+//    {
+//        let source = await Observable.concat(collection.map { $0.asObservable() })
+//        return Completable(raw: source)
+//    }
 
     /**
      Concatenates all observable sequences in the given sequence, as long as the previous observable sequence terminated successfully.
@@ -276,10 +276,10 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat(_ sources: Completable ...) async -> Completable {
-        let source = await Observable.concat(sources.map { $0.asObservable() })
-        return Completable(raw: source)
-    }
+//    static func concat(_ sources: Completable ...) async -> Completable {
+//        let source = await Observable.concat(sources.map { $0.asObservable() })
+//        return Completable(raw: source)
+//    }
 
     /**
      Merges the completion of all Completables from a collection into a single Completable.
@@ -290,12 +290,12 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - parameter sources: Collection of Completables to merge.
      - returns: A Completable that merges the completion of all Completables.
      */
-    static func zip<Collection: Swift.Collection>(_ sources: Collection) async -> Completable
-        where Collection.Element == Completable
-    {
-        let source = await Observable.merge(sources.map { $0.asObservable() })
-        return Completable(raw: source)
-    }
+//    static func zip<Collection: Swift.Collection>(_ sources: Collection) async -> Completable
+//        where Collection.Element == Completable
+//    {
+//        let source = await Observable.merge(sources.map { $0.asObservable() })
+//        return Completable(raw: source)
+//    }
 
     /**
      Merges the completion of all Completables from an array into a single Completable.
@@ -306,10 +306,10 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - parameter sources: Array of observable sequences to merge.
      - returns: A Completable that merges the completion of all Completables.
      */
-    static func zip(_ sources: [Completable]) async -> Completable {
-        let source = await Observable.merge(sources.map { $0.asObservable() })
-        return Completable(raw: source)
-    }
+//    static func zip(_ sources: [Completable]) async -> Completable {
+//        let source = await Observable.merge(sources.map { $0.asObservable() })
+//        return Completable(raw: source)
+//    }
 
     /**
      Merges the completion of all Completables into a single Completable.
@@ -320,8 +320,8 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - parameter sources: Collection of observable sequences to merge.
      - returns: The observable sequence that merges the elements of the observable sequences.
      */
-    static func zip(_ sources: Completable...) async -> Completable {
-        let source = await Observable.merge(sources.map { $0.asObservable() })
-        return Completable(raw: source)
-    }
+//    static func zip(_ sources: Completable...) async -> Completable {
+//        let source = await Observable.merge(sources.map { $0.asObservable() })
+//        return Completable(raw: source)
+//    }
 }

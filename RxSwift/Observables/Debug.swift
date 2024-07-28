@@ -31,12 +31,13 @@ private func logEvent(_ identifier: String, dateFormat: DateFormatter, content: 
     print("\(dateFormat.string(from: Date())): \(identifier) -> \(content)")
 }
 
-private final class DebugSink<Source: ObservableType, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Source.Element {
+private final actor DebugSink<Source: ObservableType, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Source.Element {
     typealias Element = Observer.Element
     typealias Parent = Debug<Source>
 
     private let parent: Parent
     private let timestampFormatter = DateFormatter()
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
@@ -63,11 +64,13 @@ private final class DebugSink<Source: ObservableType, Observer: ObserverType>: S
         }
     }
 
-    override func dispose() async {
-        if await !self.isDisposed() {
+    
+    
+    func dispose() async {
+        if !baseSink.isDisposed() {
             logEvent(self.parent.identifier, dateFormat: self.timestampFormatter, content: "isDisposed")
         }
-        await super.dispose()
+        await baseSink.dispose()
     }
 }
 
@@ -95,7 +98,7 @@ private final class Debug<Source: ObservableType>: Producer<Source.Element> {
         await super.init()
     }
 
-    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
         let sink = await DebugSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await self.source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)

@@ -6,8 +6,13 @@
 //  Copyright © 2017 Krunoslav Zaher. All rights reserved.
 //
 
-private final class FirstSink<Element, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Element? {
+private final actor FirstSink<Element, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Element? {
     typealias Parent = First<Element>
+    let baseSink: BaseSink<Observer>
+    
+    init(observer: Observer, cancel: Cancelable) async {
+        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+    }
 
     func on(_ event: Event<Element>, _ c: C) async {
         switch event {

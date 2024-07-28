@@ -21,11 +21,12 @@ public extension ObservableType {
     }
 }
 
-private final class UsingSink<ResourceType: Disposable, Observer: ObserverType>: Sink, ObserverType {
+private final actor UsingSink<ResourceType: Disposable, Observer: ObserverType>: Sink, ObserverType {
     typealias SourceType = Observer.Element
     typealias Parent = Using<SourceType, ResourceType>
 
     private let parent: Parent
+    let baseSink: BaseSink<Observer>
     
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
@@ -66,7 +67,7 @@ private final class UsingSink<ResourceType: Disposable, Observer: ObserverType>:
     }
 }
 
-private final class Using<SourceType, ResourceType: Disposable>: Observable<SourceType>, Producer<SourceType> {
+private final class Using<SourceType, ResourceType: Disposable>: Producer<SourceType> {
     typealias Element = SourceType
     
     typealias ResourceFactory = () async throws -> ResourceType

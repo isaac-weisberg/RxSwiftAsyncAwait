@@ -33,7 +33,8 @@ public extension ObservableType {
     func ignoreElements() async
         -> Observable<Never>
     {
-        await self.flatMap { _ in await Observable<Never>.empty() }
+        fatalError()
+//        await self.flatMap { _ in await Observable<Never>.empty() }
     }
 }
 

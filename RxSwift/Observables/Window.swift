@@ -29,14 +29,13 @@ public extension ObservableType {
 private final class WindowTimeCountSink<Element, Observer: ObserverType>:
     Sink,
     ObserverType,
-    LockOwnerType,
     SynchronizedOnType where Observer.Element == Observable<Element>
 {
     typealias Parent = WindowTimeCount<Element>
     
     private let parent: Parent
     
-    let lock: RecursiveLock
+    let baseSink: BaseSink<Observer>
     
     private var subject: PublishSubject<Element>
     private var count = 0
@@ -49,7 +48,6 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         subject = await PublishSubject<Element>()
         self.timerD = await SerialDisposable()
-        self.lock = await RecursiveLock()
         self.parent = parent
         self.groupDisposable = await CompositeDisposable()
         
@@ -134,7 +132,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
             
             var newId = 0
             
-            await self.lock.performLocked(c.call()) { c in
+            await {
                 if previousWindowId != self.windowId {
                     return
                 }
@@ -143,7 +141,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
                 self.windowId = self.windowId &+ 1
                 newId = self.windowId
                 await self.startNewWindowAndCompleteCurrentOne(c.call())
-            }
+            }()
             
             await self.createTimer(c.call(), newId)
             
@@ -168,7 +166,7 @@ private final class WindowTimeCount<Element>: Producer<Observable<Element>> {
         await super.init()
     }
     
-    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Observable<Element> {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Observable<Element> {
         let sink = await WindowTimeCountSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

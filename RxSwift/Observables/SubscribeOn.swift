@@ -51,11 +51,12 @@ public extension ObservableType {
     }
 }
 
-private final class SubscribeOnSink<Ob: ObservableType, Observer: ObserverType>: Sink, ObserverType where Ob.Element == Observer.Element {
+private final actor SubscribeOnSink<Ob: ObservableType, Observer: ObserverType>: Sink, ObserverType where Ob.Element == Observer.Element {
     typealias Element = Observer.Element
     typealias Parent = SubscribeOn<Ob>
 
     let parent: Parent
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
@@ -98,7 +99,7 @@ private final class SubscribeOn<Ob: ObservableType>: Producer<Ob.Element> {
         await super.init()
     }
 
-    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Ob.Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Ob.Element {
         let sink = await SubscribeOnSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

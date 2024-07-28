@@ -114,19 +114,14 @@ public enum TakeBehavior {
 
 // MARK: - TakeUntil Observable
 
-private final class TakeUntilSinkOther<Other, Observer: ObserverType>:
+private final actor TakeUntilSinkOther<Other, Observer: ObserverType>:
     ObserverType,
-    LockOwnerType,
     SynchronizedOnType
 {
     typealias Parent = TakeUntilSink<Other, Observer>
     typealias Element = Other
 
     private let parent: Parent
-
-    var lock: RecursiveLock {
-        self.parent.lock
-    }
 
     fileprivate let subscription: SingleAssignmentDisposable
 
@@ -164,9 +159,8 @@ private final class TakeUntilSinkOther<Other, Observer: ObserverType>:
 #endif
 }
 
-private final class TakeUntilSink<Other, Observer: ObserverType>:
+private final actor TakeUntilSink<Other, Observer: ObserverType>:
     Sink,
-    LockOwnerType,
     ObserverType,
     SynchronizedOnType
 {
@@ -174,12 +168,11 @@ private final class TakeUntilSink<Other, Observer: ObserverType>:
     typealias Parent = TakeUntil<Element, Other>
 
     private let parent: Parent
-
-    let lock: RecursiveLock
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
-        self.lock = await RecursiveLock()
         self.parent = parent
+        
         self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
@@ -229,7 +222,7 @@ private final class TakeUntil<Element, Other>: Producer<Element> {
 
 // MARK: - TakeUntil Predicate
 
-private final class TakeUntilPredicateSink<Observer: ObserverType>:
+private final actor TakeUntilPredicateSink<Observer: ObserverType>:
     Sink, ObserverType
 {
     typealias Element = Observer.Element
@@ -237,6 +230,7 @@ private final class TakeUntilPredicateSink<Observer: ObserverType>:
 
     private let parent: Parent
     private var running = true
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent

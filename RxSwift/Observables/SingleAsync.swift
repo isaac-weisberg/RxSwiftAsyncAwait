@@ -43,6 +43,7 @@ private final class SingleAsyncSink<Observer: ObserverType>: Sink, ObserverType 
 
     private let parent: Parent
     private var seenValue: Bool = false
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent

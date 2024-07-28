@@ -48,13 +48,14 @@ public extension ObservableType {
     }
 }
 
-private final class DoSink<Observer: ObserverType>: Sink, ObserverType {
+private final actor DoSink<Observer: ObserverType>: Sink, ObserverType {
     typealias Element = Observer.Element
     typealias EventHandler = (Event<Element>) async throws -> Void
     typealias AfterEventHandler = (Event<Element>) async throws -> Void
 
     private let eventHandler: EventHandler
     private let afterEventHandler: AfterEventHandler
+    let baseSink: BaseSink<Observer>
 
     init(eventHandler: @escaping EventHandler, afterEventHandler: @escaping AfterEventHandler, observer: Observer, cancel: Cancelable) async {
         self.eventHandler = eventHandler

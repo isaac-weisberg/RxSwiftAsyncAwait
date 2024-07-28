@@ -43,6 +43,7 @@ private final class RepeatElementSink<Observer: ObserverType>: Sink {
     typealias Parent = RepeatElement<Observer.Element>
 
     private let parent: Parent
+    let baseSink: BaseSink<Observer>
 
     init(parent: Parent, observer: Observer, cancel: Cancelable) async {
         self.parent = parent
