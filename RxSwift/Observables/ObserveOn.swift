@@ -172,7 +172,7 @@ private final class ObserveOnSink<Observer: ObserverType>: ObserverBase<Observer
 }
 
 #if TRACE_RESOURCES
-    var numberOfSerialDispatchObservables: AtomicInt!
+    var numberOfSerialDispatchObservables: ActualAtomicInt!
 
     public extension Resources {
         /**

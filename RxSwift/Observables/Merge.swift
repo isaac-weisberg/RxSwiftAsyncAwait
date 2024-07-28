@@ -366,23 +366,41 @@
 
 // MergeSink<SourceElement, SourceSequence, Observer>
 private final actor FlatMapSink<
+    SourceElement,
     SourceSequence: ObservableConvertibleType,
     Observer: ObserverType
->: MergeSink, ObserverType where Observer.Element == SourceSequence.Element {
-    typealias Element = Observer.Element
+>: MergeSink, ObserverType where SourceSequence.Element == Observer.Element {
+
+    typealias Element = SourceElement
 
     typealias Selector = (Element) async throws -> SourceSequence
 
     private let selector: Selector
-    let baseSink: MergeSinkBase<SourceSequence, Observer>
+    let baseSink: MergeSinkBase<SourceElement, SourceSequence, Observer>
 
     init(selector: @escaping Selector, observer: Observer, cancel: Cancelable) async {
         self.selector = selector
         baseSink = await MergeSinkBase(observer: observer, cancel: cancel)
     }
 
-    func run(_ observer: Observer, _ source: Observable<SourceElement>, _ c: C) async -> Disposable {
-        baseSink.run(self, source, c.call())
+    func on(_ event: Event<SourceElement>, _ c: C) async {
+        switch event {
+        case .next(let element):
+            if let value = await nextElementArrived(element: element, c.call()) {
+                await subscribeInner(value.asObservable(), c.call())
+            }
+        case .error(let error):
+            await forwardOn(.error(error), c.call())
+            await dispose()
+        case .completed:
+            baseSink.stopped = true
+            await baseSink.sourceSubscription.dispose()
+            await checkCompleted(c.call())
+        }
+    }
+
+    func run(_ source: Observable<SourceElement>, _ c: C) async -> Disposable {
+        await baseSink.run(self, source, c.call())
     }
 
 //    override func performMap(_ element: SourceElement) async throws -> SourceSequence {
@@ -451,14 +469,14 @@ private final actor FlatMapSink<
 
 protocol MergeSink: Sink {
     associatedtype SourceElement
-    associatedtype SourceSequence: ObservableConvertibleType
+    associatedtype SourceSequence: ObservableConvertibleType where SourceSequence.Element == Observer.Element
 
     var baseSink: MergeSinkBase<SourceElement, SourceSequence, Observer> { get }
 }
 
 final class MergeSinkBase<
     SourceElement,
-    SourceSequence: ObservableConvertibleType,
+    ResultingSequence: ObservableConvertibleType,
     Observer: ObserverType
 >: BaseSinkProtocol {
 
@@ -466,6 +484,8 @@ final class MergeSinkBase<
     let baseSink: BaseSink<Observer>
 
     init(observer: Observer, cancel: Cancelable) async {
+        group = await CompositeDisposable()
+        sourceSubscription = await SingleAssignmentDisposable()
         baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
@@ -510,13 +530,28 @@ final class MergeSinkBase<
     let group: CompositeDisposable
     let sourceSubscription: SingleAssignmentDisposable
 
-    func run(_ observer: Observer, _ source: Observable<SourceElement>, _ c: C) async -> Disposable {
+    var activeCount = 0
+    var stopped = false
+
+    func run<SourceObserver: ObserverType>(
+        _ observer: SourceObserver,
+        _ source: Observable<SourceElement>,
+        _ c: C
+    )
+        async -> Disposable where SourceObserver.Element == SourceElement {
         _ = await group.insert(sourceSubscription)
 
         let subscription = await source.subscribe(c.call(), observer)
         await sourceSubscription.setDisposable(subscription)
 
         return group
+    }
+
+    func checkCompleted(_ c: C) async {
+        if stopped, activeCount == 0 {
+            await forwardOn(.completed, c.call())
+            await dispose()
+        }
     }
 }
 
