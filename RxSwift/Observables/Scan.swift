@@ -92,7 +92,7 @@ final private class Scan<Element, Accumulate>: Producer<Accumulate> {
         self.accumulator = accumulator
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Accumulate {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Accumulate {
         let sink = ScanSink(parent: self, observer: observer, cancel: cancel)
         let subscription = self.source.subscribe(sink)
         return (sink: sink, subscription: subscription)

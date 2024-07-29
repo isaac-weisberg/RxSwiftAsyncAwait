@@ -63,12 +63,12 @@ public extension AsyncSequence {
             let task = Task {
                 do {
                     for try await value in self {
-                        observer.onNext(value)
+                        await observer.onNext(value)
                     }
 
-                    observer.onCompleted()
+                    await observer.onCompleted()
                 } catch {
-                    observer.onError(error)
+                    await observer.onError(error)
                 }
             }
 

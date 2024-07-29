@@ -87,7 +87,7 @@ final private class SkipCount<Element>: Producer<Element> {
         self.count = count
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = SkipCountSink(parent: self, observer: observer, cancel: cancel)
         let subscription = self.source.subscribe(sink)
 
@@ -152,7 +152,7 @@ final private class SkipTime<Element>: Producer<Element> {
         self.duration = duration
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = SkipTimeSink(parent: self, observer: observer, cancel: cancel)
         let subscription = sink.run()
         return (sink: sink, subscription: subscription)

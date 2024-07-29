@@ -95,7 +95,7 @@ final private class SubscribeOn<Ob: ObservableType>: Producer<Ob.Element> {
         self.scheduler = scheduler
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Ob.Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Ob.Element {
         let sink = SubscribeOnSink(parent: self, observer: observer, cancel: cancel)
         let subscription = sink.run()
         return (sink: sink, subscription: subscription)

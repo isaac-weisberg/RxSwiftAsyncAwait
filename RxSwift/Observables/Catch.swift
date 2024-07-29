@@ -199,7 +199,7 @@ final private class Catch<Element>: Producer<Element> {
         self.handler = handler
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = CatchSink(parent: self, observer: observer, cancel: cancel)
         let subscription = sink.run()
         return (sink: sink, subscription: subscription)
@@ -267,7 +267,7 @@ final private class CatchSequence<Sequence: Swift.Sequence>: Producer<Sequence.E
         self.sources = sources
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = CatchSequenceSink<Sequence, Observer>(observer: observer, cancel: cancel)
         let subscription = sink.run((self.sources.makeIterator(), nil))
         return (sink: sink, subscription: subscription)

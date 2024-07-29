@@ -64,7 +64,7 @@ final private class Deferred<Source: ObservableType>: Producer<Source.Element> {
         self.observableFactory = observableFactory
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable)
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable)
              where Observer.Element == Source.Element {
         let sink = DeferredSink<Source, Observer>(observer: observer, cancel: cancel)
         let subscription = sink.run(self)

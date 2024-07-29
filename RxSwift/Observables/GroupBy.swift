@@ -126,7 +126,7 @@ final private class GroupBy<Key: Hashable, Element>: Producer<GroupedObservable<
         self.selector = selector
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == GroupedObservable<Key,Element> {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == GroupedObservable<Key,Element> {
         let sink = GroupBySink(parent: self, observer: observer, cancel: cancel)
         return (sink: sink, subscription: sink.run())
     }

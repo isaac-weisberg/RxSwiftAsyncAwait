@@ -203,7 +203,7 @@ final private class RetryWhenSequence<Sequence: Swift.Sequence, TriggerObservabl
         self.notificationHandler = notificationHandler
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = RetryWhenSequenceSink<Sequence, Observer, TriggerObservable, Error>(parent: self, observer: observer, cancel: cancel)
         let subscription = sink.run((self.sources.makeIterator(), nil))
         return (sink: sink, subscription: subscription)

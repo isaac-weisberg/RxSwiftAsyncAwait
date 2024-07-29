@@ -17,7 +17,7 @@ public typealias Single<Element> = PrimitiveSequence<SingleTrait, Element>
 public typealias SingleEvent<Element> = Result<Element, Swift.Error>
 
 extension PrimitiveSequenceType where Trait == SingleTrait {
-    public typealias SingleObserver = (SingleEvent<Element>) -> Void
+    public typealias SingleObserver = (SingleEvent<Element>) async -> Void
     
     /**
      Creates an observable sequence from a specified subscribe method implementation.

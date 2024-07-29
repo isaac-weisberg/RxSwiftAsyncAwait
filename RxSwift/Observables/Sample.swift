@@ -131,7 +131,7 @@ final private class Sample<Element, SampleType>: Producer<Element> {
         self.defaultValue = defaultValue
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = SampleSequenceSink(parent: self, observer: observer, cancel: cancel, defaultValue: self.defaultValue)
         let subscription = sink.run()
         return (sink: sink, subscription: subscription)

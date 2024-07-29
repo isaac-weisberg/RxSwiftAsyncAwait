@@ -15,7 +15,8 @@ class Producer<Element>: Observable<Element> {
         if !CurrentThreadScheduler.isScheduleRequired {
             // The returned disposable needs to release all references once it was disposed.
             let disposer = SinkDisposer()
-            let sinkAndSubscription = self.run(observer, cancel: disposer)
+            let lock = ActorLock()
+            let sinkAndSubscription = self.run(lock, observer, cancel: disposer)
             disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
 
             return disposer
@@ -23,7 +24,8 @@ class Producer<Element>: Observable<Element> {
         else {
             return CurrentThreadScheduler.instance.schedule(()) { _ in
                 let disposer = SinkDisposer()
-                let sinkAndSubscription = self.run(observer, cancel: disposer)
+                let lock = ActorLock()
+                let sinkAndSubscription = self.run(lock, observer, cancel: disposer)
                 disposer.setSinkAndSubscription(sink: sinkAndSubscription.sink, subscription: sinkAndSubscription.subscription)
 
                 return disposer
@@ -31,7 +33,7 @@ class Producer<Element>: Observable<Element> {
         }
     }
 
-    func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         rxAbstractMethod()
     }
 }

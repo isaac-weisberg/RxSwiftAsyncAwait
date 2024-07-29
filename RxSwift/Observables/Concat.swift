@@ -122,7 +122,7 @@ final private class Concat<Sequence: Swift.Sequence>: Producer<Sequence.Element.
         self.count = count
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = ConcatSink<Sequence, Observer>(observer: observer, cancel: cancel)
         let subscription = sink.run((self.sources.makeIterator(), self.count))
         return (sink: sink, subscription: subscription)

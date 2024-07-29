@@ -110,7 +110,7 @@ final class Zip<%= i %><<%= (Array(1...i).map { "E\($0)" }).joined(separator: ",
         self.resultSelector = resultSelector
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = ZipSink<%= i %>_(parent: self, observer: observer, cancel: cancel)
         let subscription = sink.run()
         return (sink: sink, subscription: subscription)

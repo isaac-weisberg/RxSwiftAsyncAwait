@@ -102,7 +102,7 @@ final private class Timer<Element: RxAbstractInteger>: Producer<Element> {
         self.period = period
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         if self.period != nil {
             let sink = TimerSink(parent: self, observer: observer, cancel: cancel)
             let subscription = sink.run()

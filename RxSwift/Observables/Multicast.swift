@@ -334,7 +334,7 @@ final private class RefCount<ConnectableSource: ConnectableObservableType>: Prod
         self.source = source
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable)
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable)
              where Observer.Element == ConnectableSource.Element {
         let sink = RefCountSink(parent: self, observer: observer, cancel: cancel)
         let subscription = sink.run()
@@ -397,7 +397,7 @@ final private class Multicast<Subject: SubjectType, Result>: Producer<Result> {
         self.selector = selector
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = MulticastSink(parent: self, observer: observer, cancel: cancel)
         let subscription = sink.run()
         return (sink: sink, subscription: subscription)

@@ -321,7 +321,7 @@ final private class MergeLimited<SourceSequence: ObservableConvertibleType>: Pro
         self.maxConcurrent = maxConcurrent
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
         let sink = MergeLimitedBasicSink<SourceSequence, Observer>(maxConcurrent: self.maxConcurrent, observer: observer, cancel: cancel)
         let subscription = sink.run(self.source)
         return (sink: sink, subscription: subscription)
@@ -527,7 +527,7 @@ final private class FlatMap<SourceElement, SourceSequence: ObservableConvertible
         self.selector = selector
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
         let sink = FlatMapSink(selector: self.selector, observer: observer, cancel: cancel)
         let subscription = sink.run(self.source)
         return (sink: sink, subscription: subscription)
@@ -546,7 +546,7 @@ final private class FlatMapFirst<SourceElement, SourceSequence: ObservableConver
         self.selector = selector
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
         let sink = FlatMapFirstSink<SourceElement, SourceSequence, Observer>(selector: self.selector, observer: observer, cancel: cancel)
         let subscription = sink.run(self.source)
         return (sink: sink, subscription: subscription)
@@ -564,7 +564,7 @@ final class ConcatMap<SourceElement, SourceSequence: ObservableConvertibleType>:
         self.selector = selector
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
         let sink = ConcatMapSink<SourceElement, SourceSequence, Observer>(selector: self.selector, observer: observer, cancel: cancel)
         let subscription = sink.run(self.source)
         return (sink: sink, subscription: subscription)
@@ -578,7 +578,7 @@ final class Merge<SourceSequence: ObservableConvertibleType> : Producer<SourceSe
         self.source = source
     }
     
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceSequence.Element {
         let sink = MergeBasicSink<SourceSequence, Observer>(observer: observer, cancel: cancel)
         let subscription = sink.run(self.source)
         return (sink: sink, subscription: subscription)
@@ -592,7 +592,7 @@ final private class MergeArray<Element>: Producer<Element> {
         self.sources = sources
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = MergeBasicSink<Observable<Element>, Observer>(observer: observer, cancel: cancel)
         let subscription = sink.run(self.sources)
         return (sink: sink, subscription: subscription)
