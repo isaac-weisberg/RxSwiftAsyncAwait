@@ -32,7 +32,7 @@ final private class RepeatElement<Element>: Producer<Element> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = RepeatElementSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
 
         return (sink: sink, subscription: subscription)
     }
@@ -48,7 +48,7 @@ final private class RepeatElementSink<Observer: ObserverType>: Sink<Observer> {
         super.init(observer: observer, cancel: cancel)
     }
     
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         return self.parent.scheduler.scheduleRecursive(self.parent.element) { e, recurse in
             self.forwardOn(.next(e))
             recurse(e)

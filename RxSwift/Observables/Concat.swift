@@ -77,28 +77,27 @@ extension ObservableType {
 }
 
 final private class ConcatSink<Sequence: Swift.Sequence, Observer: ObserverType>
-    : TailRecursiveSink<Sequence, Observer>
-    , ObserverType where Sequence.Element: ObservableConvertibleType, Sequence.Element.Element == Observer.Element {
-    typealias Element = Observer.Element 
+    : TailRecursiveSink<Sequence, Observer>, ObserverThatCapturesLock where Sequence.Element: ObservableConvertibleType, Sequence.Element.Element == Observer.Element {
+    typealias Element = Observer.Element
     
     override init(observer: Observer, cancel: Cancelable) {
         super.init(observer: observer, cancel: cancel)
     }
-    
-    func on(_ event: Event<Element>){
-        switch event {
-        case .next:
-            self.forwardOn(event)
-        case .error:
-            self.forwardOn(event)
-            self.dispose()
-        case .completed:
-            self.schedule(.moveNext)
+        
+        func on(_ lock: ActorLock, _ event: Event<Observer.Element>) {
+            switch event {
+            case .next:
+                self.forwardOn(event)
+            case .error:
+                self.forwardOn(event)
+                self.dispose()
+            case .completed:
+                self.schedule(.moveNext(lock))
+            }
         }
-    }
-
-    override func subscribeToNext(_ source: Observable<Element>) -> Disposable {
-        source.subscribe(self)
+        
+    override func subscribeToNext(_ lock: ActorLock, _ source: Observable<TailRecursiveSink<Sequence, Observer>.Element>) -> any Disposable {
+        source.subscribe(lock, self.capturing(lock))
     }
     
     override func extract(_ observable: Observable<Element>) -> SequenceGenerator? {
@@ -124,7 +123,7 @@ final private class Concat<Sequence: Swift.Sequence>: Producer<Sequence.Element.
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = ConcatSink<Sequence, Observer>(observer: observer, cancel: cancel)
-        let subscription = sink.run((self.sources.makeIterator(), self.count))
+        let subscription = sink.run(lock, (self.sources.makeIterator(), self.count))
         return (sink: sink, subscription: subscription)
     }
 }

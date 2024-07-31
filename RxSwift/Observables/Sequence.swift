@@ -57,7 +57,7 @@ final private class ObservableSequenceSink<Sequence: Swift.Sequence, Observer: O
         super.init(observer: observer, cancel: cancel)
     }
 
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         return self.parent.scheduler.scheduleRecursive(self.parent.elements.makeIterator()) { iterator, recurse in
             var mutableIterator = iterator
             if let next = mutableIterator.next() {
@@ -83,7 +83,7 @@ final private class ObservableSequence<Sequence: Swift.Sequence>: Producer<Seque
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = ObservableSequenceSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

@@ -45,7 +45,7 @@ final private class Dematerialize<T: EventConvertible>: Producer<T.Element> {
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == T.Element {
         let sink = DematerializeSink<T, Observer>(observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
+        let subscription = self.source.subscribe(lock, sink)
         return (sink: sink, subscription: subscription)
     }
 }

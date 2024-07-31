@@ -37,7 +37,7 @@ final private class Materialize<T>: Producer<Event<T>> {
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = MaterializeSink(observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
+        let subscription = self.source.subscribe(lock, sink)
 
         return (sink: sink, subscription: subscription)
     }

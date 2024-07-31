@@ -115,7 +115,7 @@ final private class TakeCount<Element>: Producer<Element> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = TakeCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
+        let subscription = self.source.subscribe(lock, sink)
         return (sink: sink, subscription: subscription)
     }
 }
@@ -162,13 +162,13 @@ final private class TakeTimeSink<Element, Observer: ObserverType>
         }
     }
     
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         let disposeTimer = self.parent.scheduler.scheduleRelative((), dueTime: self.parent.duration) { _ in
             self.tick()
             return Disposables.create()
         }
         
-        let disposeSubscription = self.parent.source.subscribe(self)
+        let disposeSubscription = self.parent.source.subscribe(lock, self)
         
         return Disposables.create(disposeTimer, disposeSubscription)
     }
@@ -189,7 +189,7 @@ final private class TakeTime<Element>: Producer<Element> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = TakeTimeSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

@@ -49,8 +49,8 @@ final private class DebounceSink<Observer: ObserverType>
         super.init(observer: observer, cancel: cancel)
     }
 
-    func run() -> Disposable {
-        let subscription = self.parent.source.subscribe(self)
+    func run(_ lock: ActorLock) -> Disposable {
+        let subscription = self.parent.source.subscribe(lock, self)
 
         return Disposables.create(subscription, cancellable)
     }
@@ -114,7 +114,7 @@ final private class Debounce<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = DebounceSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
     

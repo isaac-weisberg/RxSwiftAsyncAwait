@@ -44,7 +44,7 @@ final private class ObservableOptionalScheduledSink<Observer: ObserverType>: Sin
         super.init(observer: observer, cancel: cancel)
     }
 
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         return self.parent.scheduler.schedule(self.parent.optional) { (optional: Element?) -> Disposable in
             if let next = optional {
                 self.forwardOn(.next(next))
@@ -73,7 +73,7 @@ final private class ObservableOptionalScheduled<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = ObservableOptionalScheduledSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }
@@ -85,7 +85,7 @@ final private class ObservableOptional<Element>: Producer<Element> {
         self.optional = optional
     }
     
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Element {
         if let element = self.optional {
             observer.on(.next(element))
         }

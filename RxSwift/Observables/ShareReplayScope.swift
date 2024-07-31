@@ -201,8 +201,8 @@ private final class ShareReplay1WhileConnectedConnection<Element>
         }
     }
 
-    final func connect() {
-        self.subscription.setDisposable(self.parent.source.subscribe(self))
+    final func connect(_ lock: ActorLock) {
+        self.subscription.setDisposable(self.parent.source.subscribe(lock, self))
     }
 
     final func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
@@ -269,7 +269,7 @@ final private class ShareReplay1WhileConnected<Element>
         self.source = source
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Element {
         self.lock.lock()
         let connection = self.synchronized_subscribe(observer)
         let count = connection.observers.count
@@ -278,7 +278,7 @@ final private class ShareReplay1WhileConnected<Element>
         self.lock.unlock()
         
         if count == 0 {
-            connection.connect()
+            connection.connect(lock)
         }
 
         return disposable
@@ -345,8 +345,8 @@ private final class ShareWhileConnectedConnection<Element>
         }
     }
 
-    final func connect() {
-        self.subscription.setDisposable(self.parent.source.subscribe(self))
+    final func connect(_ lock: ActorLock) {
+        self.subscription.setDisposable(self.parent.source.subscribe(lock, self))
     }
 
     final func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
@@ -409,7 +409,7 @@ final private class ShareWhileConnected<Element>
         self.source = source
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Element {
         self.lock.lock()
         let connection = self.synchronized_subscribe(observer)
         let count = connection.observers.count
@@ -418,7 +418,7 @@ final private class ShareWhileConnected<Element>
         self.lock.unlock()
 
         if count == 0 {
-            connection.connect()
+            connection.connect(lock)
         }
 
         return disposable

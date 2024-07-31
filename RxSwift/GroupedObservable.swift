@@ -24,8 +24,8 @@ public struct GroupedObservable<Key, Element> : ObservableType {
     }
 
     /// Subscribes `observer` to receive events for this sequence.
-    public func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        self.source.subscribe(observer)
+    public func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Element {
+        self.source.subscribe(lock, observer)
     }
 
     /// Converts `self` to `Observable` sequence. 

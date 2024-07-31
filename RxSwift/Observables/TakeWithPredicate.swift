@@ -188,11 +188,11 @@ final private class TakeUntilSink<Other, Observer: ObserverType>
         }
     }
     
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         let otherObserver = TakeUntilSinkOther(parent: self)
         let otherSubscription = self.parent.other.subscribe(otherObserver)
         otherObserver.subscription.setDisposable(otherSubscription)
-        let sourceSubscription = self.parent.source.subscribe(self)
+        let sourceSubscription = self.parent.source.subscribe(lock, self)
         
         return Disposables.create(sourceSubscription, otherObserver.subscription)
     }
@@ -210,7 +210,7 @@ final private class TakeUntil<Element, Other>: Producer<Element> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = TakeUntilSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }
@@ -279,7 +279,7 @@ final private class TakeUntilPredicate<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = TakeUntilPredicateSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
+        let subscription = self.source.subscribe(lock, sink)
         return (sink: sink, subscription: subscription)
     }
 }

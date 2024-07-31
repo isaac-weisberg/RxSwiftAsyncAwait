@@ -10,8 +10,6 @@
 ///
 /// It represents a push style sequence.
 
-public typealias RxObservable<Element> = RxSwift.Observable<Element>
-
 public class Observable<Element> : ObservableType {
     init() {
 #if TRACE_RESOURCES
@@ -19,7 +17,7 @@ public class Observable<Element> : ObservableType {
 #endif
     }
     
-    public func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    public func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Element {
         rxAbstractMethod()
     }
     
@@ -31,4 +29,3 @@ public class Observable<Element> : ObservableType {
 #endif
     }
 }
-

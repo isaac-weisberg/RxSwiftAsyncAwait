@@ -149,8 +149,8 @@ final private class DelaySink<Observer: ObserverType>
         }
     }
     
-    func run(source: Observable<Element>) -> Disposable {
-        self.sourceSubscription.setDisposable(source.subscribe(self))
+    func run(_ lock: ActorLock, source: Observable<Element>) -> Disposable {
+        self.sourceSubscription.setDisposable(source.subscribe(lock, self))
         return Disposables.create(sourceSubscription, cancelable)
     }
 }
@@ -168,7 +168,7 @@ final private class Delay<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = DelaySink(observer: observer, dueTime: self.dueTime, scheduler: self.scheduler, cancel: cancel)
-        let subscription = sink.run(source: self.source)
+        let subscription = sink.run(lock, source: self.source)
         return (sink: sink, subscription: subscription)
     }
 }

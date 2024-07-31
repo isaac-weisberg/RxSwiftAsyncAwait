@@ -95,7 +95,7 @@ final private class AmbSink<Observer: ObserverType>: Sink<Observer> {
         super.init(observer: observer, cancel: cancel)
     }
     
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         let subscription1 = SingleAssignmentDisposable()
         let subscription2 = SingleAssignmentDisposable()
         let disposeAll = Disposables.create(subscription1, subscription2)
@@ -133,8 +133,8 @@ final private class AmbSink<Observer: ObserverType>: Sink<Observer> {
             decide(o, e, .right, subscription1)
         }
         
-        subscription1.setDisposable(self.parent.left.subscribe(sink1))
-        subscription2.setDisposable(self.parent.right.subscribe(sink2))
+        subscription1.setDisposable(self.parent.left.subscribe(lock, sink1))
+        subscription2.setDisposable(self.parent.right.subscribe(lock, sink2))
         
         return disposeAll
     }
@@ -151,7 +151,7 @@ final private class Amb<Element>: Producer<Element> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = AmbSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

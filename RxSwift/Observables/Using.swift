@@ -32,7 +32,7 @@ final private class UsingSink<ResourceType: Disposable, Observer: ObserverType>:
         super.init(observer: observer, cancel: cancel)
     }
     
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         var disposable = Disposables.create()
         
         do {
@@ -41,12 +41,12 @@ final private class UsingSink<ResourceType: Disposable, Observer: ObserverType>:
             let source = try self.parent.observableFactory(resource)
             
             return Disposables.create(
-                source.subscribe(self),
+                source.subscribe(lock, self),
                 disposable
             )
         } catch let error {
             return Disposables.create(
-                Observable.error(error).subscribe(self),
+                Observable.error(error).subscribe(lock, self),
                 disposable
             )
         }
@@ -84,7 +84,7 @@ final private class Using<SourceType, ResourceType: Disposable>: Producer<Source
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = UsingSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

@@ -54,12 +54,12 @@ final private class WindowTimeCountSink<Element, Observer: ObserverType>
         super.init(observer: observer, cancel: cancel)
     }
     
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         
         self.forwardOn(.next(AddRef(source: self.subject, refCount: self.refCountDisposable).asObservable()))
         self.createTimer(self.windowId)
         
-        _ = self.groupDisposable.insert(self.parent.source.subscribe(self))
+        _ = self.groupDisposable.insert(self.parent.source.subscribe(lock, self))
         return self.refCountDisposable
     }
     
@@ -164,7 +164,7 @@ final private class WindowTimeCount<Element>: Producer<Observable<Element>> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Observable<Element> {
         let sink = WindowTimeCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

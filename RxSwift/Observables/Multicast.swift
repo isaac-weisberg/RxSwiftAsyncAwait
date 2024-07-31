@@ -222,7 +222,7 @@ final private class ConnectableObservableAdapter<Subject: SubjectType>
             let singleAssignmentDisposable = SingleAssignmentDisposable()
             let connection = Connection(parent: self, subjectObserver: self.lazySubject.asObserver(), lock: self.lock, subscription: singleAssignmentDisposable)
             self.connection = connection
-            let subscription = self.source.subscribe(connection)
+            let subscription = self.source.subscribe(lock, connection)
             singleAssignmentDisposable.setDisposable(subscription)
             return connection
         }
@@ -238,8 +238,8 @@ final private class ConnectableObservableAdapter<Subject: SubjectType>
         return subject
     }
 
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Subject.Element {
-        self.lazySubject.subscribe(observer)
+    override func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Subject.Element {
+        self.lazySubject.subscribe(lock, observer)
     }
 }
 
@@ -258,8 +258,8 @@ final private class RefCountSink<ConnectableSource: ConnectableObservableType, O
         super.init(observer: observer, cancel: cancel)
     }
 
-    func run() -> Disposable {
-        let subscription = self.parent.source.subscribe(self)
+    func run(_ lock: ActorLock) -> Disposable {
+        let subscription = self.parent.source.subscribe(lock, self)
         self.parent.lock.lock(); defer { self.parent.lock.unlock() }
 
         self.connectionIdSnapshot = self.parent.connectionId
@@ -337,7 +337,7 @@ final private class RefCount<ConnectableSource: ConnectableObservableType>: Prod
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable)
              where Observer.Element == ConnectableSource.Element {
         let sink = RefCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }
@@ -354,7 +354,7 @@ final private class MulticastSink<Subject: SubjectType, Observer: ObserverType>:
         super.init(observer: observer, cancel: cancel)
     }
 
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         do {
             let subject = try self.parent.subjectSelector()
             let connectable = ConnectableObservableAdapter(source: self.parent.source, makeSubject: { subject })
@@ -399,7 +399,7 @@ final private class Multicast<Subject: SubjectType, Result>: Producer<Result> {
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = MulticastSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

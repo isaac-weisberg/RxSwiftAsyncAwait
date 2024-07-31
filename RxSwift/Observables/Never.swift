@@ -21,7 +21,7 @@ extension ObservableType {
 }
 
 final private class NeverProducer<Element>: Producer<Element> {
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Element {
         Disposables.create()
     }
 }

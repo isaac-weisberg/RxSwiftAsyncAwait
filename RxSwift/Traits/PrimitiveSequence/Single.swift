@@ -28,8 +28,8 @@ extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
     public static func create(subscribe: @escaping (@escaping SingleObserver) -> Disposable) -> Single<Element> {
-        let source = Observable<Element>.create { observer in
-            return subscribe { event in
+        let source = Observable<Element>.createUnsynchronized { lock, observer in
+            return subscribe(actorLocked(lock) { event in
                 switch event {
                 case .success(let element):
                     observer.on(.next(element))
@@ -37,7 +37,7 @@ extension PrimitiveSequenceType where Trait == SingleTrait {
                 case .failure(let error):
                     observer.on(.error(error))
                 }
-            }
+            })
         }
         
         return PrimitiveSequence(raw: source)
@@ -48,9 +48,9 @@ extension PrimitiveSequenceType where Trait == SingleTrait {
      
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
-    public func subscribe(_ observer: @escaping (SingleEvent<Element>) -> Void) -> Disposable {
+    public func subscribe(_ lock: ActorLock, _ observer: @escaping (SingleEvent<Element>) -> Void) -> Disposable {
         var stopped = false
-        return self.primitiveSequence.asObservable().subscribe { event in
+        return self.primitiveSequence.asObservable().subscribe(lock) { event in
             if stopped { return }
             stopped = true
             
@@ -74,13 +74,13 @@ extension PrimitiveSequenceType where Trait == SingleTrait {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    @available(*, deprecated, renamed: "subscribe(onSuccess:onFailure:onDisposed:)")
-    public func subscribe(onSuccess: ((Element) -> Void)? = nil,
-                          onError: @escaping ((Swift.Error) -> Void),
-                          onDisposed: (() -> Void)? = nil) -> Disposable {
-        subscribe(onSuccess: onSuccess, onFailure: onError, onDisposed: onDisposed)
-    }
-    
+//    @available(*, deprecated, renamed: "subscribe(onSuccess:onFailure:onDisposed:)")
+//    public func subscribe(onSuccess: ((Element) -> Void)? = nil,
+//                          onError: @escaping ((Swift.Error) -> Void),
+//                          onDisposed: (() -> Void)? = nil) -> Disposable {
+//        subscribe(onSuccess: onSuccess, onFailure: onError, onDisposed: onDisposed)
+//    }
+//    
     /**
      Subscribes a success handler, and an error handler for this sequence.
      
@@ -96,12 +96,14 @@ extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
     public func subscribe<Object: AnyObject>(
+        _ lock: ActorLock,
         with object: Object,
         onSuccess: ((Object, Element) -> Void)? = nil,
         onFailure: ((Object, Swift.Error) -> Void)? = nil,
         onDisposed: ((Object) -> Void)? = nil
     ) -> Disposable {
         subscribe(
+            lock,
             onSuccess: { [weak object] in
                 guard let object = object else { return }
                 onSuccess?(object, $0)
@@ -126,7 +128,8 @@ extension PrimitiveSequenceType where Trait == SingleTrait {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    public func subscribe(onSuccess: ((Element) -> Void)? = nil,
+    public func subscribe(_ lock: ActorLock,
+        onSuccess: ((Element) -> Void)? = nil,
                           onFailure: ((Swift.Error) -> Void)? = nil,
                           onDisposed: (() -> Void)? = nil) -> Disposable {
         #if DEBUG
@@ -142,7 +145,7 @@ extension PrimitiveSequenceType where Trait == SingleTrait {
             disposable = Disposables.create()
         }
 
-        let observer: SingleObserver = { event in
+        let observer: (SingleEvent<Element>) -> Void = { event in
             switch event {
             case .success(let element):
                 onSuccess?(element)
@@ -158,7 +161,7 @@ extension PrimitiveSequenceType where Trait == SingleTrait {
         }
 
         return Disposables.create(
-            self.primitiveSequence.subscribe(observer),
+            self.primitiveSequence.subscribe(lock, observer),
             disposable
         )
     }

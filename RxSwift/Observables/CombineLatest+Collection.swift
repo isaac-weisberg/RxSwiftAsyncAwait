@@ -113,12 +113,12 @@ final class CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         }
     }
     
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         var j = 0
         for i in self.parent.sources {
             let index = j
             let source = i.asObservable()
-            let disposable = source.subscribe(AnyObserver { event in
+            let disposable = source.subscribe(lock, AnyObserver { event in
                 self.on(event, atIndex: index)
             })
 
@@ -159,7 +159,7 @@ final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: P
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = CombineLatestCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

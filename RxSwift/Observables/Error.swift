@@ -26,7 +26,7 @@ final private class ErrorProducer<Element>: Producer<Element> {
         self.error = error
     }
     
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Element {
         observer.on(.error(self.error))
         return Disposables.create()
     }

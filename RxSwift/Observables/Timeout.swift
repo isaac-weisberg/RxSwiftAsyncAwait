@@ -59,13 +59,13 @@ final private class TimeoutSink<Observer: ObserverType>: Sink<Observer>, LockOwn
         super.init(observer: observer, cancel: cancel)
     }
     
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         let original = SingleAssignmentDisposable()
         self.subscription.disposable = original
         
         self.createTimeoutTimer()
         
-        original.setDisposable(self.parent.source.subscribe(self))
+        original.setDisposable(self.parent.source.subscribe(lock, self))
         
         return Disposables.create(subscription, timerD)
     }
@@ -147,7 +147,7 @@ final private class Timeout<Element>: Producer<Element> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = TimeoutSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

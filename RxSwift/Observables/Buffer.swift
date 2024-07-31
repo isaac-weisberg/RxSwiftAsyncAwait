@@ -44,7 +44,7 @@ final private class BufferTimeCount<Element>: Producer<[Element]> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == [Element] {
         let sink = BufferTimeCountSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }
@@ -70,9 +70,9 @@ final private class BufferTimeCountSink<Element, Observer: ObserverType>
         super.init(observer: observer, cancel: cancel)
     }
  
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         self.createTimer(self.windowID)
-        return Disposables.create(timerD, parent.source.subscribe(self))
+        return Disposables.create(timerD, parent.source.subscribe(lock, self))
     }
     
     func startNewWindowAndSendCurrentOne() {

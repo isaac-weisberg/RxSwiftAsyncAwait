@@ -60,7 +60,7 @@ final private class TimerSink<Observer: ObserverType> : Sink<Observer> where Obs
         super.init(observer: observer, cancel: cancel)
     }
 
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         return self.parent.scheduler.schedulePeriodic(0 as Observer.Element, startAfter: self.parent.dueTime, period: self.parent.period!) { state in
             self.lock.performLocked {
                 self.forwardOn(.next(state))
@@ -80,7 +80,7 @@ final private class TimerOneOffSink<Observer: ObserverType>: Sink<Observer> wher
         super.init(observer: observer, cancel: cancel)
     }
 
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         return self.parent.scheduler.scheduleRelative(self, dueTime: self.parent.dueTime) { [unowned self] _ -> Disposable in
             self.forwardOn(.next(0))
             self.forwardOn(.completed)
@@ -105,12 +105,12 @@ final private class Timer<Element: RxAbstractInteger>: Producer<Element> {
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         if self.period != nil {
             let sink = TimerSink(parent: self, observer: observer, cancel: cancel)
-            let subscription = sink.run()
+            let subscription = sink.run(lock)
             return (sink: sink, subscription: subscription)
         }
         else {
             let sink = TimerOneOffSink(parent: self, observer: observer, cancel: cancel)
-            let subscription = sink.run()
+            let subscription = sink.run(lock)
             return (sink: sink, subscription: subscription)
         }
     }

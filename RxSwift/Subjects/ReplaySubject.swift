@@ -139,7 +139,7 @@ private class ReplayBufferBase<Element>
         }
     }
     
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Element {
         self.lock.performLocked { self.synchronized_subscribe(observer) }
     }
 

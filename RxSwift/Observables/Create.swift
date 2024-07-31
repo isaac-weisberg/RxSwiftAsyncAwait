@@ -17,12 +17,12 @@ extension ObservableType {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    public static func create(_ subscribe: @escaping (SynchronizedObserverImpl<AnyObserver<Element>>) -> Disposable) -> Observable<Element> {
+    public static func create(_ subscribe: @escaping (AsyncLockedObserver<AnyObserver<Element>>) -> Disposable) -> Observable<Element> {
         AnonymousObservable(subscribe)
     }
     
-    static func createUnsynchronized(_ subscribe: @escaping (AnyObserver<Element>) -> Disposable) -> Observable<Element> {
-        AnonymousObservableSynchronized(subscribe)
+    static func createUnsynchronized(_ subscribe: @escaping (ActorLock, AnyObserver<Element>) -> Disposable) -> Observable<Element> {
+        AnonymousObservableUnsynchronized(subscribe)
     }
 }
 
@@ -61,12 +61,12 @@ final private class AnonymousObservableSink<Observer: ObserverType>: Sink<Observ
     }
 
     func run(_ lock: ActorLock, _ parent: Parent) -> Disposable {
-        parent.subscribeHandler(AnyObserver(self).synchronized(lock))
+        parent.subscribeHandler(AnyObserver(self).asyncLocked(lock))
     }
 }
 
 final private class AnonymousObservable<Element>: Producer<Element> {
-    typealias SubscribeHandler = (SynchronizedObserverImpl<AnyObserver<Element>>) -> Disposable
+    typealias SubscribeHandler = (AsyncLockedObserver<AnyObserver<Element>>) -> Disposable
 
     let subscribeHandler: SubscribeHandler
 
@@ -84,7 +84,7 @@ final private class AnonymousObservable<Element>: Producer<Element> {
 
 final private class AnonymousObservableSynchronizedSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
     typealias Element = Observer.Element
-    typealias Parent = AnonymousObservableSynchronized<Element>
+    typealias Parent = AnonymousObservableUnsynchronized<Element>
 
     // state
     private let isStopped = AtomicInt(0)
@@ -116,13 +116,13 @@ final private class AnonymousObservableSynchronizedSink<Observer: ObserverType>:
         }
     }
 
-    func run(_ parent: Parent) -> Disposable {
-        parent.subscribeHandler(AnyObserver(self))
+    func run(_ lock: ActorLock, _ parent: Parent) -> Disposable {
+        parent.subscribeHandler(lock, AnyObserver(self))
     }
 }
 
-final private class AnonymousObservableSynchronized<Element>: Producer<Element> {
-    typealias SubscribeHandler = (AnyObserver<Element>) -> Disposable
+final private class AnonymousObservableUnsynchronized<Element>: Producer<Element> {
+    typealias SubscribeHandler = (ActorLock, AnyObserver<Element>) -> Disposable
 
     let subscribeHandler: SubscribeHandler
 
@@ -132,7 +132,7 @@ final private class AnonymousObservableSynchronized<Element>: Producer<Element> 
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = AnonymousObservableSynchronizedSink(observer: observer, cancel: cancel)
-        let subscription = sink.run(self)
+        let subscription = sink.run(lock, self)
         return (sink: sink, subscription: subscription)
     }
 }

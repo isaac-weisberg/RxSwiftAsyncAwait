@@ -94,9 +94,9 @@ final private class SampleSequenceSink<Observer: ObserverType, SampleType>
         super.init(observer: observer, cancel: cancel)
     }
     
-    func run() -> Disposable {
-        self.sourceSubscription.setDisposable(self.parent.source.subscribe(self))
-        let samplerSubscription = self.parent.sampler.subscribe(SamplerSink(parent: self))
+    func run(_ lock: ActorLock) -> Disposable {
+        self.sourceSubscription.setDisposable(self.parent.source.subscribe(lock, self))
+        let samplerSubscription = self.parent.sampler.subscribe(lock, SamplerSink(parent: self))
         
         return Disposables.create(sourceSubscription, samplerSubscription)
     }
@@ -133,7 +133,7 @@ final private class Sample<Element, SampleType>: Producer<Element> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = SampleSequenceSink(parent: self, observer: observer, cancel: cancel, defaultValue: self.defaultValue)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

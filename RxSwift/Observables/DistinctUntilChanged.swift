@@ -131,7 +131,7 @@ final private class DistinctUntilChanged<Element, Key>: Producer<Element> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = DistinctUntilChangedSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
+        let subscription = self.source.subscribe(lock, sink)
         return (sink: sink, subscription: subscription)
     }
 }

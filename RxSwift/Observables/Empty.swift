@@ -20,7 +20,7 @@ extension ObservableType {
 }
 
 final private class EmptyProducer<Element>: Producer<Element> {
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Element {
         observer.on(.completed)
         return Disposables.create()
     }

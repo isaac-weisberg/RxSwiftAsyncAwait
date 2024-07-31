@@ -72,7 +72,7 @@ final class ZipSink<%= i %>_<<%= (Array(1...i).map { "E\($0)" }).joined(separato
         }
     }
 
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
 <%= (Array(1...i).map {
 "        let subscription\($0) = SingleAssignmentDisposable()"
 }).joined(separator: "\n") %>
@@ -112,7 +112,7 @@ final class Zip<%= i %><<%= (Array(1...i).map { "E\($0)" }).joined(separator: ",
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = ZipSink<%= i %>_(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

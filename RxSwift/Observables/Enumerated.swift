@@ -55,7 +55,7 @@ final private class Enumerated<Element>: Producer<(index: Int, element: Element)
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == (index: Int, element: Element) {
         let sink = EnumeratedSink<Element, Observer>(observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
+        let subscription = self.source.subscribe(lock, sink)
         return (sink: sink, subscription: subscription)
     }
 }

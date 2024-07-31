@@ -37,7 +37,7 @@ final private class GenerateSink<Sequence, Observer: ObserverType>: Sink<Observe
         super.init(observer: observer, cancel: cancel)
     }
     
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         return self.parent.scheduler.scheduleRecursive(true) { isFirst, recurse -> Void in
             do {
                 if !isFirst {
@@ -81,7 +81,7 @@ final private class Generate<Sequence, Element>: Producer<Element> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = GenerateSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

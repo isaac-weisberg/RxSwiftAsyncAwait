@@ -71,14 +71,14 @@ final private class ConcatCompletable<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = ConcatCompletableSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }
 
 final private class ConcatCompletableSink<Observer: ObserverType>
     : Sink<Observer>
-    , ObserverType {
+    , ObserverThatCapturesLock {
     typealias Element = Never
     typealias Parent = ConcatCompletable<Observer.Element>
 
@@ -90,7 +90,7 @@ final private class ConcatCompletableSink<Observer: ObserverType>
         super.init(observer: observer, cancel: cancel)
     }
 
-    func on(_ event: Event<Element>) {
+    func on(_ lock: ActorLock, _ event: Event<Never>) {
         switch event {
         case .error(let error):
             self.forwardOn(.error(error))
@@ -99,14 +99,14 @@ final private class ConcatCompletableSink<Observer: ObserverType>
             break
         case .completed:
             let otherSink = ConcatCompletableSinkOther(parent: self)
-            self.subscription.disposable = self.parent.second.subscribe(otherSink)
+            self.subscription.disposable = self.parent.second.subscribe(lock, otherSink)
         }
     }
 
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         let subscription = SingleAssignmentDisposable()
         self.subscription.disposable = subscription
-        subscription.setDisposable(self.parent.completable.subscribe(self))
+        subscription.setDisposable(self.parent.completable.subscribe(lock, self.capturing(lock)))
         return self.subscription
     }
 }

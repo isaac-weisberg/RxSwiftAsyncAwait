@@ -126,7 +126,7 @@ final private class ZipCollectionTypeSink<Collection: Swift.Collection, Observer
         }
     }
     
-    func run() -> Disposable {
+    func run(_ lock: ActorLock) -> Disposable {
         var j = 0
         for i in self.parent.sources {
             let index = j
@@ -162,7 +162,7 @@ final private class ZipCollectionType<Collection: Swift.Collection, Result>: Pro
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
         let sink = ZipCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

@@ -132,7 +132,7 @@ extension Reactive where Base: AnyObject {
     - returns: Observable sequence of object deallocated events.
     */
     public var deallocated: Observable<Void> {
-        return self.synchronized {
+        return self.asyncLocked {
             if let deallocObservable = objc_getAssociatedObject(self.base, &deallocatedSubjectContext) as? DeallocObservable {
                 return deallocObservable.subject
             }
@@ -159,7 +159,7 @@ extension Reactive where Base: AnyObject {
      - returns: Observable sequence of arguments passed to `selector` method.
      */
     public func sentMessage(_ selector: Selector) -> Observable<[Any]> {
-        return self.synchronized {
+        return self.asyncLocked {
             // in case of dealloc selector replay subject behavior needs to be used
             if selector == deallocSelector {
                 return self.deallocating.map { _ in [] }
@@ -188,7 +188,7 @@ extension Reactive where Base: AnyObject {
      - returns: Observable sequence of arguments passed to `selector` method.
      */
     public func methodInvoked(_ selector: Selector) -> Observable<[Any]> {
-        return self.synchronized {
+        return self.asyncLocked {
             // in case of dealloc selector replay subject behavior needs to be used
             if selector == deallocSelector {
                 return self.deallocated.map { _ in [] }
@@ -540,7 +540,7 @@ private let deallocSelector = NSSelectorFromString("dealloc")
 // MARK: AnyObject + Reactive
 
 extension Reactive where Base: AnyObject {
-    func synchronized<T>( _ action: () -> T) -> T {
+    func asyncLocked<T>( _ action: () -> T) -> T {
         objc_sync_enter(self.base)
         let result = action()
         objc_sync_exit(self.base)

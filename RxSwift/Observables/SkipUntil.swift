@@ -123,10 +123,10 @@ final private class SkipUntilSink<Other, Observer: ObserverType>
         }
     }
     
-    func run() -> Disposable {
-        let sourceSubscription = self.parent.source.subscribe(self)
+    func run(_ lock: ActorLock) -> Disposable {
+        let sourceSubscription = self.parent.source.subscribe(lock, self)
         let otherObserver = SkipUntilSinkOther(parent: self)
-        let otherSubscription = self.parent.other.subscribe(otherObserver)
+        let otherSubscription = self.parent.other.subscribe(lock, otherObserver)
         self.sourceSubscription.setDisposable(sourceSubscription)
         otherObserver.subscription.setDisposable(otherSubscription)
         
@@ -146,7 +146,7 @@ final private class SkipUntil<Element, Other>: Producer<Element> {
     
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         let sink = SkipUntilSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
+        let subscription = sink.run(lock)
         return (sink: sink, subscription: subscription)
     }
 }

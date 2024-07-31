@@ -100,7 +100,7 @@ final private class Do<Element>: Producer<Element> {
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
         self.onSubscribe?()
         let sink = DoSink(eventHandler: self.eventHandler, afterEventHandler: self.afterEventHandler, observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
+        let subscription = self.source.subscribe(lock, sink)
         self.onSubscribed?()
         let onDispose = self.onDispose
         let allSubscriptions = Disposables.create {

@@ -39,22 +39,41 @@ public extension ObserverType {
     }
 }
 
-public final actor ActorLock {
-    public func perform(_ work: () -> Void) {
-        work()
+public func actorLocked<P, R>(_ lock: ActorLock, _ work: @escaping (P) -> R) -> (P) async -> R {
+    { p in
+        let r: R
+        r = await lock.perform {
+            work(p)
+        }
+        return r
     }
-
-    public init() {}
 }
 
-public protocol SynchronizedObserver {
+public final actor ActorLock {
+    public func perform<R>(_ work: () -> R) -> R {
+        work()
+    }
+    private init() {
+        
+    }
+
+    public static func with(_ work: (ActorLock) -> Void) async {
+        let lock = ActorLock()
+        
+        await lock.perform {
+            work(lock)
+        }
+    }
+}
+
+public protocol AsyncObserver {
     associatedtype Observer: ObserverType
     typealias Element = Observer.Element
 
     func on(_ event: Event<Element>) async
 }
 
-public struct SynchronizedObserverImpl<Observer: ObserverType>: SynchronizedObserver {
+public struct AsyncLockedObserver<Observer: ObserverType>: AsyncObserver {
     public typealias Element = Observer.Element
 
     public let lock: ActorLock
@@ -65,23 +84,20 @@ public struct SynchronizedObserverImpl<Observer: ObserverType>: SynchronizedObse
         self.observer = observer
     }
 
-    public init(observer: Observer) {
-        lock = ActorLock()
-        self.observer = observer
-    }
-
     public func on(_ event: Event<Element>) async {
-        observer.on(event)
+        await lock.perform {
+            observer.on(event)
+        }
     }
 }
 
 extension ObserverType {
-    func synchronized(_ actorLock: ActorLock) -> SynchronizedObserverImpl<Self> {
-        SynchronizedObserverImpl(lock: actorLock, observer: self)
+    func asyncLocked(_ actorLock: ActorLock) -> AsyncLockedObserver<Self> {
+        AsyncLockedObserver(lock: actorLock, observer: self)
     }
 }
 
-public extension SynchronizedObserver {
+public extension AsyncObserver {
 
     /// Convenience method equivalent to `on(.next(element: Element))`
     ///
@@ -101,4 +117,31 @@ public extension SynchronizedObserver {
         await on(.error(error))
     }
 
+}
+
+protocol ObserverThatCapturesLock {
+    associatedtype Element
+    
+    func on(_ lock: ActorLock, _ event: Event<Element>)
+}
+
+
+struct CaptureObserverWithLock<Observer: ObserverThatCapturesLock>: ObserverType {
+    let lock: ActorLock
+    let observer: Observer
+    
+    init(lock: ActorLock, observer: Observer) {
+        self.observer = observer
+        self.lock = lock
+    }
+    
+    func on(_ event: Event<Observer.Element>) {
+        self.observer.on(lock, event)
+    }
+}
+
+extension ObserverThatCapturesLock {
+    func capturing(_ lock: ActorLock) -> CaptureObserverWithLock<Self> {
+        CaptureObserverWithLock(lock: lock, observer: self)
+    }
 }
