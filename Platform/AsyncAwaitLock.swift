@@ -41,10 +41,8 @@ public final class AsyncAwaitLock {
 }
 
 public final actor ActualNonRecursiveLock {
-//    private var currentOwnerStack: C?
     private var latestTask: Task<Void, Never>?
     private var scheduledTasks = 0
-//    private var recursiveAcqisitions = 0
 
     public init() async {
         #if TRACE_RESOURCES
@@ -59,11 +57,6 @@ public final actor ActualNonRecursiveLock {
             }
         #endif
     }
-
-//    var shouldStopOnAcquire = false
-//    func setShouldStopOnAcquire(_ bool: Bool) {
-//        shouldStopOnAcquire = bool
-//    }
 
     #if VICIOUS_TRACING
         public func performLocked<R>(
@@ -89,30 +82,6 @@ public final actor ActualNonRecursiveLock {
     #endif
 
     public func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R {
-//        if shouldStopOnAcquire {
-//            _ = 42;
-//        }
-//
-//        if let currentOwnerStack {
-//
-//            if c._includesLocksFrom(currentOwnerStack) {
-//                recursiveAcqisitions += 1
-//
-//                #if TRACE_RESOURCES
-//                    _ = await Resources.incrementTotal()
-//                #endif
-//                let result = await work(c.call())
-//
-//                #if TRACE_RESOURCES
-//                    _ = await Resources.decrementTotal()
-//                #endif
-//
-//                recursiveAcqisitions -= 1
-//
-//                return result
-//            }
-//        }
-
         scheduledTasks += 1
 
         let theActualTask: Task<R, Never>
@@ -120,34 +89,14 @@ public final actor ActualNonRecursiveLock {
             theActualTask = Task {
                 _ = await latestTask.value
 
-//                let c = c.acquiringLock()
-//                self.currentOwnerStack = c
-
                 let result = await work(c.call())
-//                self.currentOwnerStack = nil
-
-//                if recursiveAcqisitions > 0 {
-//                    #if DEBUG
-//                        assertionFailure("How the fuck did you do it?")
-//                    #endif
-//                }
 
                 return result
             }
         } else {
             theActualTask = Task {
-//                let c = c.acquiringLock()
-//                self.currentOwnerStack = c
-
                 let result = await work(c.call())
 
-//                self.currentOwnerStack = nil
-
-//                if recursiveAcqisitions > 0 {
-//                    #if DEBUG
-//                        assertionFailure("How the fuck did you do it?")
-//                    #endif
-//                }
                 return result
             }
         }

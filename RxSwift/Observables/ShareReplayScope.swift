@@ -201,7 +201,7 @@ private final actor ShareReplay1WhileConnectedConnection<Element>:
         await subscription.setDisposable(parent.source.subscribe(C(), self))
     }
 
-    final func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+    final func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
         where Observer.Element == Element {
         if let element {
             await observer.on(.next(element), c.call())
@@ -267,15 +267,12 @@ private final actor ShareReplay1WhileConnected<Element>:
         self.source = source
     }
 
-    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
         where Observer.Element == Element {
-        let (connection, count, disposable) = await scope {
-            let connection = await self.synchronized_subscribe(observer)
-            let count = await connection.observers.count
+        let connection = await self.synchronized_subscribe(observer)
+        let count = await connection.observers.count
 
-            let disposable = await connection.synchronized_subscribe(c.call(), observer)
-            return (connection, count, disposable)
-        }
+        let disposable = await connection.synchronized_subscribe(c.call(), observer)
 
         if count == 0 {
             await connection.connect()
@@ -352,7 +349,7 @@ private final actor ShareWhileConnectedConnection<Element>:
         await subscription.setDisposable(parent.source.subscribe(C(), self))
     }
 
-    final func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable
+    final func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) async -> SynchronizedDisposable
         where Observer.Element == Element {
         let disposeKey = observers.insert(observer.on)
 

@@ -6,23 +6,21 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-/// Represents a disposable resource that only disposes its underlying disposable resource when all dependent disposable objects have been disposed.
-public final class RefCountDisposable: DisposeBase, Cancelable {
-    private let lock: ActualNonRecursiveLock
-    private var disposable = nil as Disposable?
+/// Represents a disposable resource that only disposes its underlying disposable resource when all dependent disposable
+/// objects have been disposed.
+public final class RefCountDisposable: UnsynchronizedDisposable, UnsynchronizedCancelable {
+    private var disposable = nil as UnsynchronizedDisposable?
     private var primaryDisposed = false
     private var count = 0
 
     /// - returns: Was resource disposed.
-    public func isDisposed() async -> Bool {
-        await self.lock.performLocked { self.disposable == nil }
+    public func isDisposed() -> Bool {
+        disposable == nil
     }
 
     /// Initializes a new instance of the `RefCountDisposable`.
-    public init(disposable: Disposable) async {
-        self.lock = await ActualNonRecursiveLock()
+    public init(disposable: UnsynchronizedDisposable) {
         self.disposable = disposable
-        await super.init()
     }
 
     /**
@@ -30,25 +28,23 @@ public final class RefCountDisposable: DisposeBase, Cancelable {
 
      When getter is called, a dependent disposable contributing to the reference count that manages the underlying disposable's lifetime is returned.
      */
-    public func retain() async -> Disposable {
-        await self.lock.performLocked {
-            if self.disposable != nil {
-                do {
-                    _ = try incrementChecked(&self.count)
-                } catch {
-                    rxFatalError("RefCountDisposable increment failed")
-                }
-
-                return await RefCountInnerDisposable(self)
-            } else {
-                return Disposables.create()
+    public func retain() -> UnsynchronizedDisposable {
+        if disposable != nil {
+            do {
+                _ = try incrementChecked(&count)
+            } catch {
+                rxFatalError("RefCountDisposable increment failed")
             }
+
+            return RefCountInnerDisposable(self)
+        } else {
+            return Disposables.create()
         }
     }
 
     /// Disposes the underlying disposable only when all dependent disposables have been disposed.
-    public func dispose() async {
-        let oldDisposable: Disposable? = await self.lock.performLocked(C()) { c in
+    public func dispose() {
+        let oldDisposable: UnsynchronizedDisposable? = {
             if let oldDisposable = self.disposable, !self.primaryDisposed {
                 self.primaryDisposed = true
 
@@ -59,15 +55,15 @@ public final class RefCountDisposable: DisposeBase, Cancelable {
             }
 
             return nil
-        }
+        }()
 
         if let disposable = oldDisposable {
-            await disposable.dispose()
+            disposable.dispose()
         }
     }
 
-    fileprivate func release() async {
-        let oldDisposable: Disposable? = await self.lock.performLocked {
+    fileprivate func release() {
+        let oldDisposable: UnsynchronizedDisposable? = {
             if let oldDisposable = self.disposable {
                 do {
                     _ = try decrementChecked(&self.count)
@@ -79,34 +75,33 @@ public final class RefCountDisposable: DisposeBase, Cancelable {
                     rxFatalError("RefCountDisposable counter is lower than 0")
                 }
 
-                if self.primaryDisposed && self.count == 0 {
+                if self.primaryDisposed, self.count == 0 {
                     self.disposable = nil
                     return oldDisposable
                 }
             }
 
             return nil
-        }
+        }()
 
         if let disposable = oldDisposable {
-            await disposable.dispose()
+            disposable.dispose()
         }
     }
 }
 
-final class RefCountInnerDisposable: DisposeBase, Disposable {
+final class RefCountInnerDisposable: UnsynchronizedDisposeBase, UnsynchronizedDisposable {
     private let parent: RefCountDisposable
-    private let isDisposed: AtomicInt
+    private let isDisposed: NonAtomicInt
 
-    init(_ parent: RefCountDisposable) async {
-        self.isDisposed = await AtomicInt(0)
+    init(_ parent: RefCountDisposable) {
+        isDisposed = NonAtomicInt(0)
         self.parent = parent
-        await super.init()
     }
 
-    func dispose() async {
-        if await fetchOr(self.isDisposed, 1) == 0 {
-            await self.parent.release()
+    func dispose() {
+        if fetchOr(isDisposed, 1) == 0 {
+            parent.release()
         }
     }
 }

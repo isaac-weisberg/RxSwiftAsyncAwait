@@ -11,7 +11,7 @@
 
  If an underlying disposable resource has already been set, future attempts to set the underlying disposable resource will throw an exception.
  */
-public final class SingleAssignmentDisposable: DisposeBase, Cancelable {
+public final class SingleAssignmentDisposable: UnsynchronizedDisposeBase, UnsynchronizedCancelable {
     private struct DisposeState: OptionSet {
         let rawValue: Int32
 
@@ -20,51 +20,51 @@ public final class SingleAssignmentDisposable: DisposeBase, Cancelable {
     }
 
     // state
-    private let state: ActualAtomicInt
-    private var disposable = nil as Disposable?
+    private let state: NonAtomicInt
+    private var disposable = nil as UnsynchronizedDisposable?
 
     /// - returns: A value that indicates whether the object is disposed.
-    public func isDisposed() async -> Bool {
-        await isFlagSet(self.state, DisposeState.disposed.rawValue)
+    public func isDisposed() -> Bool {
+        isFlagSet(state, DisposeState.disposed.rawValue)
     }
 
     /// Initializes a new instance of the `SingleAssignmentDisposable`.
-    override public init() async {
-        self.state = await ActualAtomicInt(0)
-        await super.init()
+    override public init() {
+        state = NonAtomicInt(0)
+        super.init()
     }
 
     /// Gets or sets the underlying disposable. After disposal, the result of getting this property is undefined.
     ///
     /// **Throws exception if the `SingleAssignmentDisposable` has already been assigned to.**
-    public func setDisposable(_ disposable: Disposable) async {
+    public func setDisposable(_ disposable: UnsynchronizedDisposable) async {
         self.disposable = disposable
 
-        let previousState = await fetchOr(self.state, DisposeState.disposableSet.rawValue)
+        let previousState = fetchOr(state, DisposeState.disposableSet.rawValue)
 
         if (previousState & DisposeState.disposableSet.rawValue) != 0 {
             rxFatalError("oldState.disposable != nil")
         }
 
         if (previousState & DisposeState.disposed.rawValue) != 0 {
-            await disposable.dispose()
+            disposable.dispose()
             self.disposable = nil
         }
     }
 
     /// Disposes the underlying disposable.
-    public func dispose() async {
-        let previousState = await fetchOr(self.state, DisposeState.disposed.rawValue)
+    public func dispose() {
+        let previousState = fetchOr(state, DisposeState.disposed.rawValue)
 
         if (previousState & DisposeState.disposed.rawValue) != 0 {
             return
         }
 
         if (previousState & DisposeState.disposableSet.rawValue) != 0 {
-            guard let disposable = self.disposable else {
+            guard let disposable else {
                 rxFatalError("Disposable not set")
             }
-            await disposable.dispose()
+            disposable.dispose()
             self.disposable = nil
         }
     }
