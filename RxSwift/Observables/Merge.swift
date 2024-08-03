@@ -395,7 +395,33 @@ private final actor FlatMapSink<
         case .completed:
             baseSink.stopped = true
             await baseSink.sourceSubscription.dispose()
-            await checkCompleted(c.call())
+            await baseSink.checkCompleted(c.call())
+        }
+    }
+
+    @inline(__always)
+    private final func nextElementArrived(element: SourceElement, _ c: C) async -> SourceSequence? {
+        if !baseSink.subscribeNext {
+            return nil
+        }
+
+        do {
+            let value = try await performMap(element)
+            baseSink.activeCount += 1
+            return value
+        } catch let e {
+            await self.forwardOn(.error(e), c.call())
+            await self.dispose()
+            return nil
+        }
+    }
+    
+    func subscribeInner(_ source: Observable<Observer.Element>, _ c: C) async {
+        let iterDisposable = await SingleAssignmentDisposable()
+        if let disposeKey = await baseSink.group.insert(iterDisposable) {
+            let iter = MergeSinkIter(parent: self, disposeKey: disposeKey)
+            let subscription = await source.subscribe(c.call(), iter)
+            await iterDisposable.setDisposable(subscription)
         }
     }
 
@@ -403,9 +429,9 @@ private final actor FlatMapSink<
         await baseSink.run(self, source, c.call())
     }
 
-//    override func performMap(_ element: SourceElement) async throws -> SourceSequence {
-//        try await selector(element)
-//    }
+    func performMap(_ element: SourceElement) async throws -> SourceSequence {
+        try await selector(element)
+    }
 }
 
 //// MARK: FlatMapFirst
@@ -433,39 +459,35 @@ private final actor FlatMapSink<
 ////    }
 ////}
 //
-// private final class MergeSinkIter<
-//    SourceElement,
-//    SourceSequence: ObservableConvertibleType,
-//    Observer: ObserverType
-// >: ObserverType where Observer.Element == SourceSequence.Element {
-//    typealias Parent = MergeSink<SourceElement, SourceSequence, Observer>
-//    typealias DisposeKey = CompositeDisposable.DisposeKey
-//    typealias Element = Observer.Element
-//
-//    private let parent: Parent
-//    private let disposeKey: DisposeKey
-//
-//    init(parent: Parent, disposeKey: DisposeKey) {
-//        self.parent = parent
-//        self.disposeKey = disposeKey
-//    }
-//
-//    func on(_ event: Event<Element>, _ c: C) async {
-//        await parent.lock.performLocked {
-//            switch event {
-//            case .next(let value):
-//                await self.parent.forwardOn(.next(value), c.call())
-//            case .error(let error):
-//                await self.parent.forwardOn(.error(error), c.call())
-//                await self.parent.dispose()
-//            case .completed:
-//                await self.parent.group.remove(for: self.disposeKey)
-//                self.parent.activeCount -= 1
-//                await self.parent.checkCompleted(c.call())
-//            }
-//        }
-//    }
-// }
+private final class MergeSinkIter<
+    TheSink: MergeSink
+>: ObserverType {
+    typealias Parent = TheSink
+    typealias DisposeKey = CompositeDisposable.DisposeKey
+    typealias Element = TheSink.SourceSequence.Element
+
+    private let parent: Parent
+    private let disposeKey: DisposeKey
+
+    init(parent: Parent, disposeKey: DisposeKey) {
+        self.parent = parent
+        self.disposeKey = disposeKey
+    }
+
+    func on(_ event: Event<Element>, _ c: C) async {
+        switch event {
+        case .next(let value):
+            await parent.forwardOn(.next(value), c.call())
+        case .error(let error):
+            await parent.forwardOn(.error(error), c.call())
+            await parent.dispose()
+        case .completed:
+            await parent.baseSink.group.remove(for: disposeKey)
+            parent.baseSink.activeCount -= 1
+            await parent.baseSink.checkCompleted(c.call())
+        }
+    }
+}
 
 protocol MergeSink: Sink {
     associatedtype SourceElement
@@ -532,6 +554,8 @@ final class MergeSinkBase<
 
     var activeCount = 0
     var stopped = false
+
+    var subscribeNext = true
 
     func run<SourceObserver: ObserverType>(
         _ observer: SourceObserver,
