@@ -7,10 +7,12 @@
 //
 
 /// Base class for all disposables.
-public class DisposeBase {
-    init() async {
+public class UnsynchronizedDisposeBase {
+    init() {
         #if TRACE_RESOURCES
+        Task {
             _ = await Resources.incrementTotal()
+        }
         #endif
     }
 

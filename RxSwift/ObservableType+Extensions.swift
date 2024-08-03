@@ -175,7 +175,6 @@ public extension Hooks {
     // call me manually plz
     static func initialize() async {
         await MainScheduler.initialize()
-        BooleanDisposable.BooleanDisposableTrue = await BooleanDisposable(isDisposed: true)
         #if TRACE_RESOURCES
             await Resources.initialize()
         #endif

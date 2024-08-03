@@ -6,8 +6,12 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
+public protocol UnsynchronizedCancelable: UnsynchronizedDisposable {
+    func isDisposed() -> Bool
+}
+
 /// Represents disposable resource with state tracking.
-public protocol Cancelable : Disposable {
+public protocol SynchronizedCancelable: SynchronizedDisposable {
     /// Was resource disposed.
     func isDisposed() async -> Bool
 }
