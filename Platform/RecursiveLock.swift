@@ -40,5 +40,5 @@ final class RecursiveLock {
         }
     }
 #else
-    typealias RecursiveLock = NSRecursiveLock
+    typealias ActualRecursiveLock = NSRecursiveLock
 #endif

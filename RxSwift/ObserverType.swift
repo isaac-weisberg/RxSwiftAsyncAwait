@@ -50,17 +50,17 @@ public func actorLocked<P, R>(_ lock: ActorLock, _ work: @escaping (P) -> R) -> 
 }
 
 public final actor ActorLock {
-    public func perform<R>(_ work: () -> R) -> R {
+    public func performLocked<R>(_ work: () -> R) -> R {
         work()
     }
-    private init() {
+    internal init() {
         
     }
 
-    public static func with(_ work: (ActorLock) -> Void) async {
+    public static func with<R>(_ work: (ActorLock) -> R) async -> R {
         let lock = ActorLock()
         
-        await lock.perform {
+        return await lock.perform {
             work(lock)
         }
     }

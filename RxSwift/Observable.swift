@@ -10,11 +10,22 @@
 ///
 /// It represents a push style sequence.
 
-public class Observable<Element> : ObservableType {
-    init() {
+func ObservableInit() {
 #if TRACE_RESOURCES
         _ = Resources.incrementTotal()
 #endif
+}
+
+
+func ObservableDeinit() {
+#if TRACE_RESOURCES
+        _ = Resources.decrementTotal()
+#endif
+}
+
+public class Observable<Element> : ObservableType {
+    init() {
+        ObservableInit()
     }
     
     public func subscribe<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer) -> Disposable where Observer.Element == Element {

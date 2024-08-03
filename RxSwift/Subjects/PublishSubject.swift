@@ -25,7 +25,7 @@ public final class PublishSubject<Element>
         self.lock.performLocked { self.observers.count > 0 }
     }
     
-    private let lock = RecursiveLock()
+    private let lock = ActorLock()
     
     // state
     private var disposed = false
