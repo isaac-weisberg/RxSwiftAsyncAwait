@@ -17,7 +17,7 @@ public extension ObservableType {
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe(_ c: C, _ on: @escaping (C, Event<Element>) async -> Void) async -> Disposable {
+    func subscribe(_ c: C, _ on: @escaping (C, Event<Element>) async -> Void) async -> SynchronizedDisposable {
         let observer = await AnonymousObserver(c.call()) { c, e in
             await on(c.call(), e)
         }
@@ -47,7 +47,7 @@ public extension ObservableType {
         onCompleted: ((Object) -> Void)? = nil,
         onDisposed: ((Object) -> Void)? = nil
     )
-        async -> Disposable {
+        async -> SynchronizedDisposable {
         await subscribe(
             c.call(),
             onNext: { [weak object] in
@@ -89,7 +89,7 @@ public extension ObservableType {
             onCompleted: (() async -> Void)? = nil,
             onDisposed: (() async -> Void)? = nil
         )
-            async -> Disposable {
+            async -> SynchronizedDisposable {
             let c = C(file, function, line)
             return await subscribe(
                 c,
@@ -106,7 +106,7 @@ public extension ObservableType {
             onCompleted: (() async -> Void)? = nil,
             onDisposed: (() async -> Void)? = nil
         )
-            async -> Disposable {
+            async -> SynchronizedDisposable {
             await subscribe(C(), onNext: onNext, onError: onError, onCompleted: onCompleted, onDisposed: onDisposed)
         }
     #endif
@@ -118,13 +118,13 @@ public extension ObservableType {
         onCompleted: (() async -> Void)? = nil,
         onDisposed: (() async -> Void)? = nil
     )
-        async -> Disposable {
-        let disposable: Disposable
+        async -> SynchronizedDisposable {
+        let disposable: SynchronizedDisposable
 
         if let disposed = onDisposed {
-            disposable = await Disposables.create(with: disposed)
+            disposable = Disposables.createSync(with: disposed)
         } else {
-            disposable = Disposables.create()
+            disposable = Disposables.createSync(with: )
         }
 
         #if DEBUG
@@ -140,27 +140,29 @@ public extension ObservableType {
             await scope {
                 switch event {
                 case .next(let value):
-                    await onNext?(value)
+                    onNext?(value)
                 case .error(let error):
                     if let onError {
-                        await onError(error)
+                        onError(error)
                     } else {
                         await Hooks.getDefaultErrorHandler()(callStack, error)
                     }
-                    await disposable.dispose()
+                    disposable.dispose()
                 case .completed:
-                    await onCompleted?()
-                    await disposable.dispose()
+                    onCompleted?()
+                    disposable.dispose()
                 }
             }
             #if DEBUG
                 await synchronizationTracker.unregister()
             #endif
         }
-        return await Disposables.create(
-            asObservable().subscribe(c.call(), observer),
-            disposable
-        )
+            
+        let disposableFromSub = await asObservable().subscribe(c.call(), observer)
+        return Disposables.createSync {
+            await disposableFromSub.dispose()
+            disposable.dispose()
+        }
     }
 }
 

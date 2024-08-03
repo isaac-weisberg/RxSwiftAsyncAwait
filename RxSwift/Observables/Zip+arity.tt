@@ -57,7 +57,7 @@ final class ZipSink<%= i %>_<<%= (Array(1...i).map { "E\($0)" }).joined(separato
 "    var values\($0): Queue<E\($0)> = Queue(capacity: 2)"
 }).joined(separator: "\n") %>
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         await super.init(arity: <%= i %>, observer: observer, cancel: cancel)
     }

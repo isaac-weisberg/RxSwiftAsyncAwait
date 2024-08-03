@@ -52,7 +52,7 @@ private final actor SkipCountSink<Observer: ObserverType>: Sink, ObserverType {
 
     var remaining: Int
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         self.remaining = parent.count
         self.baseSink = await BaseSink(observer: observer, cancel: cancel)
@@ -88,7 +88,7 @@ private final class SkipCount<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await SkipCountSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await self.source.subscribe(c.call(), sink)
 
@@ -107,7 +107,7 @@ private final actor SkipTimeSink<Element, Observer: ObserverType>: Sink, Observe
     // state
     var open = false
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
@@ -155,7 +155,7 @@ private final class SkipTime<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await SkipTimeSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

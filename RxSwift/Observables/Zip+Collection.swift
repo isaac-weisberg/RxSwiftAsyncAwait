@@ -53,7 +53,7 @@
 //    private var numberOfDone = 0
 //    private var subscriptions: [SingleAssignmentDisposable]
 //    
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.lock = await RecursiveLock()
 //        self.parent = parent
 //        self.values = [Queue<SourceElement>](repeating: Queue(capacity: 4), count: parent.count)

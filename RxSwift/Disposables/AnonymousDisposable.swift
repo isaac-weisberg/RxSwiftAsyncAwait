@@ -57,3 +57,39 @@ public extension Disposables {
         AnonymousDisposable(disposeAction: dispose)
     }
 }
+
+extension Disposables {
+    static func createSync(with dispose: @escaping () async -> Void) -> SynchronizedCancelable {
+        AnonymousSynchronizedDisposable(disposeAction: dispose)
+    }
+}
+
+private final actor AnonymousSynchronizedDisposable: SynchronizedCancelable, SynchronizedDisposable {
+    public typealias DisposeAction = () async -> Void
+
+    private let disposed: NonAtomicInt
+    private var disposeAction: DisposeAction?
+
+    /// - returns: Was resource disposed.
+    func isDisposed() -> Bool {
+        isFlagSet(disposed, 1)
+    }
+
+    // Non-deprecated version of the constructor, used by `Disposables.create(with:)`
+    fileprivate init(disposeAction: @escaping DisposeAction) {
+        self.disposeAction = disposeAction
+        disposed = NonAtomicInt()
+    }
+
+    /// Calls the disposal action if and only if the current instance hasn't been disposed yet.
+    ///
+    /// After invoking disposal action, disposal action will be dereferenced.
+    fileprivate func dispose() async {
+        if fetchOr(disposed, 1) == 0 {
+            if let action = disposeAction {
+                disposeAction = nil
+                await action()
+            }
+        }
+    }
+}

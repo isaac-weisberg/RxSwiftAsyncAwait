@@ -41,7 +41,7 @@ private final actor DebounceSink<Observer: ObserverType>:
 
     let cancellable: SerialDisposable
 
-    init(parent: ParentType, observer: Observer, cancel: Cancelable) async {
+    init(parent: ParentType, observer: Observer, cancel: SynchronizedCancelable) async {
         cancellable = await SerialDisposable()
         self.parent = parent
 
@@ -112,9 +112,9 @@ private final class Debounce<Element>: Producer<Element> {
     override func run<Observer: ObserverType>(
         _ c: C,
         _ observer: Observer,
-        cancel: Cancelable
+        cancel: SynchronizedCancelable
     )
-        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await DebounceSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

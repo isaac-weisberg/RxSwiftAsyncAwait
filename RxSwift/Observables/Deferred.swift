@@ -27,7 +27,7 @@ private final actor DeferredSink<Source: ObservableType, Observer: ObserverType>
     typealias Parent = Deferred<Source>
     let baseSink: BaseSink<Observer>
     
-    init(observer: Observer, cancel: Cancelable) async {
+    init(observer: Observer, cancel: SynchronizedCancelable) async {
         baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
@@ -67,7 +67,7 @@ private final class Deferred<Source: ObservableType>: Producer<Source.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable)
         where Observer.Element == Source.Element
     {
         let sink = await DeferredSink<Source, Observer>(observer: observer, cancel: cancel)

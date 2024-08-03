@@ -151,7 +151,7 @@ private class ReplayBufferBase<Element>:
         }
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
         where Observer.Element == Element {
         await lock.performLocked {
             await self.synchronized_subscribe(c.call(), observer)

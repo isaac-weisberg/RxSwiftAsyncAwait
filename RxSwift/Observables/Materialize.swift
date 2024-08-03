@@ -19,7 +19,7 @@ public extension ObservableType {
 
 private final actor MaterializeSink<Element, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Event<Element> {
     let baseSink: BaseSink<Observer>
-    init(observer: Observer, cancel: Cancelable) async {
+    init(observer: Observer, cancel: SynchronizedCancelable) async {
         self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
     func on(_ event: Event<Element>, _ c: C) async {
@@ -39,7 +39,7 @@ private final class Materialize<T>: Producer<Event<T>> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await MaterializeSink(observer: observer, cancel: cancel)
         let subscription = await self.source.subscribe(c.call(), sink)
 

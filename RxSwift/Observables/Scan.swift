@@ -53,7 +53,7 @@ private final actor ScanSink<Element, Observer: ObserverType>: Sink, ObserverTyp
     private var accumulate: Accumulate
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         self.accumulate = parent.seed
         self.baseSink = await BaseSink(observer: observer, cancel: cancel)
@@ -94,7 +94,7 @@ private final class Scan<Element, Accumulate>: Producer<Accumulate> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Accumulate {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Accumulate {
         let sink = await ScanSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await self.source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)

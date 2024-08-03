@@ -99,7 +99,7 @@ private final actor SkipUntilSink<Other, Observer: ObserverType>:
 
     private let sourceSubscription: SingleAssignmentDisposable
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.sourceSubscription = await SingleAssignmentDisposable()
         self.parent = parent
         self.baseSink = await BaseSink(observer: observer, cancel: cancel)
@@ -147,7 +147,7 @@ private final class SkipUntil<Element, Other>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await SkipUntilSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

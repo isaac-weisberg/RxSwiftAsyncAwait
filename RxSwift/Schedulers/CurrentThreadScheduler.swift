@@ -21,11 +21,11 @@ import Foundation
         }
 
         override var hash: Int {
-            return 0
+            0
         }
 
         public func copy(with zone: NSZone? = nil) -> Any {
-            return self
+            self
         }
     }
 #endif
@@ -41,40 +41,42 @@ public class CurrentThreadScheduler: ImmediateSchedulerType {
     /// The singleton instance of the current thread scheduler.
     public static let instance = CurrentThreadScheduler()
 
-    private static var isScheduleRequiredKey: pthread_key_t = { () -> pthread_key_t in
-        let key = UnsafeMutablePointer<pthread_key_t>.allocate(capacity: 1)
-        defer { key.deallocate() }
+//    private static var isScheduleRequiredKey: pthread_key_t = { () -> pthread_key_t in
+//        let key = UnsafeMutablePointer<pthread_key_t>.allocate(capacity: 1)
+//        defer { key.deallocate() }
+//
+//        guard pthread_key_create(key, nil) == 0 else {
+//            rxFatalError("isScheduleRequired key creation failed")
+//        }
+//
+//        return key.pointee
+//    }()
 
-        guard pthread_key_create(key, nil) == 0 else {
-            rxFatalError("isScheduleRequired key creation failed")
-        }
+//    private static var scheduleInProgressSentinel: UnsafeRawPointer = { () -> UnsafeRawPointer in
+//        UnsafeRawPointer(UnsafeMutablePointer<Int>.allocate(capacity: 1))
+//    }()
 
-        return key.pointee
-    }()
-
-    private static var scheduleInProgressSentinel: UnsafeRawPointer = { () -> UnsafeRawPointer in
-        UnsafeRawPointer(UnsafeMutablePointer<Int>.allocate(capacity: 1))
-    }()
-
-    static var queue: ScheduleQueue? {
-        get {
-            return Thread.getThreadLocalStorageValueForKey(CurrentThreadSchedulerQueueKey.instance)
-        }
-        set {
-            Thread.setThreadLocalStorageValue(newValue, forKey: CurrentThreadSchedulerQueueKey.instance)
-        }
-    }
+//    static var queue: ScheduleQueue? {
+//        get {
+//            return Thread.getThreadLocalStorageValueForKey(CurrentThreadSchedulerQueueKey.instance)
+//        }
+//        set {
+//            Thread.setThreadLocalStorageValue(newValue, forKey: CurrentThreadSchedulerQueueKey.instance)
+//        }
+//    }
 
     /// Gets a value that indicates whether the caller must call a `schedule` method.
-    public private(set) static var isScheduleRequired: Bool {
-        get {
-            return pthread_getspecific(CurrentThreadScheduler.isScheduleRequiredKey) == nil
-        }
-        set(isScheduleRequired) {
-            if pthread_setspecific(CurrentThreadScheduler.isScheduleRequiredKey, isScheduleRequired ? nil : scheduleInProgressSentinel) != 0 {
-                rxFatalError("pthread_setspecific failed")
-            }
-        }
+    public static var isScheduleRequired: Bool {
+        false
+//        get {
+//            return pthread_getspecific(CurrentThreadScheduler.isScheduleRequiredKey) == nil
+//        }
+//        set(isScheduleRequired) {
+//            if pthread_setspecific(CurrentThreadScheduler.isScheduleRequiredKey, isScheduleRequired ? nil :
+//            scheduleInProgressSentinel) != 0 {
+//                rxFatalError("pthread_setspecific failed")
+//            }
+//        }
     }
 
     /**
@@ -87,45 +89,54 @@ public class CurrentThreadScheduler: ImmediateSchedulerType {
      - parameter action: Action to be executed.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    public func schedule<StateType>(_ state: StateType, _ c: C, action: @escaping (C, StateType) async -> Disposable) async -> Disposable {
-        if CurrentThreadScheduler.isScheduleRequired {
-            CurrentThreadScheduler.isScheduleRequired = false
+    public func schedule<StateType>(
+        _ state: StateType,
+        _ c: C,
+        action: @escaping (C, StateType) async -> SynchronizedDisposable
+    )
+        async -> SynchronizedDisposable {
 
-            let disposable = await action(c.call(), state)
+        let disposable = await action(c.call(), state)
+        return disposable
 
-            defer {
-                CurrentThreadScheduler.isScheduleRequired = true
-                CurrentThreadScheduler.queue = nil
-            }
-
-            guard let queue = CurrentThreadScheduler.queue else {
-                return disposable
-            }
-
-            while let latest = queue.value.dequeue() {
-                if await latest.isDisposed() {
-                    continue
-                }
-                await latest.invoke(c.call())
-            }
-
-            return disposable
-        }
-
-        let existingQueue = CurrentThreadScheduler.queue
-
-        let queue: RxMutableBox<Queue<ScheduledItemType>>
-        if let existingQueue = existingQueue {
-            queue = existingQueue
-        }
-        else {
-            queue = RxMutableBox(Queue<ScheduledItemType>(capacity: 1))
-            CurrentThreadScheduler.queue = queue
-        }
-
-        let scheduledItem = await ScheduledItem(action: action, state: state)
-        queue.value.enqueue(scheduledItem)
-
-        return scheduledItem
+//        if CurrentThreadScheduler.isScheduleRequired {
+//            CurrentThreadScheduler.isScheduleRequired = false
+//
+//            let disposable = await action(c.call(), state)
+//
+//            defer {
+//                CurrentThreadScheduler.isScheduleRequired = true
+//                CurrentThreadScheduler.queue = nil
+//            }
+//
+//            guard let queue = CurrentThreadScheduler.queue else {
+//                return disposable
+//            }
+//
+//            while let latest = queue.value.dequeue() {
+//                if await latest.isDisposed() {
+//                    continue
+//                }
+//                await latest.invoke(c.call())
+//            }
+//
+//            return disposable
+//        }
+//
+//        let existingQueue = CurrentThreadScheduler.queue
+//
+//        let queue: RxMutableBox<Queue<ScheduledItemType>>
+//        if let existingQueue = existingQueue {
+//            queue = existingQueue
+//        }
+//        else {
+//            queue = RxMutableBox(Queue<ScheduledItemType>(capacity: 1))
+//            CurrentThreadScheduler.queue = queue
+//        }
+//
+//        let scheduledItem = await ScheduledItem(action: action, state: state)
+//        queue.value.enqueue(scheduledItem)
+//
+//        return scheduledItem
     }
 }

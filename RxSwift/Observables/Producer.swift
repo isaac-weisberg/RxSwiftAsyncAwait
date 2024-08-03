@@ -11,51 +11,40 @@ class Producer<Element>: Observable<Element> {
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
         where Observer.Element == Element {
-        if !CurrentThreadScheduler.isScheduleRequired {
-            // The returned disposable needs to release all references once it was disposed.
-            let disposer = SinkDisposer()
-            let sinkAndSubscription = await run(c.call(), observer, cancel: disposer)
-            await disposer.setSinkAndSubscription(
-                sink: sinkAndSubscription.sink,
-                subscription: sinkAndSubscription.subscription
-            )
 
-            return disposer
-        } else {
-            return await CurrentThreadScheduler.instance.schedule((), c.call()) { c, _ in
-                let disposer = SinkDisposer()
-                let sinkAndSubscription = await self.run(c.call(), observer, cancel: disposer)
-                await disposer.setSinkAndSubscription(
-                    sink: sinkAndSubscription.sink,
-                    subscription: sinkAndSubscription.subscription
-                )
+        // The returned disposable needs to release all references once it was disposed.
+        let disposer = SinkDisposer()
+        let sinkAndSubscription = await run(c.call(), observer, cancel: disposer)
+        await disposer.setSinkAndSubscription(
+            sink: sinkAndSubscription.sink,
+            subscription: sinkAndSubscription.subscription
+        )
 
-                return disposer
-            }
-        }
+        return disposer
     }
 
     func run<Observer: ObserverType>(
         _ c: C,
         _ observer: Observer,
-        cancel: Cancelable
+        cancel: SynchronizedCancelable
     )
-        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable)
+        where Observer.Element == Element {
         rxAbstractMethod()
     }
 }
 
-private final actor SinkDisposer: Cancelable {
+private final actor SinkDisposer: SynchronizedCancelable {
     private enum DisposeState: Int32 {
         case disposed = 1
         case sinkAndSubscriptionSet = 2
     }
 
     private let state: NonAtomicInt
-    private var sink: Disposable?
-    private var subscription: Disposable?
+    private var sink: SynchronizedDisposable?
+    private var subscription: SynchronizedDisposable?
 
     init() {
         state = NonAtomicInt(0)
@@ -65,7 +54,7 @@ private final actor SinkDisposer: Cancelable {
         isFlagSet(state, DisposeState.disposed.rawValue)
     }
 
-    func setSinkAndSubscription(sink: Disposable, subscription: Disposable) async {
+    func setSinkAndSubscription(sink: SynchronizedDisposable, subscription: SynchronizedDisposable) async {
         self.sink = sink
         self.subscription = subscription
 

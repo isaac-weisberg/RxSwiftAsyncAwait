@@ -31,7 +31,7 @@ public class Observable<Element>: ObservableType {
         await ObservableInit()
     }
 
-    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
         rxAbstractMethod()
     }
 

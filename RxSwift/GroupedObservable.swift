@@ -24,7 +24,7 @@ public struct GroupedObservable<Key, Element>: ObservableType {
     }
 
     /// Subscribes `observer` to receive events for this sequence.
-    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
         await self.source.subscribe(c.call(), observer)
     }
 

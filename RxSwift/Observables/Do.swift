@@ -57,7 +57,7 @@ private final actor DoSink<Observer: ObserverType>: Sink, ObserverType {
     private let afterEventHandler: AfterEventHandler
     let baseSink: BaseSink<Observer>
 
-    init(eventHandler: @escaping EventHandler, afterEventHandler: @escaping AfterEventHandler, observer: Observer, cancel: Cancelable) async {
+    init(eventHandler: @escaping EventHandler, afterEventHandler: @escaping AfterEventHandler, observer: Observer, cancel: SynchronizedCancelable) async {
         self.eventHandler = eventHandler
         self.afterEventHandler = afterEventHandler
         self.baseSink = await BaseSink(observer: observer, cancel: cancel)
@@ -100,7 +100,7 @@ private final class Do<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         await self.onSubscribe?()
         let sink = await DoSink(eventHandler: self.eventHandler, afterEventHandler: self.afterEventHandler, observer: observer, cancel: cancel)
         let subscription = await self.source.subscribe(c.call(), sink)

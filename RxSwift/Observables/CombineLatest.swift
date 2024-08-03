@@ -26,7 +26,7 @@ actor CombineLatestSink<Observer: ObserverType>:
     
     let baseSink: BaseSink<Observer>
    
-    init(arity: Int, observer: Observer, cancel: Cancelable) async {
+    init(arity: Int, observer: Observer, cancel: SynchronizedCancelable) async {
         self.arity = arity
         self.hasValue = [Bool](repeating: false, count: arity)
         self.isDone = [Bool](repeating: false, count: arity)

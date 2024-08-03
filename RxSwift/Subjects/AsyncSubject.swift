@@ -110,7 +110,7 @@ public final actor AsyncSubject<Element>:
     ///
     /// - parameter observer: Observer to subscribe to the subject.
     /// - returns: Disposable object that can be used to unsubscribe the observer from the subject.
-    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
         where Observer.Element == Element {
         await synchronized_subscribe(c.call(), observer)
     }

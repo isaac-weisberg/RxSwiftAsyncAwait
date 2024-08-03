@@ -13,7 +13,7 @@ private final actor AsSingleSink<Observer: ObserverType>: Sink, ObserverType {
 
     private var element: Event<Element>?
 
-    init(observer: Observer, cancel: Cancelable) async {
+    init(observer: Observer, cancel: SynchronizedCancelable) async {
         baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
@@ -52,9 +52,9 @@ final class AsSingle<Element>: Producer<Element> {
     override func run<Observer: ObserverType>(
         _ c: C,
         _ observer: Observer,
-        cancel: Cancelable
+        cancel: SynchronizedCancelable
     )
-        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await AsSingleSink(observer: observer, cancel: cancel)
         let subscription = await source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)

@@ -57,7 +57,7 @@ final class CombineLatestSink<%= i %>_<<%= (Array(1...i).map { "E\($0)" }).joine
 "    var latestElement\($0): E\($0)! = nil"
 }).joined(separator: "\n") %>
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         await super.init(arity: <%= i %>, observer: observer, cancel: cancel)
     }

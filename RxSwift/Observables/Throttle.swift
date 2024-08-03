@@ -45,7 +45,7 @@ private final actor ThrottleSink<Observer: ObserverType>:
 
     let cancellable: SerialDisposable
 
-    init(parent: ParentType, observer: Observer, cancel: Cancelable) async {
+    init(parent: ParentType, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         cancellable = await SerialDisposable()
 
@@ -158,9 +158,9 @@ private final class Throttle<Element>: Producer<Element> {
     override func run<Observer: ObserverType>(
         _ c: C,
         _ observer: Observer,
-        cancel: Cancelable
+        cancel: SynchronizedCancelable
     )
-        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await ThrottleSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

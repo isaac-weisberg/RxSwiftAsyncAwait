@@ -411,7 +411,7 @@ private final class ShareWhileConnected<Element>:
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
         where Observer.Element == Element {
         let (connection, count, disposable) = await lock.performLocked {
             let connection = await self.synchronized_subscribe(observer)

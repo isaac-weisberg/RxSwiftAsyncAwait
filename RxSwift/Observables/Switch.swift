@@ -78,7 +78,7 @@ private actor SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
         self.hasLatest = hasLatest
     }
 
-    init(observer: Observer, cancel: Cancelable) async {
+    init(observer: Observer, cancel: SynchronizedCancelable) async {
         subscriptions = await SingleAssignmentDisposable()
         innerSubscription = await SerialDisposable()
         baseSink = await BaseSink(observer: observer, cancel: cancel)
@@ -193,7 +193,7 @@ private final actor SwitchSinkIter<SourceType, Source: ObservableConvertibleType
 //    Observer
 // >
 //    where Observer.Element == Source.Element {
-//    override init(observer: Observer, cancel: Cancelable) async {
+//    override init(observer: Observer, cancel: SynchronizedCancelable) async {
 //        baseSink = await BaseSink(observer: observer, cancel: cancel)
 //    }
 //
@@ -211,7 +211,7 @@ private final actor SwitchSinkIter<SourceType, Source: ObservableConvertibleType
 //
 //    private let selector: Selector
 //
-//    init(selector: @escaping Selector, observer: Observer, cancel: Cancelable) async {
+//    init(selector: @escaping Selector, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.selector = selector
 //        baseSink = await BaseSink(observer: observer, cancel: cancel)
 //    }

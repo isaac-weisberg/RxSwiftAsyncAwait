@@ -161,7 +161,7 @@
 ////    private let handler: Observable<TriggerObservable.Element>
 ////    fileprivate let notifier: PublishSubject<TriggerObservable.Element>
 ////
-////    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+////    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 ////        self.errorSubject = await PublishSubject<Error>()
 ////        self.notifier = await PublishSubject<TriggerObservable.Element>()
 ////        self.lock = await RecursiveLock()
@@ -215,7 +215,7 @@
 ////        await super.init()
 ////    }
 ////
-////    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+////    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
 ////        let sink = await RetryWhenSequenceSink<Sequence, Observer, TriggerObservable, Error>(parent: self, observer: observer, cancel: cancel)
 ////        let subscription = await sink.run(c.call(), (self.sources.makeIterator(), nil))
 ////        return (sink: sink, subscription: subscription)

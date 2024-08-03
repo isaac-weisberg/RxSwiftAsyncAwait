@@ -158,7 +158,7 @@ private final actor CatchSink<Observer: ObserverType>: Sink, ObserverType {
     private let parent: Parent
     private let subscription: SerialDisposable
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         self.subscription = await SerialDisposable()
         baseSink = await BaseSink(observer: observer, cancel: cancel)
@@ -207,7 +207,7 @@ private final class Catch<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await CatchSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
@@ -225,7 +225,7 @@ private final class Catch<Element>: Producer<Element> {
 //
 //    private var lastError: Swift.Error?
 //
-//    override init(observer: Observer, cancel: Cancelable) async {
+//    override init(observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
 //    }
 //
@@ -277,7 +277,7 @@ private final class Catch<Element>: Producer<Element> {
 //        await super.init()
 //    }
 //
-//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
 //        let sink = await CatchSequenceSink<Sequence, Observer>(observer: observer, cancel: cancel)
 //        let subscription = await sink.run(c.call(), (self.sources.makeIterator(), nil))
 //        return (sink: sink, subscription: subscription)

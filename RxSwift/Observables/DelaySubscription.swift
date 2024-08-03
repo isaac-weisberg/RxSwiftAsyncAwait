@@ -32,7 +32,7 @@ private final class DelaySubscriptionSink<Observer: ObserverType>:
     
     let baseSink: BaseSink<Observer>
     
-    init(observer: Observer, cancel: Cancelable) async {
+    init(observer: Observer, cancel: SynchronizedCancelable) async {
         baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
@@ -56,7 +56,7 @@ private final class DelaySubscription<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await DelaySubscriptionSink(observer: observer, cancel: cancel)
         let subscription = await self.scheduler.scheduleRelative((), c.call(), dueTime: self.dueTime) { c, _ in
             await self.source.subscribe(c.call(), sink)

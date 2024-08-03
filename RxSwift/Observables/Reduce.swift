@@ -19,10 +19,13 @@ public extension ObservableType {
      - parameter mapResult: A function to transform the final accumulator value into the result value.
      - returns: An observable sequence containing a single element with the final accumulator value.
      */
-    func reduce<A, Result>(_ seed: A, accumulator: @escaping (A, Element) throws -> A, mapResult: @escaping (A) throws -> Result) async
-        -> Observable<Result>
-    {
-        await Reduce(source: self.asObservable(), seed: seed, accumulator: accumulator, mapResult: mapResult)
+    func reduce<A, Result>(
+        _ seed: A,
+        accumulator: @escaping (A, Element) throws -> A,
+        mapResult: @escaping (A) throws -> Result
+    )
+        async -> Observable<Result> {
+        await Reduce(source: asObservable(), seed: seed, accumulator: accumulator, mapResult: mapResult)
     }
 
     /**
@@ -37,9 +40,8 @@ public extension ObservableType {
      - returns: An observable sequence containing a single element with the final accumulator value.
      */
     func reduce<A>(_ seed: A, accumulator: @escaping (A, Element) throws -> A) async
-        -> Observable<A>
-    {
-        await Reduce(source: self.asObservable(), seed: seed, accumulator: accumulator, mapResult: { $0 })
+        -> Observable<A> {
+        await Reduce(source: asObservable(), seed: seed, accumulator: accumulator, mapResult: { $0 })
     }
 }
 
@@ -51,9 +53,9 @@ private final actor ReduceSink<SourceType, AccumulateType, Observer: ObserverTyp
     private var accumulation: AccumulateType
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
-        self.accumulation = parent.seed
+        accumulation = parent.seed
 
         baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
@@ -62,23 +64,21 @@ private final actor ReduceSink<SourceType, AccumulateType, Observer: ObserverTyp
         switch event {
         case .next(let value):
             do {
-                self.accumulation = try self.parent.accumulator(self.accumulation, value)
-            }
-            catch let e {
+                accumulation = try parent.accumulator(accumulation, value)
+            } catch let e {
                 await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
         case .error(let e):
-            await self.forwardOn(.error(e), c.call())
-            await self.dispose()
+            await forwardOn(.error(e), c.call())
+            await dispose()
         case .completed:
             do {
-                let result = try self.parent.mapResult(self.accumulation)
-                await self.forwardOn(.next(result), c.call())
-                await self.forwardOn(.completed, c.call())
-                await self.dispose()
-            }
-            catch let e {
+                let result = try parent.mapResult(accumulation)
+                await forwardOn(.next(result), c.call())
+                await forwardOn(.completed, c.call())
+                await dispose()
+            } catch let e {
                 await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
@@ -95,7 +95,13 @@ private final class Reduce<SourceType, AccumulateType, ResultType>: Producer<Res
     fileprivate let accumulator: AccumulatorType
     fileprivate let mapResult: ResultSelectorType
 
-    init(source: Observable<SourceType>, seed: AccumulateType, accumulator: @escaping AccumulatorType, mapResult: @escaping ResultSelectorType) async {
+    init(
+        source: Observable<SourceType>,
+        seed: AccumulateType,
+        accumulator: @escaping AccumulatorType,
+        mapResult: @escaping ResultSelectorType
+    )
+    async {
         self.source = source
         self.seed = seed
         self.accumulator = accumulator
@@ -103,9 +109,14 @@ private final class Reduce<SourceType, AccumulateType, ResultType>: Producer<Res
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer,
+        cancel: SynchronizedCancelable
+    )
+        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == ResultType {
         let sink = await ReduceSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = await self.source.subscribe(c.call(), sink)
+        let subscription = await source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)
     }
 }

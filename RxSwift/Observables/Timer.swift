@@ -55,7 +55,7 @@ private final actor TimerSink<Observer: ObserverType>: Sink where Observer.Eleme
     private let parent: Parent
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
@@ -79,7 +79,7 @@ private final actor TimerOneOffSink<Observer: ObserverType>: Sink where Observer
     private let parent: Parent
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
@@ -111,9 +111,9 @@ private final class Timer<Element: RxAbstractInteger>: Producer<Element> {
     override func run<Observer: ObserverType>(
         _ c: C,
         _ observer: Observer,
-        cancel: Cancelable
+        cancel: SynchronizedCancelable
     )
-        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         if period != nil {
             let sink = await TimerSink(parent: self, observer: observer, cancel: cancel)
             let subscription = await sink.run(c.call())

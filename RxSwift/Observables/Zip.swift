@@ -22,7 +22,7 @@
 //    // state
 //    private var isDone: [Bool]
 //    
-//    init(arity: Int, observer: Observer, cancel: Cancelable) async {
+//    init(arity: Int, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.lock = await RecursiveLock()
 //        self.isDone = [Bool](repeating: false, count: arity)
 //        self.arity = arity

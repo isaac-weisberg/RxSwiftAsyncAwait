@@ -44,7 +44,7 @@ private final actor ElementAtSink<Observer: ObserverType>: Sink, ObserverType {
     let parent: Parent
     var i: Int
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         i = parent.index
 
@@ -103,9 +103,9 @@ private final class ElementAt<SourceType>: Producer<SourceType> {
     override func run<Observer: ObserverType>(
         _ c: C,
         _ observer: Observer,
-        cancel: Cancelable
+        cancel: SynchronizedCancelable
     )
-        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceType {
+        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == SourceType {
         let sink = await ElementAtSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)

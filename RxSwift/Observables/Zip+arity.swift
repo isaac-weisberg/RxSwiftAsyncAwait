@@ -57,7 +57,7 @@
 //    var values1: Queue<E1> = Queue(capacity: 2)
 //    var values2: Queue<E2> = Queue(capacity: 2)
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 2, observer: observer, cancel: cancel)
 //    }
@@ -167,7 +167,7 @@
 //    var values2: Queue<E2> = Queue(capacity: 2)
 //    var values3: Queue<E3> = Queue(capacity: 2)
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 3, observer: observer, cancel: cancel)
 //    }
@@ -285,7 +285,7 @@
 //    var values3: Queue<E3> = Queue(capacity: 2)
 //    var values4: Queue<E4> = Queue(capacity: 2)
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 4, observer: observer, cancel: cancel)
 //    }
@@ -411,7 +411,7 @@
 //    var values4: Queue<E4> = Queue(capacity: 2)
 //    var values5: Queue<E5> = Queue(capacity: 2)
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 5, observer: observer, cancel: cancel)
 //    }
@@ -545,7 +545,7 @@
 //    var values5: Queue<E5> = Queue(capacity: 2)
 //    var values6: Queue<E6> = Queue(capacity: 2)
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 6, observer: observer, cancel: cancel)
 //    }
@@ -687,7 +687,7 @@
 //    var values6: Queue<E6> = Queue(capacity: 2)
 //    var values7: Queue<E7> = Queue(capacity: 2)
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 7, observer: observer, cancel: cancel)
 //    }
@@ -837,7 +837,7 @@
 //    var values7: Queue<E7> = Queue(capacity: 2)
 //    var values8: Queue<E8> = Queue(capacity: 2)
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 8, observer: observer, cancel: cancel)
 //    }

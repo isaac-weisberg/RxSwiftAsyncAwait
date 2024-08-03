@@ -54,7 +54,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
     var numberOfDone = 0
     var subscriptions: [SingleAssignmentDisposable]
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         values = [SourceElement?](repeating: nil, count: parent.count)
         isDone = [Bool](repeating: false, count: parent.count)
@@ -163,9 +163,9 @@ final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: P
     override func run<Observer: ObserverType>(
         _ c: C,
         _ observer: Observer,
-        cancel: Cancelable
+        cancel: SynchronizedCancelable
     )
-        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
+        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)

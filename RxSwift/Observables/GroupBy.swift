@@ -31,7 +31,7 @@ private final class GroupedObservableImpl<Element>: Observable<Element> {
         await super.init()
     }
 
-    override public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+    override public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
         where Observer.Element == Element {
         let release = await refCount.retain()
         let subscription = await subject.subscribe(c.call(), observer)
@@ -51,7 +51,7 @@ private final actor GroupBySink<Key: Hashable, Element, Observer: ObserverType>:
     private var refCountDisposable: RefCountDisposable!
     private var groupedSubjectTable: [Key: PublishSubject<Element>]
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         subscription = await SingleAssignmentDisposable()
         self.parent = parent
         groupedSubjectTable = [Key: PublishSubject<Element>]()
@@ -132,9 +132,9 @@ private final class GroupBy<Key: Hashable, Element>: Producer<GroupedObservable<
     override func run<Observer: ObserverType>(
         _ c: C,
         _ observer: Observer,
-        cancel: Cancelable
+        cancel: SynchronizedCancelable
     )
-        async -> (sink: Disposable, subscription: Disposable)
+        async -> (sink: UnsynchronizedDisposable, subscription: UnsynchronizedDisposable)
         where Observer.Element == GroupedObservable<
             Key,
             Element

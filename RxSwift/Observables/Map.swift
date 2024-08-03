@@ -31,7 +31,7 @@ private final actor MapSink<SourceType, Observer: ObserverType>: Sink, ObserverT
 
     private let transform: Transform
 
-    init(transform: @escaping Transform, observer: Observer, cancel: Cancelable) async {
+    init(transform: @escaping Transform, observer: Observer, cancel: SynchronizedCancelable) async {
         self.transform = transform
         baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
@@ -70,7 +70,7 @@ private final class Map<SourceType, ResultType>: Producer<ResultType> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == ResultType {
         let sink = await MapSink(transform: self.transform, observer: observer, cancel: cancel)
         let subscription = await self.source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)

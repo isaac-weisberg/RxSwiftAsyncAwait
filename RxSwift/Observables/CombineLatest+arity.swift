@@ -57,7 +57,7 @@
 //    var latestElement1: E1! = nil
 //    var latestElement2: E2! = nil
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 2, observer: observer, cancel: cancel)
 //    }
@@ -157,7 +157,7 @@
 //    var latestElement2: E2! = nil
 //    var latestElement3: E3! = nil
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 3, observer: observer, cancel: cancel)
 //    }
@@ -264,7 +264,7 @@
 //    var latestElement3: E3! = nil
 //    var latestElement4: E4! = nil
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 4, observer: observer, cancel: cancel)
 //    }
@@ -378,7 +378,7 @@
 //    var latestElement4: E4! = nil
 //    var latestElement5: E5! = nil
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 5, observer: observer, cancel: cancel)
 //    }
@@ -499,7 +499,7 @@
 //    var latestElement5: E5! = nil
 //    var latestElement6: E6! = nil
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 6, observer: observer, cancel: cancel)
 //    }
@@ -627,7 +627,7 @@
 //    var latestElement6: E6! = nil
 //    var latestElement7: E7! = nil
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 7, observer: observer, cancel: cancel)
 //    }
@@ -762,7 +762,7 @@
 //    var latestElement7: E7! = nil
 //    var latestElement8: E8! = nil
 //
-//    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
 //        self.parent = parent
 //        await super.init(arity: 8, observer: observer, cancel: cancel)
 //    }

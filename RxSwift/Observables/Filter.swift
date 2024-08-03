@@ -45,7 +45,7 @@ private final actor FilterSink<Observer: ObserverType>: Sink, ObserverType {
     private let predicate: Predicate
     let baseSink: BaseSink<Observer>
 
-    init(predicate: @escaping Predicate, observer: Observer, cancel: Cancelable) async {
+    init(predicate: @escaping Predicate, observer: Observer, cancel: SynchronizedCancelable) async {
         self.predicate = predicate
         
         self.baseSink = await BaseSink(observer: observer, cancel: cancel)
@@ -83,7 +83,7 @@ private final class Filter<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await FilterSink(predicate: self.predicate, observer: observer, cancel: cancel)
         let subscription = await self.source.subscribe(c.call(), sink)
         return (sink: sink, subscription: subscription)

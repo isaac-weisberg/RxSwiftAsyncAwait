@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-protocol Sink: Disposable, AnyObject {
+protocol Sink: SynchronizedDisposable, AnyObject {
     associatedtype TheBaseSink: BaseSinkProtocol
     typealias Observer = TheBaseSink.Observer
 
@@ -30,7 +30,7 @@ protocol BaseSinkProtocol {
 
     func dispose() async
     
-    var cancel: Cancelable { get }
+    var cancel: SynchronizedCancelable { get }
     var observer: Observer { get }
 }
 
@@ -55,14 +55,14 @@ extension Sink {
 
 final class BaseSink<Observer: ObserverType>: BaseSinkProtocol {
     let observer: Observer
-    let cancel: Cancelable
+    let cancel: SynchronizedCancelable
     private let disposed: NonAtomicInt
 
     #if DEBUG
         private let synchronizationTracker: SynchronizationTrackerSync
     #endif
 
-    init(observer: Observer, cancel: Cancelable) async {
+    init(observer: Observer, cancel: SynchronizedCancelable) async {
         disposed = NonAtomicInt(0)
         #if TRACE_RESOURCES
             _ = await Resources.incrementTotal()
@@ -120,7 +120,7 @@ final class BaseSink<Observer: ObserverType>: BaseSinkProtocol {
 //        private let synchronizationTracker: SynchronizationTracker
 //    #endif
 //
-//    init(observer: Observer, cancel: Cancelable) async {
+//    init(observer: Observer, cancel: SynchronizedCancelable) async {
 //        disposed = await AtomicInt(0)
 //        #if TRACE_RESOURCES
 //            _ = await Resources.incrementTotal()

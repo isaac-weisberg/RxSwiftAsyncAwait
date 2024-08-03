@@ -53,7 +53,7 @@ private final actor ObservableSequenceSink<Sequence: Swift.Sequence, Observer: O
     private let parent: Parent
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) async {
+    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
         self.parent = parent
         self.baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
@@ -83,7 +83,7 @@ private final class ObservableSequence<Sequence: Swift.Sequence>: Producer<Seque
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
         let sink = await ObservableSequenceSink(parent: self, observer: observer, cancel: cancel)
         let subscription = await sink.run(c.call())
         return (sink: sink, subscription: subscription)
