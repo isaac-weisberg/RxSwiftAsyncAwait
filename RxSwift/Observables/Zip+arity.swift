@@ -79,8 +79,8 @@ final class ZipSink2_<E1, E2, Observer: ObserverType> : ZipSink<Observer> {
         let observer1 = ZipObserver(lock: self.lock, parent: self, index: 0, setNextValue: { self.values1.enqueue($0) }, this: subscription1)
         let observer2 = ZipObserver(lock: self.lock, parent: self, index: 1, setNextValue: { self.values2.enqueue($0) }, this: subscription2)
 
-        subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        subscription2.setDisposable(self.parent.source2.subscribe(observer2))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
 
         return Disposables.create([
            subscription1,
@@ -191,9 +191,9 @@ final class ZipSink3_<E1, E2, E3, Observer: ObserverType> : ZipSink<Observer> {
         let observer2 = ZipObserver(lock: self.lock, parent: self, index: 1, setNextValue: { self.values2.enqueue($0) }, this: subscription2)
         let observer3 = ZipObserver(lock: self.lock, parent: self, index: 2, setNextValue: { self.values3.enqueue($0) }, this: subscription3)
 
-        subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        subscription3.setDisposable(self.parent.source3.subscribe(observer3))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
 
         return Disposables.create([
            subscription1,
@@ -311,10 +311,10 @@ final class ZipSink4_<E1, E2, E3, E4, Observer: ObserverType> : ZipSink<Observer
         let observer3 = ZipObserver(lock: self.lock, parent: self, index: 2, setNextValue: { self.values3.enqueue($0) }, this: subscription3)
         let observer4 = ZipObserver(lock: self.lock, parent: self, index: 3, setNextValue: { self.values4.enqueue($0) }, this: subscription4)
 
-        subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-        subscription4.setDisposable(self.parent.source4.subscribe(observer4))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
+        subscription4.setDisposable(self.parent.source4.subscribe(lock, observer4))
 
         return Disposables.create([
            subscription1,
@@ -439,11 +439,11 @@ final class ZipSink5_<E1, E2, E3, E4, E5, Observer: ObserverType> : ZipSink<Obse
         let observer4 = ZipObserver(lock: self.lock, parent: self, index: 3, setNextValue: { self.values4.enqueue($0) }, this: subscription4)
         let observer5 = ZipObserver(lock: self.lock, parent: self, index: 4, setNextValue: { self.values5.enqueue($0) }, this: subscription5)
 
-        subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-        subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-        subscription5.setDisposable(self.parent.source5.subscribe(observer5))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
+        subscription4.setDisposable(self.parent.source4.subscribe(lock, observer4))
+        subscription5.setDisposable(self.parent.source5.subscribe(lock, observer5))
 
         return Disposables.create([
            subscription1,
@@ -575,12 +575,12 @@ final class ZipSink6_<E1, E2, E3, E4, E5, E6, Observer: ObserverType> : ZipSink<
         let observer5 = ZipObserver(lock: self.lock, parent: self, index: 4, setNextValue: { self.values5.enqueue($0) }, this: subscription5)
         let observer6 = ZipObserver(lock: self.lock, parent: self, index: 5, setNextValue: { self.values6.enqueue($0) }, this: subscription6)
 
-        subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-        subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-        subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-        subscription6.setDisposable(self.parent.source6.subscribe(observer6))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
+        subscription4.setDisposable(self.parent.source4.subscribe(lock, observer4))
+        subscription5.setDisposable(self.parent.source5.subscribe(lock, observer5))
+        subscription6.setDisposable(self.parent.source6.subscribe(lock, observer6))
 
         return Disposables.create([
            subscription1,
@@ -719,13 +719,13 @@ final class ZipSink7_<E1, E2, E3, E4, E5, E6, E7, Observer: ObserverType> : ZipS
         let observer6 = ZipObserver(lock: self.lock, parent: self, index: 5, setNextValue: { self.values6.enqueue($0) }, this: subscription6)
         let observer7 = ZipObserver(lock: self.lock, parent: self, index: 6, setNextValue: { self.values7.enqueue($0) }, this: subscription7)
 
-        subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-        subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-        subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-        subscription6.setDisposable(self.parent.source6.subscribe(observer6))
-        subscription7.setDisposable(self.parent.source7.subscribe(observer7))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
+        subscription4.setDisposable(self.parent.source4.subscribe(lock, observer4))
+        subscription5.setDisposable(self.parent.source5.subscribe(lock, observer5))
+        subscription6.setDisposable(self.parent.source6.subscribe(lock, observer6))
+        subscription7.setDisposable(self.parent.source7.subscribe(lock, observer7))
 
         return Disposables.create([
            subscription1,
@@ -871,14 +871,14 @@ final class ZipSink8_<E1, E2, E3, E4, E5, E6, E7, E8, Observer: ObserverType> : 
         let observer7 = ZipObserver(lock: self.lock, parent: self, index: 6, setNextValue: { self.values7.enqueue($0) }, this: subscription7)
         let observer8 = ZipObserver(lock: self.lock, parent: self, index: 7, setNextValue: { self.values8.enqueue($0) }, this: subscription8)
 
-        subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-        subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-        subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-        subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-        subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-        subscription6.setDisposable(self.parent.source6.subscribe(observer6))
-        subscription7.setDisposable(self.parent.source7.subscribe(observer7))
-        subscription8.setDisposable(self.parent.source8.subscribe(observer8))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
+        subscription4.setDisposable(self.parent.source4.subscribe(lock, observer4))
+        subscription5.setDisposable(self.parent.source5.subscribe(lock, observer5))
+        subscription6.setDisposable(self.parent.source6.subscribe(lock, observer6))
+        subscription7.setDisposable(self.parent.source7.subscribe(lock, observer7))
+        subscription8.setDisposable(self.parent.source8.subscribe(lock, observer8))
 
         return Disposables.create([
            subscription1,

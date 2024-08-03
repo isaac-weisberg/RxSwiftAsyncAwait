@@ -95,6 +95,7 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
     func subscribe<Object: AnyObject>(
+        _ lock: ActorLock,
         with object: Object,
         onSuccess: ((Object, Element) -> Void)? = nil,
         onError: ((Object, Swift.Error) -> Void)? = nil,
@@ -102,6 +103,7 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
         onDisposed: ((Object) -> Void)? = nil
     ) -> Disposable {
         subscribe(
+            lock,
             onSuccess: { [weak object] in
                 guard let object else { return }
                 onSuccess?(object, $0)

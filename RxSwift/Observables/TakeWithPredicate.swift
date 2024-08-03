@@ -190,7 +190,7 @@ final private class TakeUntilSink<Other, Observer: ObserverType>
     
     func run(_ lock: ActorLock) -> Disposable {
         let otherObserver = TakeUntilSinkOther(parent: self)
-        let otherSubscription = self.parent.other.subscribe(otherObserver)
+        let otherSubscription = self.parent.other.subscribe(lock, otherObserver)
         otherObserver.subscription.setDisposable(otherSubscription)
         let sourceSubscription = self.parent.source.subscribe(lock, self)
         

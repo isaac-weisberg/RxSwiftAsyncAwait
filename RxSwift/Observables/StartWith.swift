@@ -37,6 +37,6 @@ final private class StartWith<Element>: Producer<Element> {
             observer.on(.next(e))
         }
 
-        return (sink: Disposables.create(), subscription: self.source.subscribe(observer))
+        return (sink: Disposables.create(), subscription: self.source.subscribe(lock, observer))
     }
 }

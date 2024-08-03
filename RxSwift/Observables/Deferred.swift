@@ -29,10 +29,10 @@ final private class DeferredSink<Source: ObservableType, Observer: ObserverType>
         super.init(observer: observer, cancel: cancel)
     }
     
-    func run(_ parent: Parent) -> Disposable {
+    func run(_ lock: ActorLock, _ parent: Parent) -> Disposable {
         do {
             let result = try parent.observableFactory()
-            return result.subscribe(self)
+            return result.subscribe(lock, self)
         }
         catch let e {
             self.forwardOn(.error(e))
@@ -67,7 +67,7 @@ final private class Deferred<Source: ObservableType>: Producer<Source.Element> {
     override func run<Observer: ObserverType>(_ lock: ActorLock, _ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable)
              where Observer.Element == Source.Element {
         let sink = DeferredSink<Source, Observer>(observer: observer, cancel: cancel)
-        let subscription = sink.run(self)
+        let subscription = sink.run(lock, self)
         return (sink: sink, subscription: subscription)
     }
 }

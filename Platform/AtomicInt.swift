@@ -8,7 +8,7 @@
 
 import Foundation
 
-final class AtomicInt: NSLock {
+final class AtomicInt {
     fileprivate var value: Int32
     public init(_ value: Int32 = 0) {
         self.value = value
@@ -18,38 +18,38 @@ final class AtomicInt: NSLock {
 @discardableResult
 @inline(__always)
 func add(_ this: AtomicInt, _ value: Int32) -> Int32 {
-    this.lock()
+//    this.lock()
     let oldValue = this.value
     this.value += value
-    this.unlock()
+//    this.unlock()
     return oldValue
 }
 
 @discardableResult
 @inline(__always)
 func sub(_ this: AtomicInt, _ value: Int32) -> Int32 {
-    this.lock()
+//    this.lock()
     let oldValue = this.value
     this.value -= value
-    this.unlock()
+//    this.unlock()
     return oldValue
 }
 
 @discardableResult
 @inline(__always)
 func fetchOr(_ this: AtomicInt, _ mask: Int32) -> Int32 {
-    this.lock()
+//    this.lock()
     let oldValue = this.value
     this.value |= mask
-    this.unlock()
+//    this.unlock()
     return oldValue
 }
 
 @inline(__always)
 func load(_ this: AtomicInt) -> Int32 {
-    this.lock()
+//    this.lock()
     let oldValue = this.value
-    this.unlock()
+//    this.unlock()
     return oldValue
 }
 

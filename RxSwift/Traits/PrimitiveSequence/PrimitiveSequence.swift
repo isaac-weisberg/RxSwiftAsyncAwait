@@ -141,10 +141,10 @@ extension PrimitiveSequence {
     - parameter scheduler: Scheduler to perform subscription and unsubscription actions on.
     - returns: The source sequence whose subscriptions and unsubscriptions happen on the specified scheduler.
     */
-    public func subscribe(on scheduler: ImmediateSchedulerType)
-        -> PrimitiveSequence<Trait, Element> {
-        PrimitiveSequence(raw: self.source.subscribe(on: scheduler))
-    }
+//    public func subscribe(on scheduler: ImmediateSchedulerType)
+//        -> PrimitiveSequence<Trait, Element> {
+//        PrimitiveSequence(raw: self.source.subscribe(on: scheduler))
+//    }
 
     /**
     Wraps the source sequence in order to run its subscription and unsubscription logic on the specified
@@ -161,11 +161,11 @@ extension PrimitiveSequence {
     - parameter scheduler: Scheduler to perform subscription and unsubscription actions on.
     - returns: The source sequence whose subscriptions and unsubscriptions happen on the specified scheduler.
     */
-    @available(*, deprecated, renamed: "subscribe(on:)")
-    public func subscribeOn(_ scheduler: ImmediateSchedulerType)
-        -> PrimitiveSequence<Trait, Element> {
-        subscribe(on: scheduler)
-    }
+//    @available(*, deprecated, renamed: "subscribe(on:)")
+//    public func subscribeOn(_ scheduler: ImmediateSchedulerType)
+//        -> PrimitiveSequence<Trait, Element> {
+//        subscribe(on: scheduler)
+//    }
 
     /**
      Continues an observable sequence that is terminated by an error with the observable sequence produced by the handler.

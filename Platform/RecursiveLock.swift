@@ -8,8 +8,18 @@
 
 import Foundation
 
+final class RecursiveLock {
+    init() {}
+
+    func lock() {}
+
+    func unlock() {}
+
+    deinit {}
+}
+
 #if TRACE_RESOURCES
-    class RecursiveLock: NSRecursiveLock {
+    class ActualRecursiveLock: NSRecursiveLock {
         override init() {
             _ = Resources.incrementTotal()
             super.init()

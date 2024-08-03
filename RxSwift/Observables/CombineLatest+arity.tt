@@ -72,7 +72,7 @@ final class CombineLatestSink<%= i %>_<<%= (Array(1...i).map { "E\($0)" }).joine
 }).joined(separator: "\n") %>
 
 <%= (Array(1...i).map {
-"         subscription\($0).setDisposable(self.parent.source\($0).subscribe(observer\($0)))"
+"        subscription\($0).setDisposable(self.parent.source\($0).subscribe(lock, observer\($0)))"
 }).joined(separator: "\n") %>
 
         return Disposables.create([

@@ -69,8 +69,8 @@ final class CombineLatestSink2_<E1, E2, Observer: ObserverType> : CombineLatestS
         let observer1 = CombineLatestObserver(lock: self.lock, parent: self, index: 0, setLatestValue: { (e: E1) -> Void in self.latestElement1 = e }, this: subscription1)
         let observer2 = CombineLatestObserver(lock: self.lock, parent: self, index: 1, setLatestValue: { (e: E2) -> Void in self.latestElement2 = e }, this: subscription2)
 
-         subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         subscription2.setDisposable(self.parent.source2.subscribe(observer2))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
 
         return Disposables.create([
                 subscription1,
@@ -170,9 +170,9 @@ final class CombineLatestSink3_<E1, E2, E3, Observer: ObserverType> : CombineLat
         let observer2 = CombineLatestObserver(lock: self.lock, parent: self, index: 1, setLatestValue: { (e: E2) -> Void in self.latestElement2 = e }, this: subscription2)
         let observer3 = CombineLatestObserver(lock: self.lock, parent: self, index: 2, setLatestValue: { (e: E3) -> Void in self.latestElement3 = e }, this: subscription3)
 
-         subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         subscription3.setDisposable(self.parent.source3.subscribe(observer3))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
 
         return Disposables.create([
                 subscription1,
@@ -278,10 +278,10 @@ final class CombineLatestSink4_<E1, E2, E3, E4, Observer: ObserverType> : Combin
         let observer3 = CombineLatestObserver(lock: self.lock, parent: self, index: 2, setLatestValue: { (e: E3) -> Void in self.latestElement3 = e }, this: subscription3)
         let observer4 = CombineLatestObserver(lock: self.lock, parent: self, index: 3, setLatestValue: { (e: E4) -> Void in self.latestElement4 = e }, this: subscription4)
 
-         subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-         subscription4.setDisposable(self.parent.source4.subscribe(observer4))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
+        subscription4.setDisposable(self.parent.source4.subscribe(lock, observer4))
 
         return Disposables.create([
                 subscription1,
@@ -393,11 +393,11 @@ final class CombineLatestSink5_<E1, E2, E3, E4, E5, Observer: ObserverType> : Co
         let observer4 = CombineLatestObserver(lock: self.lock, parent: self, index: 3, setLatestValue: { (e: E4) -> Void in self.latestElement4 = e }, this: subscription4)
         let observer5 = CombineLatestObserver(lock: self.lock, parent: self, index: 4, setLatestValue: { (e: E5) -> Void in self.latestElement5 = e }, this: subscription5)
 
-         subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-         subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-         subscription5.setDisposable(self.parent.source5.subscribe(observer5))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
+        subscription4.setDisposable(self.parent.source4.subscribe(lock, observer4))
+        subscription5.setDisposable(self.parent.source5.subscribe(lock, observer5))
 
         return Disposables.create([
                 subscription1,
@@ -515,12 +515,12 @@ final class CombineLatestSink6_<E1, E2, E3, E4, E5, E6, Observer: ObserverType> 
         let observer5 = CombineLatestObserver(lock: self.lock, parent: self, index: 4, setLatestValue: { (e: E5) -> Void in self.latestElement5 = e }, this: subscription5)
         let observer6 = CombineLatestObserver(lock: self.lock, parent: self, index: 5, setLatestValue: { (e: E6) -> Void in self.latestElement6 = e }, this: subscription6)
 
-         subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-         subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-         subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-         subscription6.setDisposable(self.parent.source6.subscribe(observer6))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
+        subscription4.setDisposable(self.parent.source4.subscribe(lock, observer4))
+        subscription5.setDisposable(self.parent.source5.subscribe(lock, observer5))
+        subscription6.setDisposable(self.parent.source6.subscribe(lock, observer6))
 
         return Disposables.create([
                 subscription1,
@@ -644,13 +644,13 @@ final class CombineLatestSink7_<E1, E2, E3, E4, E5, E6, E7, Observer: ObserverTy
         let observer6 = CombineLatestObserver(lock: self.lock, parent: self, index: 5, setLatestValue: { (e: E6) -> Void in self.latestElement6 = e }, this: subscription6)
         let observer7 = CombineLatestObserver(lock: self.lock, parent: self, index: 6, setLatestValue: { (e: E7) -> Void in self.latestElement7 = e }, this: subscription7)
 
-         subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-         subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-         subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-         subscription6.setDisposable(self.parent.source6.subscribe(observer6))
-         subscription7.setDisposable(self.parent.source7.subscribe(observer7))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
+        subscription4.setDisposable(self.parent.source4.subscribe(lock, observer4))
+        subscription5.setDisposable(self.parent.source5.subscribe(lock, observer5))
+        subscription6.setDisposable(self.parent.source6.subscribe(lock, observer6))
+        subscription7.setDisposable(self.parent.source7.subscribe(lock, observer7))
 
         return Disposables.create([
                 subscription1,
@@ -780,14 +780,14 @@ final class CombineLatestSink8_<E1, E2, E3, E4, E5, E6, E7, E8, Observer: Observ
         let observer7 = CombineLatestObserver(lock: self.lock, parent: self, index: 6, setLatestValue: { (e: E7) -> Void in self.latestElement7 = e }, this: subscription7)
         let observer8 = CombineLatestObserver(lock: self.lock, parent: self, index: 7, setLatestValue: { (e: E8) -> Void in self.latestElement8 = e }, this: subscription8)
 
-         subscription1.setDisposable(self.parent.source1.subscribe(observer1))
-         subscription2.setDisposable(self.parent.source2.subscribe(observer2))
-         subscription3.setDisposable(self.parent.source3.subscribe(observer3))
-         subscription4.setDisposable(self.parent.source4.subscribe(observer4))
-         subscription5.setDisposable(self.parent.source5.subscribe(observer5))
-         subscription6.setDisposable(self.parent.source6.subscribe(observer6))
-         subscription7.setDisposable(self.parent.source7.subscribe(observer7))
-         subscription8.setDisposable(self.parent.source8.subscribe(observer8))
+        subscription1.setDisposable(self.parent.source1.subscribe(lock, observer1))
+        subscription2.setDisposable(self.parent.source2.subscribe(lock, observer2))
+        subscription3.setDisposable(self.parent.source3.subscribe(lock, observer3))
+        subscription4.setDisposable(self.parent.source4.subscribe(lock, observer4))
+        subscription5.setDisposable(self.parent.source5.subscribe(lock, observer5))
+        subscription6.setDisposable(self.parent.source6.subscribe(lock, observer6))
+        subscription7.setDisposable(self.parent.source7.subscribe(lock, observer7))
+        subscription8.setDisposable(self.parent.source8.subscribe(lock, observer8))
 
         return Disposables.create([
                 subscription1,
