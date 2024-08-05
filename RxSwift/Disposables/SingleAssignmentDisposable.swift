@@ -37,7 +37,7 @@ public final class SingleAssignmentDisposable: UnsynchronizedDisposeBase, Unsync
     /// Gets or sets the underlying disposable. After disposal, the result of getting this property is undefined.
     ///
     /// **Throws exception if the `SingleAssignmentDisposable` has already been assigned to.**
-    public func setDisposable(_ disposable: UnsynchronizedDisposable) async {
+    public func setDisposable(_ disposable: UnsynchronizedDisposable) {
         self.disposable = disposable
 
         let previousState = fetchOr(state, DisposeState.disposableSet.rawValue)

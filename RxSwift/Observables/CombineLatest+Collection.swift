@@ -68,6 +68,19 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         baseSink = await BaseSink(observer: observer, cancel: cancel)
     }
 
+    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
+        baseSink.beforeForwardOn()
+        if !baseSink.isDisposed() {
+            await baseSink.forwardOn(event, c.call())
+        }
+        baseSink.afterForwardOn()
+    }
+
+    func dispose() async {
+        baseSink.setDisposedSync()
+        await baseSink.dispose()
+    }
+
     func on(_ c: C, _ event: Event<SourceElement>, atIndex: Int) async {
         switch event {
         case .next(let element):
@@ -115,7 +128,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         }
     }
 
-    func run(_ c: C) async -> Disposable {
+    func run(_ c: C) async -> SynchronizedCancelable {
         var j = 0
         for i in parent.sources {
             let index = j

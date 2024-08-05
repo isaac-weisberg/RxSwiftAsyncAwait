@@ -17,7 +17,7 @@ protocol Sink: SynchronizedDisposable, AnyObject {
 
 protocol BaseSinkProtocol {
     associatedtype Observer: ObserverType
-    
+
     func beforeForwardOn()
 
     func afterForwardOn()
@@ -29,7 +29,7 @@ protocol BaseSinkProtocol {
     func setDisposedSync()
 
     func dispose() async
-    
+
     var cancel: SynchronizedCancelable { get }
     var observer: Observer { get }
 }
@@ -39,18 +39,18 @@ extension Sink {
         SinkForward(forward: self)
     }
 
-    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
-        baseSink.beforeForwardOn()
-        if !baseSink.isDisposed() {
-            await baseSink.forwardOn(event, c.call())
-        }
-        baseSink.afterForwardOn()
-    }
-
-    func dispose() async {
-        baseSink.setDisposedSync()
-        await baseSink.dispose()
-    }
+//    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
+//        baseSink.beforeForwardOn()
+//        if !baseSink.isDisposed() {
+//            await baseSink.forwardOn(event, c.call())
+//        }
+//        baseSink.afterForwardOn()
+//    }
+//
+//    func dispose() async {
+//        baseSink.setDisposedSync()
+//        await baseSink.dispose()
+//    }
 }
 
 final class BaseSink<Observer: ObserverType>: BaseSinkProtocol {
