@@ -16,10 +16,6 @@ public protocol SynchronizedDisposable {
     func dispose() async
 }
 
-protocol Actor: AnyObject {
-    func perform<R>(_ work: () -> R) async -> R
-}
-
 extension UnsynchronizedDisposable {
     func sync(on actor: Actor) -> DisposableSynchedOnActor<Self> {
         DisposableSynchedOnActor(actor: actor, unsyncDisposable: self)

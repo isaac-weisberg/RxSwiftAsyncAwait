@@ -85,6 +85,6 @@ private final class Just<Element>: Producer<Element> {
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
         await observer.on(.next(self.element), c.call())
         await observer.on(.completed, c.call())
-        return Disposables.create()
+        return Disposables.createSync()
     }
 }
