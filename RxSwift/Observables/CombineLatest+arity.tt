@@ -23,7 +23,7 @@ extension ObservableType {
         (<%= (Array(1...i).map { "_ source\($0): O\($0)" }).joined(separator: ", ") %>, resultSelector: @escaping (<%= (Array(1...i).map { "O\($0).Element" }).joined(separator: ", ") %>) throws -> Element) async
             -> Observable<Element> {
         return await CombineLatest<%= i %>(
-            <%= (Array(1...i).map { "source\($0): source\($0).asObservable()" }).joined(separator: ", ") %>,
+            <%= (Array(1...i).map { "source\($0): source\($0)" }).joined(separator: ", ") %>,
             resultSelector: resultSelector
         )
     }
@@ -41,60 +41,31 @@ extension ObservableType where Element == Any {
         (<%= (Array(1...i).map { "_ source\($0): O\($0)" }).joined(separator: ", ") %>) async
             -> Observable<(<%= (Array(1...i).map { "O\($0).Element" }).joined(separator: ", ") %>)> {
         return await CombineLatest<%= i %>(
-            <%= (Array(1...i).map { "source\($0): source\($0).asObservable()" }).joined(separator: ", ") %>,
+            <%= (Array(1...i).map { "source\($0): source\($0)" }).joined(separator: ", ") %>,
             resultSelector: { (<%= (Array(0..<i).map { "$\($0)" }).joined(separator: ", ") %>) }
         )
     }
 }
 
-final class CombineLatestSink<%= i %>_<<%= (Array(1...i).map { "E\($0)" }).joined(separator: ", ") %>, Observer: ObserverType> : CombineLatestSink<Observer> {
-    typealias Result = Observer.Element
-    typealias Parent = CombineLatest<%= i %><<%= (Array(1...i).map { "E\($0)" }).joined(separator: ", ") %>, Result>
-
-    let parent: Parent
-
+final class CombineLatest<%= i %><<%= (Array(1...i).map { "O\($0): ObservableType" }).joined(separator: ", ") %>, Result> : Producer<Result> {
 <%= (Array(1...i).map {
-"    var latestElement\($0): E\($0)! = nil"
+"    typealias E\($0) = O\($0).Element"
 }).joined(separator: "\n") %>
-
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
-        self.parent = parent
-        await super.init(arity: <%= i %>, observer: observer, cancel: cancel)
-    }
-
-    func run(_ c: C) async -> Disposable {
-<%= (Array(1...i).map {
-"        let subscription\($0) = await SingleAssignmentDisposable()"
-}).joined(separator: "\n") %>
-
-<%= (Array(1...i).map {
-"        let observer\($0) = CombineLatestObserver(lock: self.lock, parent: self, index: \($0 - 1), setLatestValue: { (e: E\($0)) -> Void in self.latestElement\($0) = e }, this: subscription\($0))"
-}).joined(separator: "\n") %>
-
-<%= (Array(1...i).map {
-"         await subscription\($0).setDisposable(self.parent.source\($0).subscribe(c.call(), observer\($0)))"
-}).joined(separator: "\n") %>
-
-        return await Disposables.create([
-<%= (Array(1...i).map { "                subscription\($0)" }).joined(separator: ",\n") %>
-        ])
-    }
-
-    override func getResult() async throws -> Result {
-        try self.parent.resultSelector(<%= (Array(1...i).map { "self.latestElement\($0)" }).joined(separator: ", ") %>)
-    }
-}
-
-final class CombineLatest<%= i %><<%= (Array(1...i).map { "E\($0)" }).joined(separator: ", ") %>, Result> : Producer<Result> {
     typealias ResultSelector = (<%= (Array(1...i).map { "E\($0)" }).joined(separator: ", ") %>) throws -> Result
 
+    enum ParameterElement {
 <%= (Array(1...i).map {
-"    let source\($0): Observable<E\($0)>"
+"         case e\($0)(E\($0))"
+}).joined(separator: "\n") %>
+    }
+
+<%= (Array(1...i).map {
+"    let source\($0): O\($0)"
 }).joined(separator: "\n") %>
 
     let resultSelector: ResultSelector
 
-    init(<%= (Array(1...i).map { "source\($0): Observable<E\($0)>" }).joined(separator: ", ") %>, resultSelector: @escaping ResultSelector) async {
+    init(<%= (Array(1...i).map { "source\($0): O\($0)" }).joined(separator: ", ") %>, resultSelector: @escaping ResultSelector) async {
 <%= (Array(1...i).map {
 "        self.source\($0) = source\($0)"
 }).joined(separator: "\n")  %>
@@ -103,10 +74,33 @@ final class CombineLatest<%= i %><<%= (Array(1...i).map { "E\($0)" }).joined(sep
         await super.init()
     }
 
-    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
-        let sink = await CombineLatestSink<%= i %>_(parent: self, observer: observer, cancel: cancel)
-        let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+        let sink = await CombineLatestCollectionTypeSink(
+            parentSources: [
+<%= Array(1...i).map {
+
+"                source\($0).map { e\($0) in ParameterElement.e\($0)(e\($0)) }"
+}.joined(separator: ",\n") %>
+            ], resultSelector: { [resultSelector] coll in
+                if
+<%= Array(1...i).map {
+"                    case .e\($0)(let e\($0)) = coll[\($0 - 1)]"
+}.joined(separator: ",\n") %>
+                {
+                    let result = try resultSelector(
+<%= Array(1...i).map {
+"                        e\($0)"
+}.joined(separator: ",\n") %>
+                    )
+                    return result
+                }
+
+                fatalError()
+            },
+            observer: observer
+        )
+        await sink.run(c.call())
+        return sink
     }
 }
 

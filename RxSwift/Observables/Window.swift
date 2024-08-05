@@ -45,7 +45,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
     private let refCountDisposable: RefCountDisposable
     private let groupDisposable: CompositeDisposable
     
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         subject = await PublishSubject<Element>()
         self.timerD = await SerialDisposable()
         self.parent = parent
@@ -54,7 +54,7 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
         _ = await self.groupDisposable.insert(self.timerD)
         
         self.refCountDisposable = await RefCountDisposable(disposable: self.groupDisposable)
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.baseSink = BaseSink(observer: observer)
     }
     
     func run(_ c: C) async -> Disposable {
@@ -166,9 +166,9 @@ private final class WindowTimeCount<Element>: Producer<Observable<Element>> {
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Observable<Element> {
-        let sink = await WindowTimeCountSink(parent: self, observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Observable<Element> {
+        let sink = await WindowTimeCountSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

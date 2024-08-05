@@ -40,9 +40,9 @@ private final actor ObservableOptionalScheduledSink<Observer: ObserverType>: Sin
     private let parent: Parent
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func run(_ c: C) async -> Disposable {
@@ -75,13 +75,12 @@ private final class ObservableOptionalScheduled<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-        let sink = await ObservableOptionalScheduledSink(parent: self, observer: observer, cancel: cancel)
+        async -> SynchronizedDisposable where Observer.Element == Element {
+        let sink = await ObservableOptionalScheduledSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }
 

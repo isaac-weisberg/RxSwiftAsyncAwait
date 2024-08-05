@@ -26,8 +26,8 @@ private final actor EnumeratedSink<Element, Observer: ObserverType>: Sink, Obser
     
     let baseSink: BaseSink<Observer>
     
-    init(observer: Observer, cancel: SynchronizedCancelable) async {
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+    init(observer: Observer) async {
+        baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -60,9 +60,9 @@ private final class Enumerated<Element>: Producer<(index: Int, element: Element)
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == (index: Int, element: Element) {
-        let sink = await EnumeratedSink<Element, Observer>(observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == (index: Int, element: Element) {
+        let sink = await EnumeratedSink<Element, Observer>(observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

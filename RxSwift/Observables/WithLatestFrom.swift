@@ -55,10 +55,10 @@ private final actor WithLatestFromSink<FirstType, SecondType, Observer: Observer
     }
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
 
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.baseSink = BaseSink(observer: observer)
     }
 
     func run(_ c: C) async -> Disposable {
@@ -145,12 +145,11 @@ private final class WithLatestFrom<FirstType, SecondType, ResultType>: Producer<
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == ResultType {
-        let sink = await WithLatestFromSink(parent: self, observer: observer, cancel: cancel)
+        async -> SynchronizedDisposable where Observer.Element == ResultType {
+        let sink = await WithLatestFromSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

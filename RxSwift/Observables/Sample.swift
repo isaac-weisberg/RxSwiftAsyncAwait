@@ -91,7 +91,7 @@ private final actor SampleSequenceSink<Observer: ObserverType, SampleType>:
         self.sourceSubscription = await SingleAssignmentDisposable()
         self.parent = parent
         self.defaultValue = defaultValue
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.baseSink = BaseSink(observer: observer)
     }
 
     func run(_ c: C) async -> Disposable {
@@ -131,9 +131,9 @@ private final class Sample<Element, SampleType>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
         let sink = await SampleSequenceSink(parent: self, observer: observer, cancel: cancel, defaultValue: self.defaultValue)
         let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

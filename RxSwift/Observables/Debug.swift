@@ -39,13 +39,13 @@ private final actor DebugSink<Source: ObservableType, Observer: ObserverType>: S
     private let timestampFormatter = DateFormatter()
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
         self.timestampFormatter.dateFormat = dateFormat
 
         logEvent(self.parent.identifier, dateFormat: self.timestampFormatter, content: "subscribed")
 
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -98,9 +98,9 @@ private final class Debug<Source: ObservableType>: Producer<Source.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Source.Element {
-        let sink = await DebugSink(parent: self, observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Source.Element {
+        let sink = await DebugSink(parent: self, observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

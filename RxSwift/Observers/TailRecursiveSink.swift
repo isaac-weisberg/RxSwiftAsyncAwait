@@ -32,10 +32,10 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
     // this is thread safe object
     let gate: AsyncLock<InvocableScheduledItem<TailRecursiveSink<Sequence, Observer>>>
 
-    init(observer: Observer, cancel: SynchronizedCancelable) async {
+    init(observer: Observer) async {
         gate = await AsyncLock<InvocableScheduledItem<TailRecursiveSink<Sequence, Observer>>>()
         subscription = await SerialDisposable()
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func run(_ c: C, _ sources: SequenceGenerator) async -> Disposable {

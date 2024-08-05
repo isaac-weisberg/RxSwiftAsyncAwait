@@ -52,10 +52,10 @@ private final actor SkipCountSink<Observer: ObserverType>: Sink, ObserverType {
 
     var remaining: Int
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
         self.remaining = parent.count
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -88,11 +88,11 @@ private final class SkipCount<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-        let sink = await SkipCountSink(parent: self, observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+        let sink = await SkipCountSink(parent: self, observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
 
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }
 
@@ -107,9 +107,9 @@ private final actor SkipTimeSink<Element, Observer: ObserverType>: Sink, Observe
     // state
     var open = false
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -155,9 +155,9 @@ private final class SkipTime<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-        let sink = await SkipTimeSink(parent: self, observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+        let sink = await SkipTimeSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

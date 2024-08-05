@@ -10,7 +10,7 @@ final actor AddRefSink<Observer: ObserverType>: Sink, ObserverType {
     let baseSink: BaseSink<Observer>
 
     init(observer: Observer, cancel: any Cancelable) async {
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     typealias Element = Observer.Element
@@ -38,14 +38,13 @@ final class AddRef<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
+        async -> SynchronizedDisposable where Observer.Element == Element {
         let releaseDisposable = await refCount.retain()
-        let sink = await AddRefSink(observer: observer, cancel: cancel)
+        let sink = await AddRefSink(observer: observer)
         let subscription = await Disposables.create(releaseDisposable, source.subscribe(c.call(), sink))
 
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

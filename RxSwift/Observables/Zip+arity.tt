@@ -57,9 +57,9 @@ final class ZipSink<%= i %>_<<%= (Array(1...i).map { "E\($0)" }).joined(separato
 "    var values\($0): Queue<E\($0)> = Queue(capacity: 2)"
 }).joined(separator: "\n") %>
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
-        await super.init(arity: <%= i %>, observer: observer, cancel: cancel)
+        await super.init(arity: <%= i %>, observer: observer)
     }
 
     override func hasElements(_ index: Int) -> Bool {
@@ -112,9 +112,9 @@ final class Zip<%= i %><<%= (Array(1...i).map { "E\($0)" }).joined(separator: ",
     }
 
     func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
-        let sink = await ZipSink<%= i %>_(parent: self, observer: observer, cancel: cancel)
+        let sink = await ZipSink<%= i %>_(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }
 

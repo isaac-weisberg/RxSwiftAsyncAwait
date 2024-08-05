@@ -21,8 +21,8 @@ private final actor DematerializeSink<T: EventConvertible, Observer: ObserverTyp
     
     let baseSink: BaseSink<Observer>
     
-    init(observer: Observer, cancel: SynchronizedCancelable) async {
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+    init(observer: Observer) async {
+        baseSink = BaseSink(observer: observer)
     }
     
     fileprivate func on(_ event: Event<T>, _ c: C) async {
@@ -50,9 +50,9 @@ private final class Dematerialize<T: EventConvertible>: Producer<T.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == T.Element {
-        let sink = await DematerializeSink<T, Observer>(observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == T.Element {
+        let sink = await DematerializeSink<T, Observer>(observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

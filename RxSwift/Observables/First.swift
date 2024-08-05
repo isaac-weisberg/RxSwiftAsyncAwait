@@ -10,8 +10,8 @@ private final actor FirstSink<Element, Observer: ObserverType>: Sink, ObserverTy
     typealias Parent = First<Element>
     let baseSink: BaseSink<Observer>
     
-    init(observer: Observer, cancel: SynchronizedCancelable) async {
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+    init(observer: Observer) async {
+        self.baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -39,9 +39,9 @@ final class First<Element>: Producer<Element?> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element? {
-        let sink = await FirstSink(observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element? {
+        let sink = await FirstSink(observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

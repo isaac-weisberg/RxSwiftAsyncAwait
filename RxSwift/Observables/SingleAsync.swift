@@ -45,9 +45,9 @@ private final class SingleAsyncSink<Observer: ObserverType>: Sink, ObserverType 
     private var seenValue: Bool = false
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -98,9 +98,9 @@ final class SingleAsync<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-        let sink = await SingleAsyncSink(parent: self, observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+        let sink = await SingleAsyncSink(parent: self, observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

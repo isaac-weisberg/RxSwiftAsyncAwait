@@ -30,13 +30,13 @@ private final class SwitchIfEmpty<Element>: Producer<Element> {
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
         let sink = await SwitchIfEmptySink(ifEmpty: self.ifEmpty,
                                            observer: observer,
                                            cancel: cancel)
         let subscription = await sink.run(self.source.asObservable(), c.call())
         
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }
 
@@ -50,10 +50,10 @@ private final actor SwitchIfEmptySink<Observer: ObserverType>: Sink,
     private let ifEmptySubscription: SingleAssignmentDisposable
     let baseSink: BaseSink<Observer>
     
-    init(ifEmpty: Observable<Element>, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(ifEmpty: Observable<Element>, observer: Observer) async {
         self.ifEmpty = ifEmpty
         self.ifEmptySubscription = await SingleAssignmentDisposable()
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.baseSink = BaseSink(observer: observer)
     }
     
     func run(_ source: Observable<Observer.Element>, _ c: C) async -> Disposable {

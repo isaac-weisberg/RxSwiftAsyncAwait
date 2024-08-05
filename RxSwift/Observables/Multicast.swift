@@ -267,9 +267,9 @@ private final actor RefCountSink<ConnectableSource: ConnectableObservableType, O
     private var connectionIdSnapshot: Int64 = -1
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func run(_ c: C) async -> Disposable {
@@ -352,14 +352,13 @@ private final class RefCount<ConnectableSource: ConnectableObservableType>: Prod
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable)
+        async -> SynchronizedDisposable
         where Observer.Element == ConnectableSource.Element {
-        let sink = await RefCountSink(parent: self, observer: observer, cancel: cancel)
+        let sink = await RefCountSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }
 
@@ -371,9 +370,9 @@ private final actor MulticastSink<Subject: SubjectType, Observer: ObserverType>:
     private let parent: MutlicastType
     let baseSink: BaseSink<Observer>
 
-    init(parent: MutlicastType, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: MutlicastType, observer: Observer) async {
         self.parent = parent
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func run(_ c: C) async -> Disposable {
@@ -426,12 +425,11 @@ private final class Multicast<Subject: SubjectType, Result>: Producer<Result> {
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Result {
-        let sink = await MulticastSink(parent: self, observer: observer, cancel: cancel)
+        async -> SynchronizedDisposable where Observer.Element == Result {
+        let sink = await MulticastSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

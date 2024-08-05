@@ -53,11 +53,11 @@ private final actor ReduceSink<SourceType, AccumulateType, Observer: ObserverTyp
     private var accumulation: AccumulateType
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
         accumulation = parent.seed
 
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<SourceType>, _ c: C) async {
@@ -111,12 +111,11 @@ private final class Reduce<SourceType, AccumulateType, ResultType>: Producer<Res
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == ResultType {
-        let sink = await ReduceSink(parent: self, observer: observer, cancel: cancel)
+        async -> SynchronizedDisposable where Observer.Element == ResultType {
+        let sink = await ReduceSink(parent: self, observer: observer)
         let subscription = await source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

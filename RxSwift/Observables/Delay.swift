@@ -53,7 +53,7 @@ private final actor DelaySink<Observer: ObserverType>:
         cancelable = await SerialDisposable()
         self.dueTime = dueTime
         self.scheduler = scheduler
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.baseSink = BaseSink(observer: observer)
     }
 
     // All of these complications in this method are caused by the fact that
@@ -176,9 +176,9 @@ private final class Delay<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-        let sink = await DelaySink(observer: observer, dueTime: dueTime, scheduler: scheduler, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+        let sink = await DelaySink(observer: observer, dueTime: dueTime, scheduler: scheduler)
         let subscription = await sink.run(c.call(), source: source)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

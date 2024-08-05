@@ -26,9 +26,9 @@ private final actor DefaultIfEmptySink<Observer: ObserverType>: Sink, ObserverTy
     private var isEmpty = true
     let baseSink: BaseSink<Observer>
 
-    init(default: Element, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(default: Element, observer: Observer) async {
         self.default = `default`
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -61,12 +61,11 @@ private final class DefaultIfEmpty<SourceType>: Producer<SourceType> {
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == SourceType {
-        let sink = await DefaultIfEmptySink(default: self.default, observer: observer, cancel: cancel)
+        async -> SynchronizedDisposable where Observer.Element == SourceType {
+        let sink = await DefaultIfEmptySink(default: self.default, observer: observer)
         let subscription = await source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

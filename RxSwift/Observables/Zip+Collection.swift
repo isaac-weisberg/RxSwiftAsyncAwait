@@ -53,7 +53,7 @@
 //    private var numberOfDone = 0
 //    private var subscriptions: [SingleAssignmentDisposable]
 //    
-//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+//    init(parent: Parent, observer: Observer) async {
 //        self.lock = await RecursiveLock()
 //        self.parent = parent
 //        self.values = [Queue<SourceElement>](repeating: Queue(capacity: 4), count: parent.count)
@@ -65,7 +65,7 @@
 //            await self.subscriptions.append(SingleAssignmentDisposable())
 //        }
 //        
-//        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+//        self.baseSink = BaseSink(observer: observer)
 //    }
 //    
 //    func on(_ c: C, _ event: Event<SourceElement>, atIndex: Int) async {
@@ -167,8 +167,8 @@
 //    }
 //    
 //    func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: Cancelable) async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
-//        let sink = await ZipCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
+//        let sink = await ZipCollectionTypeSink(parent: self, observer: observer)
 //        let subscription = await sink.run(c.call())
-//        return (sink: sink, subscription: subscription)
+//        return sink
 //    }
 //}

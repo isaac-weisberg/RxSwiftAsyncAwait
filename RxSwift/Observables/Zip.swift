@@ -22,12 +22,12 @@
 //    // state
 //    private var isDone: [Bool]
 //    
-//    init(arity: Int, observer: Observer, cancel: SynchronizedCancelable) async {
+//    init(arity: Int, observer: Observer) async {
 //        self.lock = await RecursiveLock()
 //        self.isDone = [Bool](repeating: false, count: arity)
 //        self.arity = arity
 //        
-//        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+//        self.baseSink = BaseSink(observer: observer)
 //    }
 //
 //    func getResult() throws -> Element {

@@ -16,37 +16,34 @@ public protocol SynchronizedDisposable {
     func dispose() async
 }
 
-protocol Actor {
+protocol Actor: AnyObject {
     func perform<R>(_ work: () -> R) async -> R
 }
 
-extension Actor {
-    func perform<R>(_ work: () -> R) async -> R {
-        work()
-    }
-}
-
 extension UnsynchronizedDisposable {
-    func sync(on onActor: Actor) -> SynchronizedDisposable {
-        DisposableSynchedOnActor(actor: onActor, unsyncDisposable: self)
+    func sync(on actor: Actor) -> DisposableSynchedOnActor<Self> {
+        DisposableSynchedOnActor(actor: actor, unsyncDisposable: self)
     }
 }
 
-struct DisposableSynchedOnActor: SynchronizedDisposable {
-    let actor: Actor
+struct DisposableSynchedOnActor<Disposable: UnsynchronizedDisposable>: SynchronizedDisposable {
+    weak var actor: Actor?
     let unsyncDisposable: UnsynchronizedDisposable
 
     func dispose() async {
+        guard let actor else {
+            return
+        }
         await actor.perform {
             unsyncDisposable.dispose()
         }
     }
 }
 
-struct DisposableSynchedOnNothing: SynchronizedDisposable {
-    let unsyncDisposable: UnsynchronizedDisposable
-
-    func dispose() async {
-        unsyncDisposable.dispose()
-    }
-}
+// struct DisposableSynchedOnNothing: SynchronizedDisposable {
+//    let unsyncDisposable: UnsynchronizedDisposable
+//
+//    func dispose() async {
+//        unsyncDisposable.dispose()
+//    }
+// }

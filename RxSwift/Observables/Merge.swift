@@ -196,9 +196,9 @@
 ////
 ////    private let selector: Selector
 ////
-////    init(selector: @escaping Selector, observer: Observer, cancel: SynchronizedCancelable) async {
+////    init(selector: @escaping Selector, observer: Observer) async {
 ////        self.selector = selector
-////        await super.init(maxConcurrent: 1, observer: observer, cancel: cancel)
+////        await super.init(maxConcurrent: 1, observer: observer)
 ////    }
 ////
 ////    override func performMap(_ element: SourceElement) throws -> SourceSequence {
@@ -239,11 +239,11 @@
 //    let group: CompositeDisposable
 //    let baseSink: BaseSink<Observer>
 //
-//    init(maxConcurrent: Int, observer: Observer, cancel: SynchronizedCancelable) async {
+//    init(maxConcurrent: Int, observer: Observer) async {
 //        sourceSubscription = await SingleAssignmentDisposable()
 //        group = await CompositeDisposable()
 //        self.maxConcurrent = maxConcurrent
-//        baseSink = await BaseSink(observer: observer, cancel: cancel)
+//        baseSink = BaseSink(observer: observer)
 //    }
 //
 //    func run(_ source: Observable<SourceElement>, _ c: C) async -> Disposable {
@@ -345,7 +345,7 @@
 ////            cancel: cancel
 ////        )
 ////        let subscription = await sink.run(source, c.call())
-////        return (sink: sink, subscription: subscription)
+////        return sink
 ////    }
 ////}
 //
@@ -378,9 +378,9 @@ private final actor FlatMapSink<
     private let selector: Selector
     let baseSink: MergeSinkBase<SourceElement, SourceSequence, Observer>
 
-    init(selector: @escaping Selector, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(selector: @escaping Selector, observer: Observer) async {
         self.selector = selector
-        baseSink = await MergeSinkBase(observer: observer, cancel: cancel)
+        baseSink = await MergeSinkBase(observer: observer)
     }
 
     func on(_ event: Event<SourceElement>, _ c: C) async {
@@ -449,9 +449,9 @@ private final actor FlatMapSink<
 ////        activeCount == 0
 ////    }
 ////
-////    init(selector: @escaping Selector, observer: Observer, cancel: SynchronizedCancelable) async {
+////    init(selector: @escaping Selector, observer: Observer) async {
 ////        self.selector = selector
-////        baseSink = await BaseSink(observer: observer, cancel: cancel)
+////        baseSink = BaseSink(observer: observer)
 ////    }
 ////
 ////    override func performMap(_ element: SourceElement) async throws -> SourceSequence {
@@ -505,10 +505,10 @@ final class MergeSinkBase<
     // Base Sink Protocol
     let baseSink: BaseSink<Observer>
 
-    init(observer: Observer, cancel: SynchronizedCancelable) async {
+    init(observer: Observer) async {
         group = await CompositeDisposable()
         sourceSubscription = await SingleAssignmentDisposable()
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func beforeForwardOn() {
@@ -599,11 +599,11 @@ final class MergeSinkBase<
 //    var activeCount = 0
 //    var stopped = false
 //
-//    override init(observer: Observer, cancel: SynchronizedCancelable) async {
+//    override init(observer: Observer) async {
 //        lock = await RecursiveLock()
 //        group = await CompositeDisposable()
 //        sourceSubscription = await SingleAssignmentDisposable()
-//        baseSink = await BaseSink(observer: observer, cancel: cancel)
+//        baseSink = BaseSink(observer: observer)
 //    }
 //
 //    func performMap(_ element: SourceElement) async throws -> SourceSequence {
@@ -710,14 +710,13 @@ private final class FlatMap<
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable)
+        async -> SynchronizedDisposable
         where Observer.Element == SourceSequence.Element {
-        let sink = await FlatMapSink(selector: selector, observer: observer, cancel: cancel)
+        let sink = await FlatMapSink(selector: selector, observer: observer)
         let subscription = await sink.run(source, c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }
 
@@ -751,7 +750,7 @@ private final class FlatMap<
 //            cancel: cancel
 //        )
 //        let subscription = await sink.run(source, c.call())
-//        return (sink: sink, subscription: subscription)
+//        return sink
 //    }
 // }
 //
@@ -780,7 +779,7 @@ private final class FlatMap<
 //            cancel: cancel
 //        )
 //        let subscription = await sink.run(source, c.call())
-//        return (sink: sink, subscription: subscription)
+//        return sink
 //    }
 // }
 //
@@ -799,9 +798,9 @@ private final class FlatMap<
 //    )
 //        async -> (sink: Disposable, subscription: Disposable)
 //        where Observer.Element == SourceSequence.Element {
-//        let sink = await MergeBasicSink<SourceSequence, Observer>(observer: observer, cancel: cancel)
+//        let sink = await MergeBasicSink<SourceSequence, Observer>(observer: observer)
 //        let subscription = await sink.run(source, c.call())
-//        return (sink: sink, subscription: subscription)
+//        return sink
 //    }
 // }
 //
@@ -819,8 +818,8 @@ private final class FlatMap<
 //        cancel: Cancelable
 //    )
 //        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-//        let sink = await MergeBasicSink<Observable<Element>, Observer>(observer: observer, cancel: cancel)
+//        let sink = await MergeBasicSink<Observable<Element>, Observer>(observer: observer)
 //        let subscription = await sink.run(sources, c.call())
-//        return (sink: sink, subscription: subscription)
+//        return sink
 //    }
 // }

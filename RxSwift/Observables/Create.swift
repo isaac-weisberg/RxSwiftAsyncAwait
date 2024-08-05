@@ -36,12 +36,12 @@ private final actor AnonymousObservableSink<Observer: ObserverType>: Sink, Obser
         private let synchronizationTracker: SynchronizationTracker
     #endif
 
-    init(observer: Observer, cancel: SynchronizedCancelable) async {
+    init(observer: Observer) async {
         isStopped = NonAtomicInt(0)
         #if DEBUG
             synchronizationTracker = await SynchronizationTracker()
         #endif
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -84,13 +84,12 @@ private final class AnonymousObservable<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-        let sink = await AnonymousObservableSink(observer: observer, cancel: cancel)
+        async -> SynchronizedDisposable where Observer.Element == Element {
+        let sink = await AnonymousObservableSink(observer: observer)
         let subscription = await sink.run(self, c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }
 

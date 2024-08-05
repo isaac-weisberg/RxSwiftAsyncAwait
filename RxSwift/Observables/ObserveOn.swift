@@ -63,10 +63,10 @@ private final class ObserveOn<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-        let sink = await ObserveOnSink(scheduler: self.scheduler, observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+        let sink = await ObserveOnSink(scheduler: self.scheduler, observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 
     #if TRACE_RESOURCES
@@ -100,7 +100,7 @@ private final class ObserveOnSink<Observer: ObserverType>: ObserverBase<Observer
     let scheduleDisposable: SerialDisposable
     let cancel: Cancelable
 
-    init(scheduler: ImmediateSchedulerType, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(scheduler: ImmediateSchedulerType, observer: Observer) async {
         self.scheduleDisposable = await SerialDisposable()
         self.lock = await SpinLock()
         self.scheduler = scheduler
@@ -194,7 +194,7 @@ private final class ObserveOnSerialDispatchQueueSink<Observer: ObserverType>: Ob
 
     var cachedScheduleLambda: ((C, (sink: ObserveOnSerialDispatchQueueSink<Observer>, event: Event<Element>)) async -> Disposable)!
 
-    init(scheduler: SerialDispatchQueueScheduler, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(scheduler: SerialDispatchQueueScheduler, observer: Observer) async {
         self.scheduler = scheduler
         self.observer = observer
         self.cancel = cancel
@@ -239,10 +239,10 @@ private final class ObserveOnSerialDispatchQueue<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-        let sink = await ObserveOnSerialDispatchQueueSink(scheduler: self.scheduler, observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+        let sink = await ObserveOnSerialDispatchQueueSink(scheduler: self.scheduler, observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 
     #if TRACE_RESOURCES

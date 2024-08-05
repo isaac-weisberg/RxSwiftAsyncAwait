@@ -83,8 +83,8 @@
 ////{
 ////    typealias Element = Observer.Element
 ////
-////    override init(observer: Observer, cancel: SynchronizedCancelable) async {
-////        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+////    override init(observer: Observer) async {
+////        self.baseSink = BaseSink(observer: observer)
 ////    }
 ////
 ////    func on(_ event: Event<Element>, _ c: C) async {
@@ -125,9 +125,9 @@
 ////        await super.init()
 ////    }
 ////
-////    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-////        let sink = await ConcatSink<Sequence, Observer>(observer: observer, cancel: cancel)
+////    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+////        let sink = await ConcatSink<Sequence, Observer>(observer: observer)
 ////        let subscription = await sink.run(c.call(), (self.sources.makeIterator(), self.count))
-////        return (sink: sink, subscription: subscription)
+////        return sink
 ////    }
 ////}

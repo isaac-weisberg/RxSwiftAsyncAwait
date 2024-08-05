@@ -78,10 +78,10 @@ private actor SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
         self.hasLatest = hasLatest
     }
 
-    init(observer: Observer, cancel: SynchronizedCancelable) async {
+    init(observer: Observer) async {
         subscriptions = await SingleAssignmentDisposable()
         innerSubscription = await SerialDisposable()
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func run(_ source: Observable<SourceType>, _ c: C) async -> Disposable {
@@ -193,8 +193,8 @@ private final actor SwitchSinkIter<SourceType, Source: ObservableConvertibleType
 //    Observer
 // >
 //    where Observer.Element == Source.Element {
-//    override init(observer: Observer, cancel: SynchronizedCancelable) async {
-//        baseSink = await BaseSink(observer: observer, cancel: cancel)
+//    override init(observer: Observer) async {
+//        baseSink = BaseSink(observer: observer)
 //    }
 //
 //    override func performMap(_ element: Source) async throws -> Source {
@@ -211,9 +211,9 @@ private final actor SwitchSinkIter<SourceType, Source: ObservableConvertibleType
 //
 //    private let selector: Selector
 //
-//    init(selector: @escaping Selector, observer: Observer, cancel: SynchronizedCancelable) async {
+//    init(selector: @escaping Selector, observer: Observer) async {
 //        self.selector = selector
-//        baseSink = await BaseSink(observer: observer, cancel: cancel)
+//        baseSink = BaseSink(observer: observer)
 //    }
 //
 //    override func performMap(_ element: SourceType) async throws -> Source {
@@ -238,9 +238,9 @@ private final actor SwitchSinkIter<SourceType, Source: ObservableConvertibleType
 //    )
 //        async -> (sink: Disposable, subscription: Disposable)
 //        where Observer.Element == Source.Element {
-//        let sink = await SwitchIdentitySink<Source, Observer>(observer: observer, cancel: cancel)
+//        let sink = await SwitchIdentitySink<Source, Observer>(observer: observer)
 //        let subscription = await sink.run(source, c.call())
-//        return (sink: sink, subscription: subscription)
+//        return sink
 //    }
 // }
 
@@ -269,6 +269,6 @@ private final actor SwitchSinkIter<SourceType, Source: ObservableConvertibleType
 //            cancel: cancel
 //        )
 //        let subscription = await sink.run(source, c.call())
-//        return (sink: sink, subscription: subscription)
+//        return sink
 //    }
 // }

@@ -12,8 +12,8 @@ private final actor AsMaybeSink<Observer: ObserverType>: Sink, ObserverType {
     private var element: Event<Element>?
     let baseSink: BaseSink<Observer>
 
-    init(observer: Observer, cancel: SynchronizedCancelable) async {
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+    init(observer: Observer) async {
+        baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -48,12 +48,11 @@ final class AsMaybe<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-        let sink = await AsMaybeSink(observer: observer, cancel: cancel)
+        async -> SynchronizedDisposable where Observer.Element == Element {
+        let sink = await AsMaybeSink(observer: observer)
         let subscription = await source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

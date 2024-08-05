@@ -107,9 +107,9 @@ private final actor AmbSink<Observer: ObserverType>: Sink {
     // state
     private var choice = AmbState.neither
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func run(_ c: C) async -> Disposable {
@@ -167,13 +167,12 @@ private final class Amb<Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable)
+        async -> SynchronizedDisposable
         where Observer.Element == Element {
-        let sink = await AmbSink(parent: self, observer: observer, cancel: cancel)
+        let sink = await AmbSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

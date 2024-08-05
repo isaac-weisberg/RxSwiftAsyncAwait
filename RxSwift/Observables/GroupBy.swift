@@ -53,11 +53,11 @@
 //    private var refCountDisposable: RefCountDisposable!
 //    private var groupedSubjectTable: [Key: PublishSubject<Element>]
 //
-//    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+//    init(parent: Parent, observer: Observer) async {
 //        subscription = await SingleAssignmentDisposable()
 //        self.parent = parent
 //        groupedSubjectTable = [Key: PublishSubject<Element>]()
-//        baseSink = await BaseSink(observer: observer, cancel: cancel)
+//        baseSink = BaseSink(observer: observer)
 //    }
 //
 //    func run(_ c: C) async -> Disposable {
@@ -141,7 +141,7 @@
 //            Key,
 //            Element
 //        > {
-//        let sink = await GroupBySink(parent: self, observer: observer, cancel: cancel)
+//        let sink = await GroupBySink(parent: self, observer: observer)
 //        return await (sink: sink, subscription: sink.run(c.call()))
 //    }
 // }

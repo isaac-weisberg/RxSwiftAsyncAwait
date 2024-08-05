@@ -45,10 +45,10 @@ private final actor GenerateSink<Sequence, Observer: ObserverType>: Sink {
 
     private var state: Sequence
 
-    init(parent: Parent, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
         state = parent.initialState
-        baseSink = await BaseSink(observer: observer, cancel: cancel)
+        baseSink = BaseSink(observer: observer)
     }
 
     func run(_ c: C) async -> Disposable {
@@ -100,12 +100,11 @@ private final class Generate<Sequence, Element>: Producer<Element> {
 
     override func run<Observer: ObserverType>(
         _ c: C,
-        _ observer: Observer,
-        cancel: SynchronizedCancelable
+        _ observer: Observer
     )
-        async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == Element {
-        let sink = await GenerateSink(parent: self, observer: observer, cancel: cancel)
+        async -> SynchronizedDisposable where Observer.Element == Element {
+        let sink = await GenerateSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

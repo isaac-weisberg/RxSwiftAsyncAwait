@@ -30,9 +30,9 @@ private final class CompactMapSink<SourceType, Observer: ObserverType>: Sink, Ob
     private let transform: Transform
     let baseSink: BaseSink<Observer>
 
-    init(transform: @escaping Transform, observer: Observer, cancel: SynchronizedCancelable) async {
+    init(transform: @escaping Transform, observer: Observer) async {
         self.transform = transform
-        self.baseSink = await BaseSink(observer: observer, cancel: cancel)
+        self.baseSink = BaseSink(observer: observer)
     }
 
     func on(_ event: Event<SourceType>, _ c: C) async {
@@ -70,9 +70,9 @@ private final class CompactMap<SourceType, ResultType>: Producer<ResultType> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer, cancel: SynchronizedCancelable) async -> (sink: SynchronizedDisposable, subscription: SynchronizedDisposable) where Observer.Element == ResultType {
-        let sink = await CompactMapSink(transform: self.transform, observer: observer, cancel: cancel)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == ResultType {
+        let sink = await CompactMapSink(transform: self.transform, observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
-        return (sink: sink, subscription: subscription)
+        return sink
     }
 }

@@ -18,26 +18,13 @@ protocol Sink: SynchronizedDisposable, AnyObject {
 protocol BaseSinkProtocol {
     associatedtype Observer: ObserverType
 
-    func beforeForwardOn()
-
-    func afterForwardOn()
-
-    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async
-
-    func isDisposed() -> Bool
-
-    func setDisposedSync()
-
-    func dispose() async
-
-    var cancel: SynchronizedCancelable { get }
     var observer: Observer { get }
 }
 
 extension Sink {
-    func forwarder() -> SinkForward<Self> {
-        SinkForward(forward: self)
-    }
+//    func forwarder() -> SinkForward<Self> {
+//        SinkForward(forward: self)
+//    }
 
 //    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
 //        baseSink.beforeForwardOn()
@@ -55,51 +42,14 @@ extension Sink {
 
 final class BaseSink<Observer: ObserverType>: BaseSinkProtocol {
     let observer: Observer
-    let cancel: SynchronizedCancelable
-    private let disposed: NonAtomicInt
 
-    #if DEBUG
-        private let synchronizationTracker: SynchronizationTrackerSync
-    #endif
-
-    init(observer: Observer, cancel: SynchronizedCancelable) async {
-        disposed = NonAtomicInt(0)
+    init(observer: Observer) {
         #if TRACE_RESOURCES
+        Task {
             _ = await Resources.incrementTotal()
-        #endif
-        #if DEBUG
-            synchronizationTracker = SynchronizationTrackerSync()
+        }
         #endif
         self.observer = observer
-        self.cancel = cancel
-    }
-
-    func beforeForwardOn() {
-        #if DEBUG
-            synchronizationTracker.register(synchronizationErrorMessage: .default)
-        #endif
-    }
-
-    func afterForwardOn() {
-        #if DEBUG
-            synchronizationTracker.unregister()
-        #endif
-    }
-
-    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
-        await observer.on(event, c.call())
-    }
-
-    func isDisposed() -> Bool {
-        isFlagSet(disposed, 1)
-    }
-
-    func setDisposedSync() {
-        fetchOr(disposed, 1)
-    }
-
-    func dispose() async {
-        await cancel.dispose()
     }
 
     deinit {
@@ -120,7 +70,7 @@ final class BaseSink<Observer: ObserverType>: BaseSinkProtocol {
 //        private let synchronizationTracker: SynchronizationTracker
 //    #endif
 //
-//    init(observer: Observer, cancel: SynchronizedCancelable) async {
+//    init(observer: Observer) async {
 //        disposed = await AtomicInt(0)
 //        #if TRACE_RESOURCES
 //            _ = await Resources.incrementTotal()
@@ -168,23 +118,3 @@ final class BaseSink<Observer: ObserverType>: BaseSinkProtocol {
 //        #endif
 //    }
 // }
-
-final class SinkForward<TheSink: Sink>: ObserverType {
-    typealias Element = TheSink.Observer.Element
-
-    private let forward: TheSink
-
-    init(forward: TheSink) {
-        self.forward = forward
-    }
-
-    final func on(_ event: Event<Element>, _ c: C) async {
-        switch event {
-        case .next:
-            await forward.baseSink.observer.on(event, c.call())
-        case .error, .completed:
-            await forward.baseSink.observer.on(event, c.call())
-            await forward.baseSink.cancel.dispose()
-        }
-    }
-}
