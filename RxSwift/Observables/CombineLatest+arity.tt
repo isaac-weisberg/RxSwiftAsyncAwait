@@ -47,7 +47,7 @@ extension ObservableType where Element == Any {
     }
 }
 
-final class CombineLatest<%= i %><<%= (Array(1...i).map { "O\($0): ObservableType" }).joined(separator: ", ") %>, Result> : Producer<Result> {
+final class CombineLatest<%= i %><<%= (Array(1...i).map { "O\($0): ObservableType" }).joined(separator: ", ") %>, Result> : Observable<Result> {
 <%= (Array(1...i).map {
 "    typealias E\($0) = O\($0).Element"
 }).joined(separator: "\n") %>
@@ -74,7 +74,7 @@ final class CombineLatest<%= i %><<%= (Array(1...i).map { "O\($0): ObservableTyp
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
 <%= Array(1...i).map {

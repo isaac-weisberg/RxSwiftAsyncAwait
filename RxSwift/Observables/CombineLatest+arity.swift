@@ -48,7 +48,7 @@ extension ObservableType where Element == Any {
     }
 }
 
-final class CombineLatest2<O1: ObservableType, O2: ObservableType, Result> : Producer<Result> {
+final class CombineLatest2<O1: ObservableType, O2: ObservableType, Result> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias ResultSelector = (E1, E2) throws -> Result
@@ -71,7 +71,7 @@ final class CombineLatest2<O1: ObservableType, O2: ObservableType, Result> : Pro
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -138,7 +138,7 @@ extension ObservableType where Element == Any {
     }
 }
 
-final class CombineLatest3<O1: ObservableType, O2: ObservableType, O3: ObservableType, Result> : Producer<Result> {
+final class CombineLatest3<O1: ObservableType, O2: ObservableType, O3: ObservableType, Result> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
@@ -165,7 +165,7 @@ final class CombineLatest3<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -235,7 +235,7 @@ extension ObservableType where Element == Any {
     }
 }
 
-final class CombineLatest4<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, Result> : Producer<Result> {
+final class CombineLatest4<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, Result> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
@@ -266,7 +266,7 @@ final class CombineLatest4<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -339,7 +339,7 @@ extension ObservableType where Element == Any {
     }
 }
 
-final class CombineLatest5<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, Result> : Producer<Result> {
+final class CombineLatest5<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, Result> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
@@ -374,7 +374,7 @@ final class CombineLatest5<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -450,7 +450,7 @@ extension ObservableType where Element == Any {
     }
 }
 
-final class CombineLatest6<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, Result> : Producer<Result> {
+final class CombineLatest6<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, Result> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
@@ -489,7 +489,7 @@ final class CombineLatest6<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -568,7 +568,7 @@ extension ObservableType where Element == Any {
     }
 }
 
-final class CombineLatest7<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType, Result> : Producer<Result> {
+final class CombineLatest7<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType, Result> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
@@ -611,7 +611,7 @@ final class CombineLatest7<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -693,7 +693,7 @@ extension ObservableType where Element == Any {
     }
 }
 
-final class CombineLatest8<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType, O8: ObservableType, Result> : Producer<Result> {
+final class CombineLatest8<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType, O8: ObservableType, Result> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
@@ -740,7 +740,7 @@ final class CombineLatest8<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },

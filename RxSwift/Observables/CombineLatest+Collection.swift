@@ -38,12 +38,12 @@ public extension ObservableType {
 }
 
 final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observer: ObserverType>:
-    Sink where Collection.Element: ObservableType {
+    SynchronizedDisposable where Collection.Element: ObservableType {
     typealias Result = Observer.Element
     typealias SourceElement = Collection.Element.Element
     typealias ResultSelector = ([SourceElement]) throws -> Observer.Element
 
-    let baseSink: BaseSink<Observer>
+    let observer: Observer
     let resultSelector: ResultSelector
     let parentSources: Collection
     let parentCount: Int
@@ -56,7 +56,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
     var subscriptions: [SynchronizedDisposable?]
     var disposed = false
 
-    init(parentSources: Collection, resultSelector: @escaping ResultSelector, observer: Observer) async {
+    init(parentSources: Collection, resultSelector: @escaping ResultSelector, observer: Observer) {
         self.parentSources = parentSources
         parentCount = parentSources.count
         self.resultSelector = resultSelector
@@ -64,12 +64,17 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         isDone = [Bool](repeating: false, count: parentCount)
         subscriptions = Array(repeating: nil, count: parentCount)
 
-        baseSink = BaseSink(observer: observer)
+        self.observer = observer
     }
 
     func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
         if !disposed {
-            await baseSink.observer.on(event, c.call())
+            switch observer.on {
+            case .sync(let syncObserverEventHandler):
+                syncObserverEventHandler(event, c.call())
+            case .async(let asyncObserverEventHandler):
+                await asyncObserverEventHandler(event, c.call())
+            }
         }
     }
 
@@ -146,9 +151,9 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         for i in parentSources {
             let index = j
             let source = i
-            let disposable = await source.subscribe(c.call(), AnyObserver { c, event in
+            let disposable = await source.subscribe(c.call(), AnyObserver(eventHandler: .async { event, c in
                 await self.on(c.call(), event, atIndex: index)
-            })
+            }))
 
             subscriptions[j] = disposable
 
@@ -173,7 +178,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
     }
 }
 
-final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: Producer<Result>
+final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: Observable<Result>
     where Collection.Element: ObservableType {
     typealias ResultSelector = ([Collection.Element.Element]) throws -> Result
 
@@ -188,12 +193,9 @@ final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: P
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(
-        _ c: C,
-        _ observer: Observer
-    )
-        async -> SynchronizedDisposable where Observer.Element == Result {
-        let sink = await CombineLatestCollectionTypeSink(
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any SynchronizedDisposable
+        where Result == Observer.Element, Observer: ObserverType {
+        let sink = CombineLatestCollectionTypeSink(
             parentSources: sources,
             resultSelector: resultSelector,
             observer: observer
