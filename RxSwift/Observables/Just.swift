@@ -33,8 +33,7 @@ public extension ObservableType {
     }
 }
 
-private final actor JustScheduledSink<Observer: ObserverType>: UnsynchronizedDisposable,
-    SynchronizedDisposable {
+private final actor JustScheduledSink<Observer: SyncObserverType>: SynchronizedDisposable {
     typealias Parent = JustScheduled<Observer.Element>
 
     private let parent: Parent
@@ -46,16 +45,9 @@ private final actor JustScheduledSink<Observer: ObserverType>: UnsynchronizedDis
         self.observer = observer
     }
 
-    nonisolated func dispose() {
-        Task {
-            dispose()
-        }
-    }
-
     func dispose() async {
         if !disposed {
             disposed = true
-
         }
     }
 
@@ -72,7 +64,7 @@ private final actor JustScheduledSink<Observer: ObserverType>: UnsynchronizedDis
     }
 }
 
-private final class JustScheduled<Element>: UnsynchronizedObservable<Element> {
+private final class JustScheduled<Element>: SynchronizedObservable<Element> {
     fileprivate let scheduler: ActorScheduler
     fileprivate let element: Element
 
@@ -82,10 +74,17 @@ private final class JustScheduled<Element>: UnsynchronizedObservable<Element> {
         super.init()
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any UnsynchronizedDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronizedDisposable
         where Element == Observer.Element, Observer: ObserverType {
 
-        let sink = JustScheduledSink(parent: self, observer: observer)
+            let sink = JustScheduledSink(parent: self, observer: AnySyncObserver(eventHandler: { e, c in
+                switch observer.on {
+                case .sync(let syncObserverEventHandler):
+                    observer.on()
+                case .async(let asyncObserverEventHandler):
+                    <#code#>
+                }
+            }))
         Task {
             await sink.run(c.call())
         }
