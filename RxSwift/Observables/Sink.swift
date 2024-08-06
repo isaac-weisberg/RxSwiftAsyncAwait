@@ -16,7 +16,7 @@ protocol Sink: SynchronizedDisposable, AnyObject {
 }
 
 protocol BaseSinkProtocol {
-    associatedtype Observer: SynchronizedObserverType
+    associatedtype Observer: ObserverType
 
     var observer: Observer { get }
 }
@@ -40,7 +40,7 @@ extension Sink {
 //    }
 }
 
-final class BaseSink<Observer: SynchronizedObserverType>: BaseSinkProtocol {
+final class BaseSink<Observer: ObserverType>: BaseSinkProtocol {
     let observer: Observer
 
     init(observer: Observer) {

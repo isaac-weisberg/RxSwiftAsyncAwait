@@ -6,37 +6,87 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-/// A type-erased `ObserverType`.
-///
-/// Forwards operations to an arbitrary underlying observer with the same `Element` type, hiding the specifics of the
-/// underlying observer type.
-public struct AnyObserver<Element>: SynchronizedObserverType {
+public struct AnySyncObserver<Element>: SyncObserverType {
     /// Anonymous event handler type.
-    public typealias EventHandler = (C, Event<Element>) async -> Void
+    public typealias EventHandler = SyncObserverEventHandler<Element>
 
-    private let observer: EventHandler
+    public let on: EventHandler
 
     /// Construct an instance whose `on(event)` calls `eventHandler(event)`
     ///
     /// - parameter eventHandler: Event handler that observes sequences events.
     public init(eventHandler: @escaping EventHandler) {
-        observer = eventHandler
+        on = eventHandler
+    }
+    
+    public func on(_ event: Event<Element>, _ c: C) {
+        self.on(event, c.call())
     }
 
     /// Construct an instance whose `on(event)` calls `observer.on(event)`
     ///
     /// - parameter observer: Observer that receives sequence events.
-    public init<Observer: SynchronizedObserverType>(_ observer: Observer) where Observer.Element == Element {
-        self.observer = { c, e in
-            await observer.on(e, c)
-        }
+    public init<Observer: SyncObserverType>(_ observer: Observer) where Observer.Element == Element {
+        self.on = observer.on(_:_:)
+    }
+}
+
+public struct AnyAsyncObserver<Element>: AsyncObserverType {
+    /// Anonymous event handler type.
+    public typealias EventHandler = AsyncObserverEventHandler<Element>
+
+    public let on: EventHandler
+
+    /// Construct an instance whose `on(event)` calls `eventHandler(event)`
+    ///
+    /// - parameter eventHandler: Event handler that observes sequences events.
+    public init(eventHandler: @escaping EventHandler) {
+        on = eventHandler
+    }
+    
+    public func on(_ event: Event<Element>, _ c: C) async {
+        await self.on(event, c.call())
     }
 
-    /// Send `event` to this observer.
+    /// Construct an instance whose `on(event)` calls `observer.on(event)`
     ///
-    /// - parameter event: Event instance.
-    public func on(_ event: Event<Element>, _ c: C) async {
-        await observer(c.call(), event)
+    /// - parameter observer: Observer that receives sequence events.
+    public init<Observer: SyncObserverType>(_ observer: Observer) where Observer.Element == Element {
+        self.on = observer.on(_:_:)
+    }
+}
+
+/// A type-erased `ObserverType`.
+///
+/// Forwards operations to an arbitrary underlying observer with the same `Element` type, hiding the specifics of the
+/// underlying observer type.
+public struct AnyObserver<Element>: ObserverType {
+    /// Anonymous event handler type.
+    public typealias EventHandler = ObserverEventHandler<Element>
+
+    public let on: EventHandler
+
+    /// Construct an instance whose `on(event)` calls `eventHandler(event)`
+    ///
+    /// - parameter eventHandler: Event handler that observes sequences events.
+    public init(eventHandler: EventHandler) {
+        on = eventHandler
+    }
+
+    /// Construct an instance whose `on(event)` calls `observer.on(event)`
+    ///
+    /// - parameter observer: Observer that receives sequence events.
+    public init<Observer: ObserverType>(_ observer: Observer) where Observer.Element == Element {
+        switch observer.on {
+        case .sync(let observer):
+            self.on = .sync { e, c in
+                observer(e, c.call())
+            }
+        case .async(let observer):
+            self.on = .async { e, c in
+                await observer(e, c.call())
+            }
+        }
     }
 
     /// Erases type of observer and returns canonical observer.
@@ -49,10 +99,10 @@ public struct AnyObserver<Element>: SynchronizedObserverType {
 
 extension AnyObserver {
     /// Collection of `AnyObserver`s
-    typealias s = Bag<(Event<Element>, C) async -> Void>
+    typealias s = Bag<EventHandler>
 }
 
-public extension SynchronizedObserverType {
+public extension ObserverType {
     /// Erases type of observer and returns canonical observer.
     ///
     /// - returns: type erased observer.
@@ -65,69 +115,15 @@ public extension SynchronizedObserverType {
     ///
     /// - returns: observer that transforms events.
     func mapObserver<Result>(_ transform: @escaping (Result) throws -> Element) -> AnyObserver<Result> {
-        AnyObserver { c, e in
-            await self.on(e.map(transform), c.call())
-        }
-    }
-}
-
-public struct AnyUnsynchronizedObserver<Element>: UnsynchronizedObserverType {
-    /// Anonymous event handler type.
-    public typealias EventHandler = (C, Event<Element>) -> Void
-
-    private let observer: EventHandler
-
-    /// Construct an instance whose `on(event)` calls `eventHandler(event)`
-    ///
-    /// - parameter eventHandler: Event handler that observes sequences events.
-    public init(eventHandler: @escaping EventHandler) {
-        observer = eventHandler
-    }
-
-    /// Construct an instance whose `on(event)` calls `observer.on(event)`
-    ///
-    /// - parameter observer: Observer that receives sequence events.
-    public init<Observer: UnsynchronizedObserverType>(_ observer: Observer) where Observer.Element == Element {
-        self.observer = { c, e in
-            observer.on(e, c)
-        }
-    }
-
-    /// Send `event` to this observer.
-    ///
-    /// - parameter event: Event instance.
-    public func on(_ event: Event<Element>, _ c: C) {
-        observer(c.call(), event)
-    }
-
-    /// Erases type of observer and returns canonical observer.
-    ///
-    /// - returns: type erased observer.
-    public func asObserver() -> AnyUnsynchronizedObserver<Element> {
-        self
-    }
-}
-
-extension AnyUnsynchronizedObserver {
-    /// Collection of `AnyObserver`s
-    typealias s = Bag<(Event<Element>, C) -> Void>
-}
-
-public extension UnsynchronizedObserverType {
-    /// Erases type of observer and returns canonical observer.
-    ///
-    /// - returns: type erased observer.
-    func asObserver() -> AnyUnsynchronizedObserver<Element> {
-        AnyUnsynchronizedObserver(self)
-    }
-
-    /// Transforms observer of type R to type E using custom transform method.
-    /// Each event sent to result observer is transformed and sent to `self`.
-    ///
-    /// - returns: observer that transforms events.
-    func mapObserver<Result>(_ transform: @escaping (Result) throws -> Element) -> AnyUnsynchronizedObserver<Result> {
-        AnyUnsynchronizedObserver { c, e in
-            self.on(e.map(transform), c.call())
+        switch self.on {
+        case .sync(let observer):
+            return AnyObserver(eventHandler: .sync { e, c in
+                observer(e.map(transform), c.call())
+            })
+        case .async(let observer):
+            return AnyObserver(eventHandler: .async { e, c in
+                await observer(e.map(transform), c.call())
+            })
         }
     }
 }

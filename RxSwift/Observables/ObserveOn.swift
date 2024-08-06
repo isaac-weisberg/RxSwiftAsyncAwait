@@ -17,7 +17,7 @@ final class Desynchronized<Source: ObservableType>: UnsynchronizedObservable<Sou
         self.source = source
     }
     
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any UnsynchronizedDisposable where Source.Element == Observer.Element, Observer: UnsynchronizedObserverType {
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any UnsynchronizedDisposable where Source.Element == Observer.Element, Observer: ObserverType {
         let sink = DesynchronizedSink<Observer>()
         
         Task {
@@ -29,7 +29,7 @@ final class Desynchronized<Source: ObservableType>: UnsynchronizedObservable<Sou
     
 }
 
-final actor DesynchronizedSink<Observer: UnsynchronizedObserverType>: SynchronizedObserverType, SynchronizedDisposable, UnsynchronizedDisposable {
+final actor DesynchronizedSink<Observer: ObserverType>: ObserverType, SynchronizedDisposable, UnsynchronizedDisposable {
     typealias Element = Observer.Element
     
     var observer: Observer?
@@ -80,7 +80,7 @@ final class ObserveOnUnsync<Source: UnsynchronizedObservableType>: Unsynchronize
     }
 
     override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any UnsynchronizedDisposable
-        where Element == Observer.Element, Observer: UnsynchronizedObserverType {
+        where Element == Observer.Element, Observer: ObserverType {
 
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
 
@@ -89,7 +89,7 @@ final class ObserveOnUnsync<Source: UnsynchronizedObservableType>: Unsynchronize
     }
 }
 
-final class ObserveOnSink<Observer: UnsynchronizedObserverType>: UnsynchronizedObserverType, SynchronizedObserverType,
+final class ObserveOnSink<Observer: ObserverType>: ObserverType, ObserverType,
     SynchronizedDisposable, UnsynchronizedDisposable {
     typealias Element = Observer.Element
 
@@ -225,7 +225,7 @@ final class ObserveOnSink<Observer: UnsynchronizedObserverType>: UnsynchronizedO
 //        await super.init()
 //    }
 //
-//    override func run<Observer: SynchronizedObserverType>(_ c: C, _ observer: Observer) async ->
+//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async ->
 //    SynchronizedDisposable where Observer.Element == Element {
 //        let sink = await ObserveOnSink(scheduler: self.scheduler, observer: observer)
 //        let subscription = await self.source9.subscribe(c.call(), sink)

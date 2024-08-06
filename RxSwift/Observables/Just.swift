@@ -33,7 +33,7 @@ public extension ObservableType {
     }
 }
 
-private final actor JustScheduledSink<Observer: UnsynchronizedObserverType>: UnsynchronizedDisposable,
+private final actor JustScheduledSink<Observer: ObserverType>: UnsynchronizedDisposable,
     SynchronizedDisposable {
     typealias Parent = JustScheduled<Observer.Element>
 
@@ -83,7 +83,7 @@ private final class JustScheduled<Element>: UnsynchronizedObservable<Element> {
     }
 
     override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any UnsynchronizedDisposable
-        where Element == Observer.Element, Observer: UnsynchronizedObserverType {
+        where Element == Observer.Element, Observer: ObserverType {
 
         let sink = JustScheduledSink(parent: self, observer: observer)
         Task {
@@ -101,7 +101,7 @@ private final class Just<Element>: UnsynchronizedObservable<Element> {
         super.init()
     }
 
-    override func subscribe<Observer: UnsynchronizedObserverType>(
+    override func subscribe<Observer: ObserverType>(
         _ c: C,
         _ observer: Observer
     )

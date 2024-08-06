@@ -11,7 +11,7 @@ class Producer<Element>: Observable<Element> {
         await super.init()
     }
 
-    override func subscribe<Observer: SynchronizedObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
         where Observer.Element == Element {
 
         // The returned disposable needs to release all references once it was disposed.
@@ -20,7 +20,7 @@ class Producer<Element>: Observable<Element> {
         return sinkAndSubscription
     }
 
-    func run<Observer: SynchronizedObserverType>(
+    func run<Observer: ObserverType>(
         _ c: C,
         _ observer: Observer
     )

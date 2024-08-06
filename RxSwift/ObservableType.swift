@@ -31,7 +31,7 @@ public protocol ObservableType: ObservableConvertibleType {
 
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
-    func subscribe<Observer: SynchronizedObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
         where Observer.Element == Element
 }
 
@@ -69,7 +69,7 @@ public protocol UnsynchronizedObservableType: UnsynchronizedObservableConvertibl
 
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
-    func subscribe<Observer: UnsynchronizedObserverType>(_ c: C, _ observer: Observer) -> UnsynchronizedDisposable
+    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) -> UnsynchronizedDisposable
         where Observer.Element == Element
 }
 
