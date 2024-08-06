@@ -14,7 +14,7 @@
         // call me manually plz
         public static func initialize() async {
             resourceCount = await ActualAtomicInt(0)
-            numberOfSerialDispatchObservables = await ActualAtomicInt(0)
+//            numberOfSerialDispatchObservables = await ActualAtomicInt(0)
         }
 
         /// Counts internal Rx resource allocations (Observables, Observers, Disposables, etc.). This provides a simple

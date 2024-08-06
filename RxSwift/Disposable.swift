@@ -6,23 +6,35 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public protocol SynchronousDisposable {
+public protocol SynchronousDisposable: Sendable {
     func dispose()
 }
 
 /// Represents a disposable resource.
-public protocol AsynchronousDisposable {
+public protocol AsynchronousDisposable: Sendable {
     /// Dispose resource.
     func dispose() async
 }
 
+private struct A: AsynchronousDisposable {
+    let disposable: SynchronousDisposable
+
+    func dispose() async {
+        disposable.dispose()
+    }
+}
+
 extension SynchronousDisposable {
+    func asAsync() -> AsynchronousDisposable {
+        A(disposable: self)
+    }
+
     func sync(on actor: Actor) -> DisposableSynchedOnActor<Self> {
         DisposableSynchedOnActor(actor: actor, unsyncDisposable: self)
     }
 }
 
-struct DisposableSynchedOnActor<Disposable: SynchronousDisposable>: AsynchronousDisposable {
+struct DisposableSynchedOnActor<Disposable: SynchronousDisposable>: AsynchronousDisposable, Sendable {
     weak var actor: Actor?
     let unsyncDisposable: SynchronousDisposable
 
@@ -30,7 +42,7 @@ struct DisposableSynchedOnActor<Disposable: SynchronousDisposable>: Asynchronous
         guard let actor else {
             return
         }
-        await actor.perform {
+        await actor.perform(C()) { _ in
             unsyncDisposable.dispose()
         }
     }

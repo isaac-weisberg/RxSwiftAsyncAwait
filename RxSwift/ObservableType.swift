@@ -35,6 +35,11 @@ public protocol ObservableType: ObservableConvertibleType, Sendable {
         where Observer.Element == Element
 }
 
+public protocol AsyncObservableToAsyncObserverType: AsyncObservableToAsyncObserverConvertibleType, Sendable {
+    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element
+}
+
 public protocol AsyncObservableToSyncObserverType: AsyncObservableToSyncObserverConvertibleType, Sendable {
     func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element

@@ -1,137 +1,110 @@
-public extension SynchronousObservableType {
-    func observe(on scheduler: ActorScheduler) -> SynchronousObservable<Element> {
-        ObserveOnUnsync(self, scheduler)
+public extension AsyncObservableToSyncObserver {
+    func observe(on scheduler: ActorScheduler) -> AsyncObservableToSyncObserver<Element> {
+        ObserveOnAsyncToSync(source: self, scheduler: scheduler)
     }
 }
 
-public extension ObservableType {
-    func deAsynchronous() -> SynchronousObservable<Element> {
-        DeAsynchronous(source: self)
-    }
-}
-
-private final class DeAsynchronous<Source: ObservableType>: SynchronousObservable<Source.Element> {
-    let source: Source
-
-    init(source: Source) {
-        self.source = source
-    }
-
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
-        where Source.Element == Observer.Element, Observer: ObserverType {
-        let sink = DeAsynchronousSink<AnySyncObserver<Source.Element>>()
-
-        Task {
-            await sink.run(c.call(), source, AnySyncObserver(eventHandler: { e, c in
-                switch observer.on {
-                case .sync(let syncObserverEventHandler):
-                    syncObserverEventHandler(e, c.call())
-                case .async(let asyncObserverEventHandler):
-                    #if DEBUG
-                        assertionFailure(
-                            "We are desynchronizing an observable, yet you have provided a Asynchronous observer? That's weird... This is supposed to be internal code, so it's my mistake... right?"
-                        )
-                    #endif
-                    Task {
-                        await asyncObserverEventHandler(e, c.call())
-                    }
-                }
-            }))
-        }
-
-        return sink
-    }
-
-}
-
-final actor DeAsynchronousSink<Observer: SyncObserverType>: ObserverType, AsynchronousDisposable,
-    SynchronousDisposable {
-    typealias Element = Observer.Element
-
-    var observer: Observer?
-    var disposed = false
-    var sourceSubscription: AsynchronousDisposable?
-
-    init() {}
-
-    nonisolated var on: ObserverEventHandler<Observer.Element> {
-        .async { [self] e, c in
-            await self.on(e, c.call())
-        }
-    }
-
-    func on(_ event: Event<Element>, _ c: C) async {
-        if disposed {
-            return
-        }
-
-        observer!.on(event, c.call())
-    }
-
-    nonisolated func dispose() {
-        Task {
-            await self.dispose()
-        }
-    }
-
-    func dispose() async {
-        if !disposed {
-            disposed = true
-            observer = nil
-            let sourceSubscription = sourceSubscription
-            self.sourceSubscription = nil
-            await sourceSubscription?.dispose()
-        }
-    }
-
-    func run<Observable: ObservableType>(_ c: C, _ source: Observable, _ observer: Observer) async
-        where Observable.Element == Element {
-        self.observer = observer
-        sourceSubscription = await source.subscribe(c.call(), self)
-    }
-}
-
-final class ObserveOnUnsync<Source: SynchronousObservableType>: SynchronousObservable<Source.Element> {
+final class ObserveOnAsyncToSync<Element: Sendable>: AsyncObservableToSyncObserver<Element> {
+    typealias Source = AsyncObservableToSyncObserver<Element>
     let source: Source
     let scheduler: ActorScheduler
 
-    init(_ source: Source, _ scheduler: ActorScheduler) {
+    init(source: Source, scheduler: ActorScheduler) {
         self.source = source
         self.scheduler = scheduler
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
-        where Element == Observer.Element, Observer: ObserverType {
-
-        let sink = ObserveOnSink(scheduler: scheduler, observer: AnySyncObserver(eventHandler: { e, c in
-            switch observer.on {
-            case .sync(let syncObserverEventHandler):
-                syncObserverEventHandler(e, c.call())
-            case .async(let asyncObserverEventHandler):
-                #if DEBUG
-                    assertionFailure(
-                        "Why did you bother subscribing an async observer to an observe(on:)? ObserverOn doesn't take effect if the observer needs to be notified asynchronously"
-                    )
-                #endif
-                Task {
-                    await asyncObserverEventHandler(e, c.call())
-                }
-            }
-        }))
-
-        sink.run(c.call(), source: source)
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Element == Observer.Element, Observer: SyncObserverType {
+        let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
+        let disp = await source.subscribe(c.call(), sink)
+        await sink.setInnerSyncDisposable(disp)
         return sink
     }
 }
 
-final class ObserveOnSink<Observer: SyncObserverType>: ObserverType,
-    AsynchronousDisposable, SynchronousDisposable {
+public extension AsyncObservableToAsyncObserver {
+    func observe(on scheduler: ActorScheduler) -> AsyncObservableToSyncObserver<Element> {
+        ObserveOnAsyncToAsync(source: self, scheduler: scheduler)
+    }
+}
+
+final class ObserveOnAsyncToAsync<Element: Sendable>: AsyncObservableToSyncObserver<Element> {
+    typealias Source = AsyncObservableToAsyncObserver<Element>
+    let source: Source
+    let scheduler: ActorScheduler
+
+    init(source: Source, scheduler: ActorScheduler) {
+        self.source = source
+        self.scheduler = scheduler
+    }
+
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Element == Observer.Element, Observer: SyncObserverType {
+        let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
+        let disp = await source.subscribe(c.call(), sink)
+        await sink.setInnerSyncDisposable(disp)
+        return sink
+    }
+}
+
+public extension SyncObservableToAsyncObserver {
+    func observe(on scheduler: ActorScheduler) -> AsyncObservableToSyncObserver<Element> {
+        ObserveOnSyncToAsync(source: self, scheduler: scheduler)
+    }
+}
+
+final class ObserveOnSyncToAsync<Element: Sendable>: AsyncObservableToSyncObserver<Element> {
+    typealias Source = SyncObservableToAsyncObserver<Element>
+    let source: Source
+    let scheduler: ActorScheduler
+
+    init(source: Source, scheduler: ActorScheduler) {
+        self.source = source
+        self.scheduler = scheduler
+    }
+
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Element == Observer.Element, Observer: SyncObserverType {
+        let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
+        let disp = source.subscribe(c.call(), sink)
+        await sink.setInnerSyncDisposable(disp.asAsync())
+        return sink
+    }
+}
+
+public extension SyncObservableToSyncObserver {
+    func observe(on scheduler: ActorScheduler) -> AsyncObservableToSyncObserver<Element> {
+        ObserveOnSyncToSync(source: self, scheduler: scheduler)
+    }
+}
+
+final class ObserveOnSyncToSync<Element: Sendable>: AsyncObservableToSyncObserver<Element> {
+    typealias Source = SyncObservableToSyncObserver<Element>
+    let source: Source
+    let scheduler: ActorScheduler
+
+    init(source: Source, scheduler: ActorScheduler) {
+        self.source = source
+        self.scheduler = scheduler
+    }
+
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Element == Observer.Element, Observer: SyncObserverType {
+        let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
+        let disp = source.subscribe(c.call(), sink)
+        await sink.setInnerSyncDisposable(disp.asAsync())
+        return sink
+    }
+}
+
+final actor ObserveOnSink<Observer: SyncObserverType>: SyncObserverType, AsyncObserverType,
+    AsynchronousDisposable, Sendable {
     typealias Element = Observer.Element
 
     let scheduler: ActorScheduler
     let observer: Observer
-    var innerSyncDisposable: AsynchronousDisposable?
-    var innerUnsyncDisposable: SynchronousDisposable?
+    private var innerSyncDisposable: AsynchronousDisposable?
     var disposed = false
 
     init(scheduler: ActorScheduler, observer: Observer) {
@@ -140,30 +113,16 @@ final class ObserveOnSink<Observer: SyncObserverType>: ObserverType,
     }
 
     func isDisposed() async -> Bool {
-        await scheduler.perform(C()) { [self] _ in
-            disposed
-        }
+        disposed
     }
 
     func dispose() async {
-        await scheduler.perform(C()) { [self] _ in
-            if !disposed {
-                disposed = true
+        if !disposed {
+            disposed = true
 
-                let innerSyncDisposable = innerSyncDisposable
-                self.innerSyncDisposable = nil
-                Task {
-                    await innerSyncDisposable?.dispose()
-                }
-                innerUnsyncDisposable?.dispose()
-                innerUnsyncDisposable = nil
-            }
-        }
-    }
-
-    var on: ObserverEventHandler<Observer.Element> {
-        .async { [self] e, c in
-            self.on(e, c.call())
+            let innerSyncDisposable = innerSyncDisposable
+            self.innerSyncDisposable = nil
+            await innerSyncDisposable?.dispose()
         }
     }
 
@@ -173,17 +132,8 @@ final class ObserveOnSink<Observer: SyncObserverType>: ObserverType,
         }
 
         await scheduler.perform(c.call()) { [self] c in
-            if disposed {
-                return
-            }
-
             observer.on(event, c.call())
         }
-    }
-
-    func run<Observable: SynchronousObservableType>(_ c: C, source: Observable)
-        where Observable.Element == Observer.Element {
-        innerUnsyncDisposable = source.subscribe(c.call(), self)
     }
 
     nonisolated func on(_ event: Event<Element>, _ c: C) {
@@ -196,6 +146,15 @@ final class ObserveOnSink<Observer: SyncObserverType>: ObserverType,
         Task {
             await self.dispose()
         }
+    }
+
+    func setInnerSyncDisposable(_ disposable: any AsynchronousDisposable) async {
+        if disposed {
+            await innerSyncDisposable?.dispose()
+            return
+        }
+
+        innerSyncDisposable = disposable
     }
 
 }
@@ -377,20 +336,20 @@ final class ObserveOnSink<Observer: SyncObserverType>: ObserverType,
 //    }
 // }
 //
-#if TRACE_RESOURCES
-    var numberOfSerialDispatchObservables: ActualAtomicInt!
-
-    public extension Resources {
-        /**
-         Counts number of `SerialDispatchQueueObservables`.
-
-         Purposed for unit tests.
-         */
-        static func numberOfSerialDispatchQueueObservables() async -> Int32 {
-            await load(numberOfSerialDispatchObservables)
-        }
-    }
-#endif
+// #if TRACE_RESOURCES
+//    var numberOfSerialDispatchObservables: ActualAtomicInt!
+//
+//    public extension Resources {
+//        /**
+//         Counts number of `SerialDispatchQueueObservables`.
+//
+//         Purposed for unit tests.
+//         */
+//        static func numberOfSerialDispatchQueueObservables() async -> Int32 {
+//            await load(numberOfSerialDispatchObservables)
+//        }
+//    }
+// #endif
 //
 // private final class ObserveOnSerialDispatchQueueSink<Observer: ObserverType>: ObserverBase<Observer.Element> {
 //    let scheduler: SerialDispatchQueueScheduler
