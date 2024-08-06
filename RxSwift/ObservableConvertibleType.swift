@@ -18,6 +18,18 @@ public protocol ObservableConvertibleType: Sendable {
 }
 
 /// Type that can be converted to observable sequence (`Observable<Element>`).
+public protocol AsyncObservableToSyncObserverConvertibleType: Sendable {
+    /// Type of elements in sequence.
+    associatedtype Element: Sendable
+
+    /// Converts `self` to `Observable` sequence.
+    ///
+    /// - returns: Observable sequence that represents `self`.
+    func asObservable() async -> AsyncObservableToSyncObserver<Element>
+}
+
+
+/// Type that can be converted to observable sequence (`Observable<Element>`).
 public protocol SyncObservableToSyncObserverConvertibleType: Sendable {
     /// Type of elements in sequence.
     associatedtype Element: Sendable

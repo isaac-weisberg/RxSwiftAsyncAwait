@@ -15,7 +15,7 @@ public extension ObservableType {
      - parameter element: Single element in the resulting observable sequence.
      - returns: An observable sequence containing the single specified element.
      */
-    static func just(_ element: Element) -> SynchronousObservable<Element> {
+    static func just(_ element: Element) -> SyncObservableToSyncObserver<Element> {
         Just(element: element)
     }
 
@@ -28,12 +28,12 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to send the single element on.
      - returns: An observable sequence containing the single specified element.
      */
-    static func just(_ element: Element, scheduler: ActorScheduler) async -> SynchronousObservable<Element> {
+    static func just(_ element: Element, scheduler: ActorScheduler) async -> AsyncObservableToSyncObserver<Element> {
         JustScheduled(element: element, scheduler: scheduler)
     }
 }
 
-private final actor JustScheduledSink<Observer: SyncObserverType>: SynchronousDisposable {
+private final actor JustScheduledSink<Observer: SyncObserverType>: AsynchronousDisposable {
     typealias Parent = JustScheduled<Observer.Element>
 
     private let parent: Parent
@@ -43,12 +43,6 @@ private final actor JustScheduledSink<Observer: SyncObserverType>: SynchronousDi
     init(parent: Parent, observer: Observer) {
         self.parent = parent
         self.observer = observer
-    }
-
-    nonisolated func dispose() {
-        Task {
-            await dispose()
-        }
     }
 
     func dispose() async {
@@ -71,7 +65,7 @@ private final actor JustScheduledSink<Observer: SyncObserverType>: SynchronousDi
     }
 }
 
-private final class JustScheduled<Element>: SynchronousObservable<Element>, @unchecked Sendable {
+private final class JustScheduled<Element: Sendable>: AsyncObservableToSyncObserver<Element>, @unchecked Sendable {
     fileprivate let scheduler: ActorScheduler
     fileprivate let element: Element
 
@@ -81,27 +75,15 @@ private final class JustScheduled<Element>: SynchronousObservable<Element>, @unc
         super.init()
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
-        where Element == Observer.Element, Observer: ObserverType {
-
-        let sink = JustScheduledSink(parent: self, observer: AnySyncObserver(eventHandler: { e, c in
-            switch observer.on {
-            case .sync(let syncObserverEventHandler):
-                syncObserverEventHandler(e, c.call())
-            case .async(let asyncObserverEventHandler):
-                Task {
-                    await asyncObserverEventHandler(e, c.call())
-                }
-            }
-        }))
-        Task {
-            await sink.run(c.call())
-        }
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Element == Observer.Element, Observer: SyncObserverType {
+        let sink = JustScheduledSink(parent: self, observer: observer)
+        await sink.run(c.call())
         return sink
     }
 }
 
-private final class Just<Element>: SynchronousObservable<Element> {
+private final class Just<Element: Sendable>: SyncObservableToSyncObserver<Element> {
     private let element: Element
 
     init(element: Element) {
@@ -109,24 +91,11 @@ private final class Just<Element>: SynchronousObservable<Element> {
         super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(
-        _ c: C,
-        _ observer: Observer
-    )
-        -> SynchronousDisposable where Observer.Element == Element {
-
-        switch observer.on {
-        case .sync(let syncObserverEventHandler):
-
-            syncObserverEventHandler(.next(element), c.call())
-            syncObserverEventHandler(.completed, c.call())
-        case .async(let asyncObserverEventHandler):
-
-            Task {
-                await asyncObserverEventHandler(.next(element), c.call())
-                await asyncObserverEventHandler(.completed, c.call())
-            }
-        }
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
+        where Element == Observer.Element, Observer: SyncObserverType {
+        observer.on(.next(element), c.call())
+        observer.on(.completed, c.call())
         return Disposables.create()
     }
+
 }

@@ -45,6 +45,23 @@ public class Observable<Element: Sendable>: ObservableType, @unchecked Sendable 
     }
 }
 
+public class AsyncObservableToSyncObserver<Element: Sendable>: AsyncObservableToSyncObserverType, @unchecked Sendable {
+    init() {
+        ObservableInit()
+    }
+
+    public func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Observer: SyncObserverType, Element == Observer.Element {
+        rxAbstractMethod()
+    }
+
+    public func asObservable() -> AsyncObservableToSyncObserver<Element> { self }
+
+    deinit {
+        ObservableDeinit()
+    }
+}
+
 public class SyncObservableToAsyncObserver<Element: Sendable>: SyncObservableToAsyncObserverType, @unchecked Sendable {
     init() {
         ObservableInit()

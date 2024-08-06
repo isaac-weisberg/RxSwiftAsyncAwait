@@ -35,15 +35,20 @@ public protocol ObservableType: ObservableConvertibleType, Sendable {
         where Observer.Element == Element
 }
 
-public extension ObservableType {
-
-    /// Default implementation of converting `ObservableType` to `Observable`.
-    func asObservable() async -> Observable<Element> {
-        // temporary workaround
-        // return Observable.create(subscribe: self.subscribe)
-        await Observable<Element>.create { c, o in await self.subscribe(c.call(), AnyObserver(eventHandler: .async(o.on))) }
-    }
+public protocol AsyncObservableToSyncObserverType: AsyncObservableToSyncObserverConvertibleType, Sendable {
+    func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element
 }
+
+//public extension ObservableType {
+//
+//    /// Default implementation of converting `ObservableType` to `Observable`.
+//    func asObservable() async -> Observable<Element> {
+//        // temporary workaround
+//        // return Observable.create(subscribe: self.subscribe)
+//        await Observable<Element>.create { c, o in await self.subscribe(c.call(), AnyObserver(eventHandler: .async(o.on))) }
+//    }
+//}
 
 public protocol SyncObservableToAsyncObserverType: SyncObservableToAsyncObserverConvertibleType, Sendable {
     func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) -> SynchronousDisposable
