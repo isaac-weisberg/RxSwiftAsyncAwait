@@ -10,61 +10,82 @@ public extension ObservableType {
     }
 }
 
-final class Desynchronized<Source: ObservableType>: UnsynchronizedObservable<Source.Element> {
+private final class Desynchronized<Source: ObservableType>: UnsynchronizedObservable<Source.Element> {
     let source: Source
-    
+
     init(source: Source) {
         self.source = source
     }
-    
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any UnsynchronizedDisposable where Source.Element == Observer.Element, Observer: ObserverType {
-        let sink = DesynchronizedSink<Observer>()
-        
+
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any UnsynchronizedDisposable
+        where Source.Element == Observer.Element, Observer: ObserverType {
+        let sink = DesynchronizedSink<AnySyncObserver<Source.Element>>()
+
         Task {
-            await sink.run(c.call(), source, observer)
+            await sink.run(c.call(), source, AnySyncObserver(eventHandler: { e, c in
+                switch observer.on {
+                case .sync(let syncObserverEventHandler):
+                    syncObserverEventHandler(e, c.call())
+                case .async(let asyncObserverEventHandler):
+                    #if DEBUG
+                        assertionFailure(
+                            "We are desynchronizing an observable, yet you have provided a synchronized observer? That's weird... This is supposed to be internal code, so it's my mistake... right?"
+                        )
+                    #endif
+                    Task {
+                        await asyncObserverEventHandler(e, c.call())
+                    }
+                }
+            }))
         }
-        
+
         return sink
     }
-    
+
 }
 
-final actor DesynchronizedSink<Observer: ObserverType>: ObserverType, SynchronizedDisposable, UnsynchronizedDisposable {
+final actor DesynchronizedSink<Observer: SyncObserverType>: ObserverType, SynchronizedDisposable,
+    UnsynchronizedDisposable {
     typealias Element = Observer.Element
-    
+
     var observer: Observer?
     var disposed = false
     var sourceSubscription: SynchronizedDisposable?
-    
-    init() {
-        
+
+    init() {}
+
+    nonisolated var on: ObserverEventHandler<Observer.Element> {
+        .async { [self] e, c in
+            await self.on(e, c.call())
+        }
     }
-    
+
     func on(_ event: Event<Element>, _ c: C) async {
         if disposed {
             return
         }
-        
-        self.observer!.on(event, c.call())
+
+        observer!.on(event, c.call())
     }
-    
+
     nonisolated func dispose() {
         Task {
             await self.dispose()
         }
     }
-    
+
     func dispose() async {
         if !disposed {
             disposed = true
-            self.observer = nil
-            let sourceSubscription = self.sourceSubscription
+            observer = nil
+            let sourceSubscription = sourceSubscription
             self.sourceSubscription = nil
             await sourceSubscription?.dispose()
         }
     }
-    
-    func run<Observable: ObservableType>(_ c: C, _ source: Observable, _ observer: Observer) async where Observable.Element == Element {
+
+    func run<Observable: ObservableType>(_ c: C, _ source: Observable, _ observer: Observer) async
+        where Observable.Element == Element {
         self.observer = observer
         sourceSubscription = await source.subscribe(c.call(), self)
     }
@@ -82,14 +103,28 @@ final class ObserveOnUnsync<Source: UnsynchronizedObservableType>: Unsynchronize
     override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any UnsynchronizedDisposable
         where Element == Observer.Element, Observer: ObserverType {
 
-        let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
+        let sink = ObserveOnSink(scheduler: scheduler, observer: AnySyncObserver(eventHandler: { e, c in
+            switch observer.on {
+            case .sync(let syncObserverEventHandler):
+                syncObserverEventHandler(e, c.call())
+            case .async(let asyncObserverEventHandler):
+                #if DEBUG
+                    assertionFailure(
+                        "Why did you bother subscribing an async observer to an observe(on:)? ObserverOn doesn't take effect if the observer needs to be notified asynchronously"
+                    )
+                #endif
+                Task {
+                    await asyncObserverEventHandler(e, c.call())
+                }
+            }
+        }))
 
         sink.run(c.call(), source: source)
         return sink
     }
 }
 
-final class ObserveOnSink<Observer: ObserverType>: ObserverType, ObserverType,
+final class ObserveOnSink<Observer: SyncObserverType>: ObserverType,
     SynchronizedDisposable, UnsynchronizedDisposable {
     typealias Element = Observer.Element
 
@@ -105,16 +140,17 @@ final class ObserveOnSink<Observer: ObserverType>: ObserverType, ObserverType,
     }
 
     func isDisposed() async -> Bool {
-        await scheduler.perform(C()) { [self] c in
+        await scheduler.perform(C()) { [self] _ in
             disposed
         }
     }
+
     func dispose() async {
-        await scheduler.perform(C()) { [self] c in
+        await scheduler.perform(C()) { [self] _ in
             if !disposed {
                 disposed = true
 
-                let innerSyncDisposable = self.innerSyncDisposable
+                let innerSyncDisposable = innerSyncDisposable
                 self.innerSyncDisposable = nil
                 Task {
                     await innerSyncDisposable?.dispose()
@@ -122,6 +158,12 @@ final class ObserveOnSink<Observer: ObserverType>: ObserverType, ObserverType,
                 innerUnsyncDisposable?.dispose()
                 innerUnsyncDisposable = nil
             }
+        }
+    }
+
+    var on: ObserverEventHandler<Observer.Element> {
+        .async { [self] e, c in
+            self.on(e, c.call())
         }
     }
 
@@ -143,13 +185,13 @@ final class ObserveOnSink<Observer: ObserverType>: ObserverType, ObserverType,
         where Observable.Element == Observer.Element {
         innerUnsyncDisposable = source.subscribe(c.call(), self)
     }
-    
+
     nonisolated func on(_ event: Event<Element>, _ c: C) {
         Task {
             await self.on(event, c)
         }
     }
-    
+
     nonisolated func dispose() {
         Task {
             await self.dispose()
@@ -335,7 +377,7 @@ final class ObserveOnSink<Observer: ObserverType>: ObserverType, ObserverType,
 //    }
 // }
 //
- #if TRACE_RESOURCES
+#if TRACE_RESOURCES
     var numberOfSerialDispatchObservables: ActualAtomicInt!
 
     public extension Resources {
@@ -345,10 +387,10 @@ final class ObserveOnSink<Observer: ObserverType>: ObserverType, ObserverType,
          Purposed for unit tests.
          */
         static func numberOfSerialDispatchQueueObservables() async -> Int32 {
-            return await load(numberOfSerialDispatchObservables)
+            await load(numberOfSerialDispatchObservables)
         }
     }
- #endif
+#endif
 //
 // private final class ObserveOnSerialDispatchQueueSink<Observer: ObserverType>: ObserverBase<Observer.Element> {
 //    let scheduler: SerialDispatchQueueScheduler
