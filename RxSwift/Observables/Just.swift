@@ -75,11 +75,11 @@ private final class JustScheduled<Element: Sendable>: AsyncObservableToSyncObser
         super.init()
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> AnyDisposable
         where Element == Observer.Element, Observer: SyncObserverType {
         let sink = JustScheduledSink(parent: self, observer: observer)
         await sink.run(c.call())
-        return sink
+        return .async(sink)
     }
 }
 

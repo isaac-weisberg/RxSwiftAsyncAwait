@@ -15,9 +15,9 @@ public extension ObservableType {
      - parameter resultSelector: Function to invoke whenever any of the sources produces an element.
      - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
      */
-    static func combineLatest<Collection: Swift.Collection>(
+    static func combineLatest<Collection: Swift.Collection & Sendable>(
         _ collection: Collection,
-        resultSelector: @escaping ([Collection.Element.Element]) throws -> Element
+        resultSelector: @Sendable @escaping ([Collection.Element.Element]) throws -> Element
     )
         async -> Observable<Element>
         where Collection.Element: ObservableType {
@@ -31,7 +31,8 @@ public extension ObservableType {
 
      - returns: An observable sequence containing the result of combining elements of the sources.
      */
-    static func combineLatest<Collection: Swift.Collection>(_ collection: Collection) async -> Observable<[Element]>
+    static func combineLatest<Collection: Swift.Collection & Sendable>(_ collection: Collection) async
+        -> Observable<[Element]>
         where Collection.Element: ObservableType, Collection.Element.Element == Element {
         await CombineLatestCollectionType(sources: collection, resultSelector: { $0 })
     }
@@ -172,15 +173,11 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
             }
         }
     }
-
-    func perform<R>(_ work: () -> R) async -> R {
-        work()
-    }
 }
 
-final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: Observable<Result>
+final class CombineLatestCollectionType<Collection: Swift.Collection & Sendable, Result: Sendable>: Observable<Result>
     where Collection.Element: ObservableType {
-    typealias ResultSelector = ([Collection.Element.Element]) throws -> Result
+    typealias ResultSelector = @Sendable ([Collection.Element.Element]) throws -> Result
 
     let sources: Collection
     let resultSelector: ResultSelector
@@ -190,7 +187,7 @@ final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: O
         self.sources = sources
         self.resultSelector = resultSelector
         count = self.sources.count
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable

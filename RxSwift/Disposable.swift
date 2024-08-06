@@ -16,6 +16,11 @@ public protocol AsynchronousDisposable: Sendable {
     func dispose() async
 }
 
+public enum AnyDisposable: Sendable {
+    case sync(SynchronousDisposable)
+    case async(AsynchronousDisposable)
+}
+
 private struct A: AsynchronousDisposable {
     let disposable: SynchronousDisposable
 

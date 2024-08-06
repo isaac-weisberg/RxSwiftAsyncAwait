@@ -14,12 +14,12 @@ final class ObserveOnAsyncToSync<Element: Sendable>: AsyncObservableToSyncObserv
         self.scheduler = scheduler
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> AnyDisposable
         where Element == Observer.Element, Observer: SyncObserverType {
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
         let disp = await source.subscribe(c.call(), sink)
         await sink.setInnerSyncDisposable(disp)
-        return sink
+        return .async(sink)
     }
 }
 
@@ -39,12 +39,12 @@ final class ObserveOnAsyncToAsync<Element: Sendable>: AsyncObservableToSyncObser
         self.scheduler = scheduler
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> AnyDisposable
         where Element == Observer.Element, Observer: SyncObserverType {
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
         let disp = await source.subscribe(c.call(), sink)
         await sink.setInnerSyncDisposable(disp)
-        return sink
+        return .async(sink)
     }
 }
 
@@ -64,12 +64,12 @@ final class ObserveOnSyncToAsync<Element: Sendable>: AsyncObservableToSyncObserv
         self.scheduler = scheduler
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> AnyDisposable
         where Element == Observer.Element, Observer: SyncObserverType {
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
         let disp = source.subscribe(c.call(), sink)
-        await sink.setInnerSyncDisposable(disp.asAsync())
-        return sink
+        await sink.setInnerSyncDisposable(.sync(disp))
+        return .async(sink)
     }
 }
 
@@ -89,12 +89,12 @@ final class ObserveOnSyncToSync<Element: Sendable>: AsyncObservableToSyncObserve
         self.scheduler = scheduler
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> AnyDisposable
         where Element == Observer.Element, Observer: SyncObserverType {
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
         let disp = source.subscribe(c.call(), sink)
-        await sink.setInnerSyncDisposable(disp.asAsync())
-        return sink
+        await sink.setInnerSyncDisposable(.sync(disp))
+        return .async(sink)
     }
 }
 
@@ -104,7 +104,7 @@ final actor ObserveOnSink<Observer: SyncObserverType>: SyncObserverType, AsyncOb
 
     let scheduler: ActorScheduler
     let observer: Observer
-    private var innerSyncDisposable: AsynchronousDisposable?
+    private var innerSyncDisposable: AnyDisposable?
     var disposed = false
 
     init(scheduler: ActorScheduler, observer: Observer) {
@@ -122,7 +122,14 @@ final actor ObserveOnSink<Observer: SyncObserverType>: SyncObserverType, AsyncOb
 
             let innerSyncDisposable = innerSyncDisposable
             self.innerSyncDisposable = nil
-            await innerSyncDisposable?.dispose()
+            switch innerSyncDisposable {
+            case .sync(let synchronousDisposable):
+                synchronousDisposable.dispose()
+            case .async(let asynchronousDisposable):
+                await asynchronousDisposable.dispose()
+            case nil:
+                break
+            }
         }
     }
 
@@ -148,9 +155,16 @@ final actor ObserveOnSink<Observer: SyncObserverType>: SyncObserverType, AsyncOb
         }
     }
 
-    func setInnerSyncDisposable(_ disposable: any AsynchronousDisposable) async {
+    func setInnerSyncDisposable(_ disposable: AnyDisposable) async {
         if disposed {
-            await innerSyncDisposable?.dispose()
+            switch innerSyncDisposable {
+            case .sync(let synchronousDisposable):
+                synchronousDisposable.dispose()
+            case .async(let asynchronousDisposable):
+                await asynchronousDisposable.dispose()
+            case nil:
+                break
+            }
             return
         }
 

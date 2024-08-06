@@ -50,7 +50,7 @@ public class AsyncObservableToAsyncObserver<Element: Sendable>: AsyncObservableT
         ObservableInit()
     }
 
-    public func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+    public func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AnyDisposable
         where Observer.Element == Element {
         rxAbstractMethod()
     }
@@ -67,7 +67,7 @@ public class AsyncObservableToSyncObserver<Element: Sendable>: AsyncObservableTo
         ObservableInit()
     }
 
-    public func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+    public func subscribe<Observer>(_ c: C, _ observer: Observer) async -> AnyDisposable
         where Observer: SyncObserverType, Element == Observer.Element {
         rxAbstractMethod()
     }
