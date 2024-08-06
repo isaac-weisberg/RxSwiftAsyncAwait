@@ -67,7 +67,7 @@ private final class Deferred<Source: ObservableType>: Producer<Source.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Source.Element
     {
         let sink = await DeferredSink<Source, Observer>(observer: observer)

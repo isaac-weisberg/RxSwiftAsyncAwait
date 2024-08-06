@@ -74,7 +74,7 @@ final class CombineLatest<%= i %><<%= (Array(1...i).map { "O\($0): ObservableTyp
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
 <%= Array(1...i).map {

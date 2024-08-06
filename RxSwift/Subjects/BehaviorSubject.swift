@@ -13,7 +13,7 @@ public final actor BehaviorSubject<Element>:
     ObservableType,
     SubjectType,
     ObserverType,
-    SynchronizedUnsubscribeType,
+    AsynchronousUnsubscribeType,
     Cancelable {
     public typealias SubjectObserverType = BehaviorSubject<Element>
 
@@ -81,7 +81,7 @@ public final actor BehaviorSubject<Element>:
         #if DEBUG
             await synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
-        let observers = synchronized_on(event, c.call())
+        let observers = Asynchronous_on(event, c.call())
 
         for observer in observers {
             await observer(event, c.call())
@@ -92,7 +92,7 @@ public final actor BehaviorSubject<Element>:
         #endif
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) -> Observers {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) -> Observers {
         if stoppedEvent != nil {
             return Observers()
         }
@@ -115,12 +115,12 @@ public final actor BehaviorSubject<Element>:
     ///
     /// - parameter observer: Observer to subscribe to the subject.
     /// - returns: Disposable object that can be used to unsubscribe the observer from the subject.
-    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
-        await synchronized_subscribe(c.call(), observer)
+        await Asynchronous_subscribe(c.call(), observer)
     }
 
-    func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+    func Asynchronous_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
         where Observer.Element == Element {
         if isDisposed() {
             await observer.on(.error(RxError.disposed(object: self)), c.call())
@@ -138,11 +138,11 @@ public final actor BehaviorSubject<Element>:
         return SubscriptionDisposable(owner: self, key: key)
     }
 
-    func synchronizedUnsubscribe(_ disposeKey: DisposeKey) {
-        synchronized_unsubscribe(disposeKey)
+    func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) {
+        Asynchronous_unsubscribe(disposeKey)
     }
 
-    func synchronized_unsubscribe(_ disposeKey: DisposeKey) {
+    func Asynchronous_unsubscribe(_ disposeKey: DisposeKey) {
         if isDisposed() {
             return
         }

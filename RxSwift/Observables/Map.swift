@@ -35,7 +35,7 @@ private final class Map<SourceType, ResultType>: Producer<ResultType> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == ResultType {
         let subscription = await source.subscribe(c.call(), AnonymousObserver(c.call()) { [transform] c, element in
             switch element {

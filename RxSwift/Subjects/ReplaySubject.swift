@@ -103,7 +103,7 @@ public class ReplaySubject<Element>:
 
 private class ReplayBufferBase<Element>:
     ReplaySubject<Element>,
-    SynchronizedUnsubscribeType {
+    AsynchronousUnsubscribeType {
     func trim() {
         rxAbstractMethod()
     }
@@ -120,13 +120,13 @@ private class ReplayBufferBase<Element>:
         #if DEBUG
             await synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
-        await dispatch(synchronized_on(event, c.call()), event, c.call())
+        await dispatch(Asynchronous_on(event, c.call()), event, c.call())
         #if DEBUG
             await synchronizationTracker.unregister()
         #endif
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async -> Observers {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async -> Observers {
         await lock.performLocked(c.call()) { _ in
             if self.isDisposed {
                 return Observers()
@@ -151,14 +151,14 @@ private class ReplayBufferBase<Element>:
         }
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
         await lock.performLocked {
-            await self.synchronized_subscribe(c.call(), observer)
+            await self.Asynchronous_subscribe(c.call(), observer)
         }
     }
 
-    func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+    func Asynchronous_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
         where Observer.Element == Element {
         if isDisposed {
             await observer.on(.error(RxError.disposed(object: self)), c.call())
@@ -177,11 +177,11 @@ private class ReplayBufferBase<Element>:
         }
     }
 
-    func synchronizedUnsubscribe(_ disposeKey: DisposeKey) async {
-        await lock.performLocked { self.synchronized_unsubscribe(disposeKey) }
+    func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) async {
+        await lock.performLocked { self.Asynchronous_unsubscribe(disposeKey) }
     }
 
-    func synchronized_unsubscribe(_ disposeKey: DisposeKey) {
+    func Asynchronous_unsubscribe(_ disposeKey: DisposeKey) {
         if isDisposed {
             return
         }
@@ -192,14 +192,14 @@ private class ReplayBufferBase<Element>:
     override func dispose() async {
         await super.dispose()
 
-        await synchronizedDispose()
+        await AsynchronousDispose()
     }
 
-    func synchronizedDispose() async {
-        await lock.performLocked { self.synchronized_dispose() }
+    func AsynchronousDispose() async {
+        await lock.performLocked { self.Asynchronous_dispose() }
     }
 
-    func synchronized_dispose() {
+    func Asynchronous_dispose() {
         isDisposed = true
         observers.removeAll()
     }
@@ -224,8 +224,8 @@ private final class ReplayOne<Element>: ReplayBufferBase<Element> {
         }
     }
 
-    override func synchronized_dispose() {
-        super.synchronized_dispose()
+    override func Asynchronous_dispose() {
+        super.Asynchronous_dispose()
         value = nil
     }
 }
@@ -248,8 +248,8 @@ private class ReplayManyBase<Element>: ReplayBufferBase<Element> {
         }
     }
 
-    override func synchronized_dispose() {
-        super.synchronized_dispose()
+    override func Asynchronous_dispose() {
+        super.Asynchronous_dispose()
         queue = Queue(capacity: 0)
     }
 }

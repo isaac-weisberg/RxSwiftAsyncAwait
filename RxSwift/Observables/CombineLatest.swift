@@ -103,20 +103,20 @@
 //
 //final class CombineLatestObserver<Element>:
 //    ObserverType,
-//    SynchronizedOnType {
+//    AsynchronousOnType {
 //    typealias ValueSetter = (Element) -> Void
 //
 //    private let parent: CombineLatestProtocol
 //
 //    private let index: Int
-//    private let this: SynchronizedDisposable
+//    private let this: AsynchronousDisposable
 //    private let setLatestValue: ValueSetter
 //
 //    init(
 //        parent: CombineLatestProtocol,
 //        index: Int,
 //        setLatestValue: @escaping ValueSetter,
-//        this: SynchronizedDisposable
+//        this: AsynchronousDisposable
 //    ) {
 //        self.parent = parent
 //        self.index = index
@@ -125,10 +125,10 @@
 //    }
 //
 //    func on(_ event: Event<Element>, _ c: C) async {
-//        await synchronizedOn(event, c.call())
+//        await AsynchronousOn(event, c.call())
 //    }
 //
-//    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+//    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
 //        switch event {
 //        case .next(let value):
 //            setLatestValue(value)

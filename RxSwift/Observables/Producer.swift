@@ -11,7 +11,7 @@
 //        await super.init()
 //    }
 //
-//    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+//    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
 //        where Observer.Element == Element {
 //
 //        // The returned disposable needs to release all references once it was disposed.
@@ -24,7 +24,7 @@
 //        _ c: C,
 //        _ observer: Observer
 //    )
-//        async -> SynchronizedDisposable
+//        async -> AsynchronousDisposable
 //        where Observer.Element == Element {
 //        rxAbstractMethod()
 //    }

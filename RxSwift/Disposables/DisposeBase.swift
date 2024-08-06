@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-func UnsynchronizedDisposeBaseInit() {
+func SynchronousDisposeBaseInit() {
     
         #if TRACE_RESOURCES
         Task {
@@ -15,7 +15,7 @@ func UnsynchronizedDisposeBaseInit() {
         #endif
 }
 
-func UnsynchronizedDisposeBaseDeinit() {
+func SynchronousDisposeBaseDeinit() {
     
         #if TRACE_RESOURCES
             Task {
@@ -25,12 +25,12 @@ func UnsynchronizedDisposeBaseDeinit() {
 }
 
 /// Base class for all disposables.
-public class UnsynchronizedDisposeBase {
+public class SynchronousDisposeBase {
     init() {
-        UnsynchronizedDisposeBaseInit()
+        SynchronousDisposeBaseInit()
     }
 
     deinit {
-        UnsynchronizedDisposeBaseDeinit()
+        SynchronousDisposeBaseDeinit()
     }
 }

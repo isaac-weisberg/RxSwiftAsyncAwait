@@ -130,7 +130,7 @@ public final actor ActualNonRecursiveLock {
 //        }
 //    }
 
-    public struct C {
+    public struct C: Sendable {
         public static func with<R>(
             _ file: StaticString = #file,
             _ function: StaticString = #function,
@@ -249,7 +249,7 @@ public final actor ActualNonRecursiveLock {
     }
 
 #else
-    public struct C {
+    public struct C: Sendable {
         public init() {}
 
         @inline(__always)

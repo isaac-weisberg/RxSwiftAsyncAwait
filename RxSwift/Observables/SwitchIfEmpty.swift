@@ -30,7 +30,7 @@ private final class SwitchIfEmpty<Element>: Producer<Element> {
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await SwitchIfEmptySink(ifEmpty: self.ifEmpty,
                                            observer: observer,
                                            cancel: cancel)

@@ -15,7 +15,7 @@ public protocol ImmediateSchedulerType {
      - parameter action: Action to be executed.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    func schedule<StateType>(_ state: StateType, _ c: C, action: @escaping (C, StateType) async -> UnsynchronizedDisposable) async -> UnsynchronizedDisposable
+    func schedule<StateType>(_ state: StateType, _ c: C, action: @escaping (C, StateType) async -> SynchronousDisposable) async -> SynchronousDisposable
 }
 
 public extension ImmediateSchedulerType {
@@ -26,7 +26,7 @@ public extension ImmediateSchedulerType {
      - parameter action: Action to execute recursively. The last parameter passed to the action is used to trigger recursive scheduling of the action, passing in recursive invocation state.
      - returns: The disposable object used to cancel the scheduled action (best effort).
      */
-    func scheduleRecursive<State>(_ state: State, _ c: C, action: @escaping (_ state: State, _ c: C, _ recurse: (State) async -> Void) async -> Void) async -> UnsynchronizedDisposable {
+    func scheduleRecursive<State>(_ state: State, _ c: C, action: @escaping (_ state: State, _ c: C, _ recurse: (State) async -> Void) async -> Void) async -> SynchronousDisposable {
         let recursiveScheduler = await RecursiveImmediateScheduler(action: action, scheduler: self, c.call())
         
         await recursiveScheduler.schedule(state)

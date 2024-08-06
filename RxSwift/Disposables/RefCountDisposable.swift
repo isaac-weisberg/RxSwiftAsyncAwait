@@ -8,8 +8,8 @@
 
 /// Represents a disposable resource that only disposes its underlying disposable resource when all dependent disposable
 /// objects have been disposed.
-public final class RefCountDisposable: UnsynchronizedDisposable, UnsynchronizedCancelable {
-    private var disposable = nil as UnsynchronizedDisposable?
+public final class RefCountDisposable: SynchronousDisposable, SynchronousCancelable {
+    private var disposable = nil as SynchronousDisposable?
     private var primaryDisposed = false
     private var count = 0
 
@@ -19,7 +19,7 @@ public final class RefCountDisposable: UnsynchronizedDisposable, UnsynchronizedC
     }
 
     /// Initializes a new instance of the `RefCountDisposable`.
-    public init(disposable: UnsynchronizedDisposable) {
+    public init(disposable: SynchronousDisposable) {
         self.disposable = disposable
     }
 
@@ -28,7 +28,7 @@ public final class RefCountDisposable: UnsynchronizedDisposable, UnsynchronizedC
 
      When getter is called, a dependent disposable contributing to the reference count that manages the underlying disposable's lifetime is returned.
      */
-    public func retain() -> UnsynchronizedDisposable {
+    public func retain() -> SynchronousDisposable {
         if disposable != nil {
             do {
                 _ = try incrementChecked(&count)
@@ -44,7 +44,7 @@ public final class RefCountDisposable: UnsynchronizedDisposable, UnsynchronizedC
 
     /// Disposes the underlying disposable only when all dependent disposables have been disposed.
     public func dispose() {
-        let oldDisposable: UnsynchronizedDisposable? = {
+        let oldDisposable: SynchronousDisposable? = {
             if let oldDisposable = self.disposable, !self.primaryDisposed {
                 self.primaryDisposed = true
 
@@ -63,7 +63,7 @@ public final class RefCountDisposable: UnsynchronizedDisposable, UnsynchronizedC
     }
 
     fileprivate func release() {
-        let oldDisposable: UnsynchronizedDisposable? = {
+        let oldDisposable: SynchronousDisposable? = {
             if let oldDisposable = self.disposable {
                 do {
                     _ = try decrementChecked(&self.count)
@@ -90,7 +90,7 @@ public final class RefCountDisposable: UnsynchronizedDisposable, UnsynchronizedC
     }
 }
 
-final class RefCountInnerDisposable: UnsynchronizedDisposeBase, UnsynchronizedDisposable {
+final class RefCountInnerDisposable: SynchronousDisposeBase, SynchronousDisposable {
     private let parent: RefCountDisposable
     private let isDisposed: NonAtomicInt
 

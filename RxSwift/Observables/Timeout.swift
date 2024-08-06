@@ -159,7 +159,7 @@ private final class Timeout<Element>: Producer<Element> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == Element {
+        async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await TimeoutSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink

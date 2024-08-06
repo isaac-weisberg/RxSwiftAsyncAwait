@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-protocol Sink: SynchronizedDisposable, AnyObject {
+protocol Sink: AsynchronousDisposable, AnyObject {
     associatedtype TheBaseSink: BaseSinkProtocol
     typealias Observer = TheBaseSink.Observer
 

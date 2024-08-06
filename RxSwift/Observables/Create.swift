@@ -17,7 +17,7 @@ public extension ObservableType {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(_ subscribe: @escaping (C, AnyAsyncObserver<Element>) async -> SynchronizedDisposable) async
+    static func create(_ subscribe: @escaping (C, AnyAsyncObserver<Element>) async -> AsynchronousDisposable) async
         -> Observable<Element> {
         await AnonymousObservable(subscribe)
     }
@@ -30,24 +30,24 @@ public extension ObservableType {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func createUnsynchronized(
+    static func createSynchronous(
         _ subscribe: @escaping (C, AnySyncObserver<Element>)
-            -> UnsynchronizedDisposable
+            -> SynchronousDisposable
     )
-        -> UnsynchronizedObservable<Element> {
-        AnonymousUnsynchronizedObservable(subscribe)
+        -> SynchronousObservable<Element> {
+        AnonymousSynchronousObservable(subscribe)
     }
 }
 
 private final actor AnonymousObservableSink<
     Observer: AsyncObserverType
->: AsyncObserverType, SynchronizedDisposable {
+>: AsyncObserverType, AsynchronousDisposable {
     typealias Element = Observer.Element
     typealias SubscribeHandler = AnonymousObservable<Element>.SubscribeHandler
 
     // state
     private let isStopped: NonAtomicInt
-    private var innerDisposable: SynchronizedDisposable?
+    private var innerDisposable: AsynchronousDisposable?
     private let observer: Observer
 
     init(observer: Observer) {
@@ -84,7 +84,7 @@ private final actor AnonymousObservableSink<
 }
 
 private final class AnonymousObservable<Element>: Observable<Element> {
-    typealias SubscribeHandler = (C, AnyAsyncObserver<Element>) async -> SynchronizedDisposable
+    typealias SubscribeHandler = (C, AnyAsyncObserver<Element>) async -> AsynchronousDisposable
 
     let subscribeHandler: SubscribeHandler
 
@@ -93,7 +93,7 @@ private final class AnonymousObservable<Element>: Observable<Element> {
         await super.init()
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any SynchronizedDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where Element == Observer.Element, Observer: ObserverType {
         let sink = AnonymousObservableSink(observer: AnyAsyncObserver(eventHandler: { e, c in
             switch observer.on {
@@ -112,15 +112,15 @@ func scope<R>(_ work: () async -> R) async -> R {
     await work()
 }
 
-private final class AnonymousUnsynchronizedObservableSink<
+private final class AnonymousSynchronousObservableSink<
     Observer: SyncObserverType
->: SyncObserverType, UnsynchronizedDisposable {
+>: SyncObserverType, SynchronousDisposable {
     typealias Element = Observer.Element
-    typealias SubscribeHandler = AnonymousUnsynchronizedObservable<Element>.SubscribeHandler
+    typealias SubscribeHandler = AnonymousSynchronousObservable<Element>.SubscribeHandler
 
     // state
     private let isStopped: NonAtomicInt
-    private var innerDisposable: UnsynchronizedDisposable?
+    private var innerDisposable: SynchronousDisposable?
     private let observer: Observer
 
     init(observer: Observer) {
@@ -159,8 +159,8 @@ private final class AnonymousUnsynchronizedObservableSink<
     }
 }
 
-private final class AnonymousUnsynchronizedObservable<Element>: UnsynchronizedObservable<Element> {
-    typealias SubscribeHandler = (C, AnySyncObserver<Element>) -> UnsynchronizedDisposable
+private final class AnonymousSynchronousObservable<Element>: SynchronousObservable<Element> {
+    typealias SubscribeHandler = (C, AnySyncObserver<Element>) -> SynchronousDisposable
 
     let subscribeHandler: SubscribeHandler
 
@@ -169,9 +169,9 @@ private final class AnonymousUnsynchronizedObservable<Element>: UnsynchronizedOb
         super.init()
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any UnsynchronizedDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
         where Observer: ObserverType, Observer.Element == Element {
-        let sink = AnonymousUnsynchronizedObservableSink(observer: AnySyncObserver(eventHandler: { event, c in
+        let sink = AnonymousSynchronousObservableSink(observer: AnySyncObserver(eventHandler: { event, c in
             switch observer.on {
             case .sync(let syncObserverEventHandler):
                 syncObserverEventHandler(event, c.call())

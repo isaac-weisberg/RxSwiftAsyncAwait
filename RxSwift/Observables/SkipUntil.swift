@@ -39,7 +39,7 @@ public extension ObservableType {
 
 private final actor SkipUntilSinkOther<Other, Observer: ObserverType>:
     ObserverType,
-    SynchronizedOnType
+    AsynchronousOnType
 {
     typealias Parent = SkipUntilSink<Other, Observer>
     typealias Element = Other
@@ -57,10 +57,10 @@ private final actor SkipUntilSinkOther<Other, Observer: ObserverType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.synchronizedOn(event, c.call())
+        await self.AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
             await self.parent.setForwardElements(true)
@@ -85,7 +85,7 @@ private final actor SkipUntilSinkOther<Other, Observer: ObserverType>:
 private final actor SkipUntilSink<Other, Observer: ObserverType>:
     Sink,
     ObserverType,
-    SynchronizedOnType
+    AsynchronousOnType
 {
     typealias Element = Observer.Element
     typealias Parent = SkipUntil<Element, Other>
@@ -106,10 +106,10 @@ private final actor SkipUntilSink<Other, Observer: ObserverType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.synchronizedOn(event, c.call())
+        await self.AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
             if self.forwardElements {
@@ -147,7 +147,7 @@ private final class SkipUntil<Element, Other>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await SkipUntilSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink

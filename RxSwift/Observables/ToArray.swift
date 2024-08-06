@@ -59,7 +59,7 @@ private final class ToArray<SourceType>: Producer<[SourceType]> {
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == [SourceType] {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == [SourceType] {
         let sink = await ToArraySink(parent: self, observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
         return sink

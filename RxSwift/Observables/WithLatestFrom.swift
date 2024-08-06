@@ -42,7 +42,7 @@ public extension ObservableType {
 private final actor WithLatestFromSink<FirstType, SecondType, Observer: ObserverType>:
     Sink,
     ObserverType,
-    SynchronizedOnType {
+    AsynchronousOnType {
     typealias ResultType = Observer.Element
     typealias Parent = WithLatestFrom<FirstType, SecondType, ResultType>
     typealias Element = FirstType
@@ -72,10 +72,10 @@ private final actor WithLatestFromSink<FirstType, SecondType, Observer: Observer
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await synchronizedOn(event, c.call())
+        await AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
             guard let latest else { return }
@@ -99,7 +99,7 @@ private final actor WithLatestFromSink<FirstType, SecondType, Observer: Observer
 
 private final class WithLatestFromSecond<FirstType, SecondType, Observer: ObserverType>:
     ObserverType,
-    SynchronizedOnType {
+    AsynchronousOnType {
     typealias ResultType = Observer.Element
     typealias Parent = WithLatestFromSink<FirstType, SecondType, Observer>
     typealias Element = SecondType
@@ -113,10 +113,10 @@ private final class WithLatestFromSecond<FirstType, SecondType, Observer: Observ
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await synchronizedOn(event, c.call())
+        await AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
             await parent.setLatest(value)
@@ -147,7 +147,7 @@ private final class WithLatestFrom<FirstType, SecondType, ResultType>: Producer<
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == ResultType {
+        async -> AsynchronousDisposable where Observer.Element == ResultType {
         let sink = await WithLatestFromSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink

@@ -11,7 +11,7 @@
 
  If an underlying disposable resource has already been set, future attempts to set the underlying disposable resource will throw an exception.
  */
-public final class SingleAssignmentDisposable: UnsynchronizedDisposeBase, UnsynchronizedCancelable {
+public final class SingleAssignmentDisposable: SynchronousDisposeBase, SynchronousCancelable {
     private struct DisposeState: OptionSet {
         let rawValue: Int32
 
@@ -21,7 +21,7 @@ public final class SingleAssignmentDisposable: UnsynchronizedDisposeBase, Unsync
 
     // state
     private let state: NonAtomicInt
-    private var disposable = nil as UnsynchronizedDisposable?
+    private var disposable = nil as SynchronousDisposable?
 
     /// - returns: A value that indicates whether the object is disposed.
     public func isDisposed() -> Bool {
@@ -37,7 +37,7 @@ public final class SingleAssignmentDisposable: UnsynchronizedDisposeBase, Unsync
     /// Gets or sets the underlying disposable. After disposal, the result of getting this property is undefined.
     ///
     /// **Throws exception if the `SingleAssignmentDisposable` has already been assigned to.**
-    public func setDisposable(_ disposable: UnsynchronizedDisposable) {
+    public func setDisposable(_ disposable: SynchronousDisposable) {
         self.disposable = disposable
 
         let previousState = fetchOr(state, DisposeState.disposableSet.rawValue)

@@ -19,7 +19,7 @@
 final class AsyncLock<I: InvocableType>:
     Disposable,
     Lock,
-    SynchronizedDisposeType
+    AsynchronousDisposeType
 {
     typealias Action = () -> Void
 
@@ -99,10 +99,10 @@ final class AsyncLock<I: InvocableType>:
     }
 
     func dispose() async {
-        await self.synchronizedDispose()
+        await self.AsynchronousDispose()
     }
 
-    func synchronized_dispose() {
+    func Asynchronous_dispose() {
         self.queue = Queue(capacity: 0)
         self.hasFaulted = true
     }

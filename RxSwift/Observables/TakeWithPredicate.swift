@@ -116,7 +116,7 @@ public enum TakeBehavior {
 
 private final actor TakeUntilSinkOther<Other, Observer: ObserverType>:
     ObserverType,
-    SynchronizedOnType
+    AsynchronousOnType
 {
     typealias Parent = TakeUntilSink<Other, Observer>
     typealias Element = Other
@@ -134,10 +134,10 @@ private final actor TakeUntilSinkOther<Other, Observer: ObserverType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.synchronizedOn(event, c.call())
+        await self.AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
             await self.parent.forwardOn(.completed, c.call())
@@ -162,7 +162,7 @@ private final actor TakeUntilSinkOther<Other, Observer: ObserverType>:
 private final actor TakeUntilSink<Other, Observer: ObserverType>:
     Sink,
     ObserverType,
-    SynchronizedOnType
+    AsynchronousOnType
 {
     typealias Element = Observer.Element
     typealias Parent = TakeUntil<Element, Other>
@@ -177,10 +177,10 @@ private final actor TakeUntilSink<Other, Observer: ObserverType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.synchronizedOn(event, c.call())
+        await self.AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
             await self.forwardOn(event, c.call())
@@ -213,7 +213,7 @@ private final class TakeUntil<Element, Other>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await TakeUntilSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink
@@ -286,7 +286,7 @@ private final class TakeUntilPredicate<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await TakeUntilPredicateSink(parent: self, observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
         return sink

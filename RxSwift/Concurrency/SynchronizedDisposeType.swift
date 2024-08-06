@@ -1,19 +1,19 @@
 //
-//  SynchronizedDisposeType.swift
+//  AsynchronousDisposeType.swift
 //  RxSwift
 //
 //  Created by Krunoslav Zaher on 10/25/15.
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-protocol SynchronizedDisposeType: AnyObject, Disposable, Lock {
-    func synchronized_dispose() async
+protocol AsynchronousDisposeType: AnyObject, Disposable, Lock {
+    func Asynchronous_dispose() async
 }
 
-extension SynchronizedDisposeType {
-    func synchronizedDispose() async {
+extension AsynchronousDisposeType {
+    func AsynchronousDispose() async {
         return await performLocked {
-            await self.synchronized_dispose()
+            await self.Asynchronous_dispose()
         }
     }
 }

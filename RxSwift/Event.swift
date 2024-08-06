@@ -10,7 +10,7 @@
 ///
 /// Sequence grammar: 
 /// **next\* (error | completed)**
-@frozen public enum Event<Element> {
+@frozen public enum Event<Element: Sendable>: Sendable {
     /// Next element is produced.
     case next(Element)
 

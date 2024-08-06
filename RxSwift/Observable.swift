@@ -12,26 +12,29 @@
 
 public typealias RxObservable<Element> = Observable<Element>
 
-func ObservableInit() async {
-#if TRACE_RESOURCES
-        _ = await Resources.incrementTotal()
-#endif
+func ObservableInit() {
+    #if TRACE_RESOURCES
+        Task {
+            _ = await Resources.incrementTotal()
+        }
+    #endif
 }
 
 func ObservableDeinit() {
-#if TRACE_RESOURCES
+    #if TRACE_RESOURCES
         Task {
             _ = await Resources.decrementTotal()
         }
-#endif
+    #endif
 }
 
-public class Observable<Element>: ObservableType {
-    init() async {
-        await ObservableInit()
+public class Observable<Element: Sendable>: ObservableType, @unchecked Sendable {
+    init() {
+        ObservableInit()
     }
 
-    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element {
         rxAbstractMethod()
     }
 
@@ -42,18 +45,34 @@ public class Observable<Element>: ObservableType {
     }
 }
 
-public class UnsynchronizedObservable<Element>: UnsynchronizedObservableType {
+public class SyncObservableToAsyncObserver<Element: Sendable>: SyncObservableToAsyncObserverType, @unchecked Sendable {
     init() {
-        Task {
-            await ObservableInit()
-        }
+        ObservableInit()
     }
 
-    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) -> UnsynchronizedDisposable where Observer.Element == Element {
+    public func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
+        where Observer: AsyncObserverType, Element == Observer.Element {
         rxAbstractMethod()
     }
 
-    public func asObservable() -> UnsynchronizedObservable<Element> { self }
+    public func asObservable() -> SyncObservableToAsyncObserver<Element> { self }
+
+    deinit {
+        ObservableDeinit()
+    }
+}
+
+public class SyncObservableToSyncObserver<Element: Sendable>: SyncObservableToSyncObserverType, @unchecked Sendable {
+    init() {
+        ObservableInit()
+    }
+
+    public func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
+        where Observer: SyncObserverType, Element == Observer.Element {
+        rxAbstractMethod()
+    }
+
+    public func asObservable() -> SyncObservableToSyncObserver<Element> { self }
 
     deinit {
         ObservableDeinit()

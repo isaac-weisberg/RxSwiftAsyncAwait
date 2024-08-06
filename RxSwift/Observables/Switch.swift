@@ -140,7 +140,7 @@ private actor SwitchSink<SourceType, Source: ObservableConvertibleType, Observer
 
 private final actor SwitchSinkIter<SourceType, Source: ObservableConvertibleType, Observer: ObserverType>:
     ObserverType,
-    SynchronizedOnType where Source.Element == Observer.Element {
+    AsynchronousOnType where Source.Element == Observer.Element {
     typealias Element = Source.Element
     typealias Parent = SwitchSink<SourceType, Source, Observer>
 
@@ -155,10 +155,10 @@ private final actor SwitchSinkIter<SourceType, Source: ObservableConvertibleType
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await synchronizedOn(event, c.call())
+        await AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next: break
         case .error, .completed:

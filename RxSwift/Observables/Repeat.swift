@@ -31,7 +31,7 @@ private final class RepeatElement<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await RepeatElementSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
 

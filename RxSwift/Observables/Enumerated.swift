@@ -60,7 +60,7 @@ private final class Enumerated<Element>: Producer<(index: Int, element: Element)
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == (index: Int, element: Element) {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == (index: Int, element: Element) {
         let sink = await EnumeratedSink<Element, Observer>(observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
         return sink

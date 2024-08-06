@@ -41,7 +41,7 @@
 //#endif
 //
 //class RecursiveLockTests: RxTest {
-//    var joinPthreads = Synchronized([pthread_t]())
+//    var joinPthreads = Asynchronous([pthread_t]())
 //
 //    override func tearDown() {
 //      super.tearDown()
@@ -97,7 +97,7 @@
 //extension RecursiveLockTests {
 //    func testSynchronizes() {
 //        func performTestLock(lock: Lock, expectedValues: [Int]) {
-//            let values = Synchronized([Int]())
+//            let values = Asynchronous([Int]())
 //
 //            let expectation1 = self.expectation(description: "first finishes")
 //            let expectation2 = self.expectation(description: "second finishes")

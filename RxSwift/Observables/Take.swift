@@ -117,7 +117,7 @@ private final class TakeCount<Element>: Producer<Element> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == Element {
+        async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await TakeCountSink(parent: self, observer: observer)
         let subscription = await source.subscribe(c.call(), sink)
         return sink
@@ -129,7 +129,7 @@ private final class TakeCount<Element>: Producer<Element> {
 private final actor TakeTimeSink<Element, Observer: ObserverType>:
     Sink,
     ObserverType,
-    SynchronizedOnType where Observer.Element == Element {
+    AsynchronousOnType where Observer.Element == Element {
     let baseSink: BaseSink<Observer>
 
     typealias Parent = TakeTime<Element>
@@ -142,10 +142,10 @@ private final actor TakeTimeSink<Element, Observer: ObserverType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await synchronizedOn(event, c.call())
+        await AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
             await forwardOn(.next(value), c.call())
@@ -193,7 +193,7 @@ private final class TakeTime<Element>: Producer<Element> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == Element {
+        async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await TakeTimeSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink

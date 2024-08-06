@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public extension SynchronizedDisposable {
+public extension AsynchronousDisposable {
     /// Adds `self` to `bag`
     ///
     /// - parameter bag: `DisposeBag` to add `self` to.
@@ -47,7 +47,7 @@ public final class DisposeBagUnderThehood: DisposeBase {
     fileprivate var lock: ActualNonRecursiveLock
 
     // state
-    fileprivate var disposables = [SynchronizedDisposable]()
+    fileprivate var disposables = [AsynchronousDisposable]()
     fileprivate var isDisposed = false
 
     /// Constructs new empty dispose bag.
@@ -59,11 +59,11 @@ public final class DisposeBagUnderThehood: DisposeBase {
     /// Adds `disposable` to be disposed when dispose bag is being deinited.
     ///
     /// - parameter disposable: Disposable to add.
-    public func insert(_ disposable: SynchronizedDisposable) async {
+    public func insert(_ disposable: AsynchronousDisposable) async {
         await self._insert(disposable)?.dispose()
     }
 
-    private func _insert(_ disposable: SynchronizedDisposable) async -> SynchronizedDisposable? {
+    private func _insert(_ disposable: AsynchronousDisposable) async -> AsynchronousDisposable? {
         await self.lock.performLocked {
             if self.isDisposed {
                 return disposable
@@ -84,7 +84,7 @@ public final class DisposeBagUnderThehood: DisposeBase {
         }
     }
 
-    private func _dispose() async -> [SynchronizedDisposable] {
+    private func _dispose() async -> [AsynchronousDisposable] {
         await self.lock.performLocked {
             let disposables = self.disposables
 
@@ -98,35 +98,35 @@ public final class DisposeBagUnderThehood: DisposeBase {
 
 public extension DisposeBag {
     /// Convenience init allows a list of disposables to be gathered for disposal.
-    convenience init(disposing disposables: SynchronizedDisposable...) async {
+    convenience init(disposing disposables: AsynchronousDisposable...) async {
         await self.init()
         self.actualDisposeBag.disposables += disposables
     }
 
     /// Convenience init which utilizes a function builder to let you pass in a list of
     /// disposables to make a DisposeBag of.
-    convenience init(@DisposableBuilder builder: () -> [SynchronizedDisposable]) async {
+    convenience init(@DisposableBuilder builder: () -> [AsynchronousDisposable]) async {
         await self.init(disposing: builder())
     }
 
     /// Convenience init allows an array of disposables to be gathered for disposal.
-    convenience init(disposing disposables: [SynchronizedDisposable]) async {
+    convenience init(disposing disposables: [AsynchronousDisposable]) async {
         await self.init()
         self.actualDisposeBag.disposables += disposables
     }
 
     /// Convenience function allows a list of disposables to be gathered for disposal.
-    func insert(_ disposables: SynchronizedDisposable...) async {
+    func insert(_ disposables: AsynchronousDisposable...) async {
         await self.insert(disposables)
     }
 
     /// Convenience function allows a list of disposables to be gathered for disposal.
-    func insert(@DisposableBuilder builder: () -> [SynchronizedDisposable]) async {
+    func insert(@DisposableBuilder builder: () -> [AsynchronousDisposable]) async {
         await self.insert(builder())
     }
 
     /// Convenience function allows an array of disposables to be gathered for disposal.
-    func insert(_ disposables: [SynchronizedDisposable]) async {
+    func insert(_ disposables: [AsynchronousDisposable]) async {
         await self.actualDisposeBag.lock.performLocked {
             if self.actualDisposeBag.isDisposed {
                 for disposable in disposables {
@@ -142,14 +142,14 @@ public extension DisposeBag {
     #if swift(>=5.4)
     @resultBuilder
     struct DisposableBuilder {
-        public static func buildBlock(_ disposables: SynchronizedDisposable...) -> [SynchronizedDisposable] {
+        public static func buildBlock(_ disposables: AsynchronousDisposable...) -> [AsynchronousDisposable] {
             return disposables
         }
     }
     #else
     @_functionBuilder
     struct DisposableBuilder {
-        public static func buildBlock(_ disposables: SynchronizedDisposable...) -> [SynchronizedDisposable] {
+        public static func buildBlock(_ disposables: AsynchronousDisposable...) -> [AsynchronousDisposable] {
             return disposables
         }
     }

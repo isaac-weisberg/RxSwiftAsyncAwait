@@ -104,7 +104,7 @@ private final class ElementAt<SourceType>: Producer<SourceType> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == SourceType {
+        async -> AsynchronousDisposable where Observer.Element == SourceType {
         let sink = await ElementAtSink(parent: self, observer: observer)
         let subscription = await source.subscribe(c.call(), sink)
         return sink

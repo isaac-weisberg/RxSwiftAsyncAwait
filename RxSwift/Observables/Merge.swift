@@ -147,7 +147,7 @@
 //    Observer: ObserverType
 // >:
 //    ObserverType,
-//    SynchronizedOnType where SourceSequence.Element == Observer.Element {
+//    AsynchronousOnType where SourceSequence.Element == Observer.Element {
 //    typealias Element = Observer.Element
 //    typealias DisposeKey = CompositeDisposable.DisposeKey
 //    typealias Parent = MergeLimitedSink<SourceElement, SourceSequence, Observer>
@@ -161,10 +161,10 @@
 //    }
 //
 //    func on(_ event: Event<Element>, _ c: C) async {
-//        await synchronizedOn(event, c.call())
+//        await AsynchronousOn(event, c.call())
 //    }
 //
-//    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+//    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
 //        switch event {
 //        case .next:
 //            await parent.forwardOn(event, c.call())
@@ -712,7 +712,7 @@ private final class FlatMap<
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable
+        async -> AsynchronousDisposable
         where Observer.Element == SourceSequence.Element {
         let sink = await FlatMapSink(selector: selector, observer: observer)
         let subscription = await sink.run(source, c.call())

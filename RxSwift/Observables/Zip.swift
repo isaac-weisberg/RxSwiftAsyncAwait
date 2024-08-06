@@ -85,7 +85,7 @@
 //final class ZipObserver<Element>:
 //    ObserverType,
 //    LockOwnerType,
-//    SynchronizedOnType
+//    AsynchronousOnType
 //{
 //    typealias ValueSetter = (Element) -> Void
 //
@@ -107,10 +107,10 @@
 //    }
 //    
 //    func on(_ event: Event<Element>, _ c: C) async {
-//        await self.synchronizedOn(event, c.call())
+//        await self.AsynchronousOn(event, c.call())
 //    }
 //
-//    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+//    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
 //        if self.parent != nil {
 //            switch event {
 //            case .next:

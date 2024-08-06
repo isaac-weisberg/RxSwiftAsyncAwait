@@ -99,7 +99,7 @@ private final class SubscribeOn<Ob: ObservableType>: Producer<Ob.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Ob.Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Ob.Element {
         let sink = await SubscribeOnSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink

@@ -33,7 +33,7 @@
 //    }
 //
 //    override public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async ->
-//    SynchronizedDisposable
+//    AsynchronousDisposable
 //        where Observer.Element == Element {
 //        let release = await refCount.retain()
 //        let subscription = await subject.subscribe(c.call(), observer)
@@ -134,9 +134,9 @@
 //    override func run<Observer: ObserverType>(
 //        _ c: C,
 //        _ observer: Observer,
-//        cancel: SynchronizedCancelable
+//        cancel: AsynchronousCancelable
 //    )
-//        async -> (sink: UnsynchronizedDisposable, subscription: UnsynchronizedDisposable)
+//        async -> (sink: SynchronousDisposable, subscription: SynchronousDisposable)
 //        where Observer.Element == GroupedObservable<
 //            Key,
 //            Element

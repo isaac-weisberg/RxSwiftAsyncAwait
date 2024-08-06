@@ -8,9 +8,9 @@
 
 /// Represents a disposable resource whose underlying disposable resource can be replaced by another disposable
 /// resource, causing automatic disposal of the previous underlying disposable resource.
-public final class SerialDisposable: UnsynchronizedDisposeBase, UnsynchronizedCancelable {
+public final class SerialDisposable: SynchronousDisposeBase, SynchronousCancelable {
     // state
-    private var current = nil as UnsynchronizedDisposable?
+    private var current = nil as SynchronousDisposable?
     private var disposed = false
 
     /// - returns: Was resource disposed.
@@ -31,12 +31,12 @@ public final class SerialDisposable: UnsynchronizedDisposeBase, UnsynchronizedCa
      If the `SerialDisposable` has already been disposed, assignment to this property causes immediate disposal of the given disposable object.
      */
 
-    public func getDisposable() -> UnsynchronizedDisposable {
+    public func getDisposable() -> SynchronousDisposable {
         current ?? Disposables.create()
     }
 
-    public func setDisposable(_ newDisposable: UnsynchronizedDisposable) {
-        let disposable: UnsynchronizedDisposable? = {
+    public func setDisposable(_ newDisposable: SynchronousDisposable) {
+        let disposable: SynchronousDisposable? = {
             if self.isDisposed() {
                 return newDisposable
             } else {
@@ -56,7 +56,7 @@ public final class SerialDisposable: UnsynchronizedDisposeBase, UnsynchronizedCa
         _dispose()?.dispose()
     }
 
-    private func _dispose() -> UnsynchronizedDisposable? {
+    private func _dispose() -> SynchronousDisposable? {
         guard !isDisposed() else { return nil }
 
         disposed = true

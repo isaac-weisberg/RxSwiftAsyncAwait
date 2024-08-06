@@ -63,7 +63,7 @@ private final class DefaultIfEmpty<SourceType>: Producer<SourceType> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == SourceType {
+        async -> AsynchronousDisposable where Observer.Element == SourceType {
         let sink = await DefaultIfEmptySink(default: self.default, observer: observer)
         let subscription = await source.subscribe(c.call(), sink)
         return sink

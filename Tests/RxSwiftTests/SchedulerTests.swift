@@ -81,7 +81,7 @@ extension ConcurrentDispatchQueueSchedulerTests {
     func test_schedulePeriodic() async {
         let expectScheduling = expectation(description: "wait")
         let start = Date()
-        let times = Synchronized([Date]())
+        let times = Asynchronous([Date]())
 
         let scheduler = self.createScheduler()
 

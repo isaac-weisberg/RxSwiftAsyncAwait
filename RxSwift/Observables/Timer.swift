@@ -112,7 +112,7 @@ private final class Timer<Element: RxAbstractInteger>: Producer<Element> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == Element {
+        async -> AsynchronousDisposable where Observer.Element == Element {
         if period != nil {
             let sink = await TimerSink(parent: self, observer: observer)
             let subscription = await sink.run(c.call())

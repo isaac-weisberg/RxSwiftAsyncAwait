@@ -29,7 +29,7 @@ public extension ObservableType {
 private final class WindowTimeCountSink<Element, Observer: ObserverType>:
     Sink,
     ObserverType,
-    SynchronizedOnType where Observer.Element == Observable<Element>
+    AsynchronousOnType where Observer.Element == Observable<Element>
 {
     typealias Parent = WindowTimeCount<Element>
     
@@ -73,10 +73,10 @@ private final class WindowTimeCountSink<Element, Observer: ObserverType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.synchronizedOn(event, c.call())
+        await self.AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         var newWindow = false
         var newId = 0
         
@@ -166,7 +166,7 @@ private final class WindowTimeCount<Element>: Producer<Observable<Element>> {
         await super.init()
     }
     
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Observable<Element> {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Observable<Element> {
         let sink = await WindowTimeCountSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink

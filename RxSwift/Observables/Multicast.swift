@@ -250,7 +250,7 @@ private final class ConnectableObservableAdapter<Subject: SubjectType>:
         return subject
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Subject.Element {
         await lazySubject().subscribe(c.call(), observer)
     }
@@ -354,7 +354,7 @@ private final class RefCount<ConnectableSource: ConnectableObservableType>: Prod
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable
+        async -> AsynchronousDisposable
         where Observer.Element == ConnectableSource.Element {
         let sink = await RefCountSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
@@ -427,7 +427,7 @@ private final class Multicast<Subject: SubjectType, Result>: Producer<Result> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == Result {
+        async -> AsynchronousDisposable where Observer.Element == Result {
         let sink = await MulticastSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink

@@ -9,7 +9,7 @@
 /// Represents an Action-based disposable.
 ///
 /// When dispose method is called, disposal action will be dereferenced.
-private final class AnonymousDisposable: UnsynchronizedDisposeBase, UnsynchronizedCancelable {
+private final class AnonymousDisposable: SynchronousDisposeBase, SynchronousCancelable {
     public typealias DisposeAction = () -> Void
 
     private let disposed: NonAtomicInt
@@ -53,18 +53,18 @@ public extension Disposables {
     /// Constructs a new disposable with the given action used for disposal.
     ///
     /// - parameter dispose: Disposal action which will be run upon calling `dispose`.
-    static func create(with dispose: @escaping () -> Void) -> UnsynchronizedCancelable {
+    static func create(with dispose: @escaping () -> Void) -> SynchronousCancelable {
         AnonymousDisposable(disposeAction: dispose)
     }
 }
 
 extension Disposables {
-    static func createSync(with dispose: @escaping () async -> Void) -> SynchronizedCancelable {
-        AnonymousSynchronizedDisposable(disposeAction: dispose)
+    static func createSync(with dispose: @escaping () async -> Void) -> AsynchronousCancelable {
+        AnonymousAsynchronousDisposable(disposeAction: dispose)
     }
 }
 
-private final actor AnonymousSynchronizedDisposable: SynchronizedCancelable, SynchronizedDisposable {
+private final actor AnonymousAsynchronousDisposable: AsynchronousCancelable, AsynchronousDisposable {
     public typealias DisposeAction = () async -> Void
 
     private let disposed: NonAtomicInt

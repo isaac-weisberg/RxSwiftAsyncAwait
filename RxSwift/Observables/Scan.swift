@@ -94,7 +94,7 @@ private final class Scan<Element, Accumulate>: Producer<Accumulate> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Accumulate {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Accumulate {
         let sink = await ScanSink(parent: self, observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
         return sink

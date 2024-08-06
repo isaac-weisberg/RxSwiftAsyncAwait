@@ -71,7 +71,7 @@ final class CombineLatest2<O1: ObservableType, O2: ObservableType, Result> : Obs
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -165,7 +165,7 @@ final class CombineLatest3<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -266,7 +266,7 @@ final class CombineLatest4<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -374,7 +374,7 @@ final class CombineLatest5<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -489,7 +489,7 @@ final class CombineLatest6<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -611,7 +611,7 @@ final class CombineLatest7<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
@@ -740,7 +740,7 @@ final class CombineLatest8<O1: ObservableType, O2: ObservableType, O3: Observabl
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Result {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
         let sink = await CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },

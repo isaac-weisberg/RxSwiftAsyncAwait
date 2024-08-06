@@ -17,7 +17,7 @@ public extension ObservableType {
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe(_ c: C, _ on: @escaping (C, Event<Element>) async -> Void) async -> SynchronizedDisposable {
+    func subscribe(_ c: C, _ on: @escaping (C, Event<Element>) async -> Void) async -> AsynchronousDisposable {
         let observer = await AnonymousObserver(c.call()) { c, e in
             await on(c.call(), e)
         }
@@ -47,7 +47,7 @@ public extension ObservableType {
         onCompleted: ((Object) -> Void)? = nil,
         onDisposed: ((Object) -> Void)? = nil
     )
-        async -> SynchronizedDisposable {
+        async -> AsynchronousDisposable {
         await subscribe(
             c.call(),
             onNext: { [weak object] in
@@ -89,7 +89,7 @@ public extension ObservableType {
             onCompleted: (() async -> Void)? = nil,
             onDisposed: (() async -> Void)? = nil
         )
-            async -> SynchronizedDisposable {
+            async -> AsynchronousDisposable {
             let c = C(file, function, line)
             return await subscribe(
                 c,
@@ -106,7 +106,7 @@ public extension ObservableType {
             onCompleted: (() async -> Void)? = nil,
             onDisposed: (() async -> Void)? = nil
         )
-            async -> SynchronizedDisposable {
+            async -> AsynchronousDisposable {
             await subscribe(C(), onNext: onNext, onError: onError, onCompleted: onCompleted, onDisposed: onDisposed)
         }
     #endif
@@ -118,8 +118,8 @@ public extension ObservableType {
         onCompleted: (() async -> Void)? = nil,
         onDisposed: (() async -> Void)? = nil
     )
-        async -> SynchronizedDisposable {
-        let disposable: SynchronizedDisposable
+        async -> AsynchronousDisposable {
+        let disposable: AsynchronousDisposable
 
         if let disposed = onDisposed {
             disposable = Disposables.createSync(with: disposed)

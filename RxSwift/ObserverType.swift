@@ -21,28 +21,28 @@ public enum ObserverOnNextHandler<Element> {
     case async((Element, C) async -> Void)
 }
 
-public typealias SyncObserverEventHandler<Element> = (Event<Element>, C) -> Void
-public typealias AsyncObserverEventHandler<Element> = (Event<Element>, C) async -> Void
+public typealias SyncObserverEventHandler<Element> = @Sendable (Event<Element>, C) -> Void
+public typealias AsyncObserverEventHandler<Element> = @Sendable  (Event<Element>, C) async -> Void
 
-public enum ObserverEventHandler<Element> {
+public enum ObserverEventHandler<Element>: Sendable {
     case sync(SyncObserverEventHandler<Element>)
     case async(AsyncObserverEventHandler<Element>)
 }
 
-public protocol SyncObserverType {
-    associatedtype Element
+public protocol SyncObserverType: Sendable {
+    associatedtype Element: Sendable
     
-    func on(_ event: Event<Element>, _ c: C) -> Void
+    @Sendable func on(_ event: Event<Element>, _ c: C) -> Void
 }
 
-public protocol AsyncObserverType {
-    associatedtype Element
+public protocol AsyncObserverType: Sendable {
+    associatedtype Element: Sendable
     
-    func on(_ event: Event<Element>, _ c: C) async -> Void
+    @Sendable func on(_ event: Event<Element>, _ c: C) async -> Void
 }
 
-public protocol ObserverType {
-    associatedtype Element
+public protocol ObserverType: Sendable {
+    associatedtype Element: Sendable
 
     var on: ObserverEventHandler<Element> { get }
 }

@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public struct AnySyncObserver<Element>: SyncObserverType {
+public struct AnySyncObserver<Element: Sendable>: SyncObserverType, Sendable {
     /// Anonymous event handler type.
     public typealias EventHandler = SyncObserverEventHandler<Element>
 
@@ -31,7 +31,7 @@ public struct AnySyncObserver<Element>: SyncObserverType {
     }
 }
 
-public struct AnyAsyncObserver<Element>: AsyncObserverType {
+public struct AnyAsyncObserver<Element: Sendable>: AsyncObserverType {
     /// Anonymous event handler type.
     public typealias EventHandler = AsyncObserverEventHandler<Element>
 
@@ -60,7 +60,7 @@ public struct AnyAsyncObserver<Element>: AsyncObserverType {
 ///
 /// Forwards operations to an arbitrary underlying observer with the same `Element` type, hiding the specifics of the
 /// underlying observer type.
-public struct AnyObserver<Element>: ObserverType {
+public struct AnyObserver<Element: Sendable>: ObserverType {
     /// Anonymous event handler type.
     public typealias EventHandler = ObserverEventHandler<Element>
 
@@ -114,7 +114,7 @@ public extension ObserverType {
     /// Each event sent to result observer is transformed and sent to `self`.
     ///
     /// - returns: observer that transforms events.
-    func mapObserver<Result>(_ transform: @escaping (Result) throws -> Element) -> AnyObserver<Result> {
+    func mapObserver<Result>(_ transform: @Sendable @escaping (Result) throws -> Element) -> AnyObserver<Result> {
         switch self.on {
         case .sync(let observer):
             return AnyObserver(eventHandler: .sync { e, c in

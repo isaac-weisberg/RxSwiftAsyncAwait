@@ -29,7 +29,7 @@ func dispatch<Element>(_ bag: Bag<(Event<Element>, _ c: C) async -> Void>, _ eve
 }
 
 /// Dispatches `dispose` to all disposables contained inside bag.
-func disposeAll(in bag: Bag<UnsynchronizedDisposable>) {
+func disposeAll(in bag: Bag<SynchronousDisposable>) {
     bag._value0?.dispose()
 
     if bag._onlyFastPath {

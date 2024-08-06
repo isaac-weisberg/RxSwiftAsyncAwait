@@ -40,7 +40,7 @@ final class AddRef<Element>: Producer<Element> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == Element {
+        async -> AsynchronousDisposable where Observer.Element == Element {
         let releaseDisposable = await refCount.retain()
         let sink = await AddRefSink(observer: observer)
         let subscription = await Disposables.create(releaseDisposable, source.subscribe(c.call(), sink))

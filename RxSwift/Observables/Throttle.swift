@@ -30,7 +30,7 @@ public extension ObservableType {
 private final actor ThrottleSink<Observer: ObserverType>:
     Sink,
     ObserverType,
-    SynchronizedOnType {
+    AsynchronousOnType {
     typealias Element = Observer.Element
     typealias ParentType = Throttle<Element>
 
@@ -59,10 +59,10 @@ private final actor ThrottleSink<Observer: ObserverType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await synchronizedOn(event, c.call())
+        await AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
             let now = parent.scheduler.now
@@ -159,7 +159,7 @@ private final class Throttle<Element>: Producer<Element> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == Element {
+        async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await ThrottleSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink

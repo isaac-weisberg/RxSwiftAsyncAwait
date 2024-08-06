@@ -53,7 +53,7 @@ final class AsSingle<Element>: Producer<Element> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == Element {
+        async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await AsSingleSink(observer: observer)
         let subscription = await source.subscribe(c.call(), sink)
         return sink

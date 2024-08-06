@@ -7,7 +7,7 @@
 //
 
 /// Represents a push style sequence.
-public protocol ObservableType: ObservableConvertibleType {
+public protocol ObservableType: ObservableConvertibleType, Sendable {
     /**
      Subscribes `observer` to receive events for this sequence.
 
@@ -31,7 +31,7 @@ public protocol ObservableType: ObservableConvertibleType {
 
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
-    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element
 }
 
@@ -41,44 +41,16 @@ public extension ObservableType {
     func asObservable() async -> Observable<Element> {
         // temporary workaround
         // return Observable.create(subscribe: self.subscribe)
-        await Observable<Element>.create { c, o in await self.subscribe(c.call(), o) }
+        await Observable<Element>.create { c, o in await self.subscribe(c.call(), AnyObserver(eventHandler: .async(o.on))) }
     }
 }
-/// Represents a push style sequence.
-public protocol UnsynchronizedObservableType: UnsynchronizedObservableConvertibleType {
-    /**
-     Subscribes `observer` to receive events for this sequence.
 
-     ### Grammar
-
-     **Next\* (Error | Completed)?**
-
-     * sequences can produce zero or more elements so zero or more `Next` events can be sent to `observer`
-     * once an `Error` or `Completed` event is sent, the sequence terminates and can't produce any other elements
-
-     It is possible that events are sent from different threads, but no two events can be sent concurrently to
-     `observer`.
-
-     ### Resource Management
-
-     When sequence sends `Complete` or `Error` event all internal resources that compute sequence elements
-     will be freed.
-
-     To cancel production of sequence elements and free resources immediately, call `dispose` on returned
-     subscription.
-
-     - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
-     */
-    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) -> UnsynchronizedDisposable
+public protocol SyncObservableToAsyncObserverType: SyncObservableToAsyncObserverConvertibleType, Sendable {
+    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) -> SynchronousDisposable
         where Observer.Element == Element
 }
 
-public extension UnsynchronizedObservableType {
-
-    /// Default implementation of converting `ObservableType` to `Observable`.
-    func asObservable() -> UnsynchronizedObservable<Element> {
-        // temporary workaround
-        // return Observable.create(subscribe: self.subscribe)
-        Observable<Element>.createUnsynchronized { c, o in self.subscribe(c.call(), o) }
-    }
+public protocol SyncObservableToSyncObserverType: SyncObservableToSyncObserverConvertibleType, Sendable {
+    func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) -> SynchronousDisposable
+        where Observer.Element == Element
 }

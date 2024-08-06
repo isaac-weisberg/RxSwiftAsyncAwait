@@ -113,7 +113,7 @@ private final class Reduce<SourceType, AccumulateType, ResultType>: Producer<Res
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == ResultType {
+        async -> AsynchronousDisposable where Observer.Element == ResultType {
         let sink = await ReduceSink(parent: self, observer: observer)
         let subscription = await source.subscribe(c.call(), sink)
         return sink

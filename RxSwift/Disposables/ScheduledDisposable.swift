@@ -6,19 +6,19 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-private let disposeScheduledDisposable: (C, ScheduledDisposable) async -> UnsynchronizedDisposable = { c, sd in
+private let disposeScheduledDisposable: (C, ScheduledDisposable) async -> SynchronousDisposable = { c, sd in
     await sd.disposeInner()
     return Disposables.create()
 }
 
 /// Represents a disposable resource whose disposal invocation will be scheduled on the specified scheduler.
-public final class ScheduledDisposable: SynchronizedCancelable, SynchronizedDisposable {
+public final class ScheduledDisposable: AsynchronousCancelable, AsynchronousDisposable {
     public let scheduler: ImmediateSchedulerType
 
     private let disposed: ActualAtomicInt
 
     // state
-    private var disposable: SynchronizedDisposable?
+    private var disposable: AsynchronousDisposable?
 
     /// - returns: Was resource disposed.
     public func isDisposed() async -> Bool {
@@ -31,7 +31,7 @@ public final class ScheduledDisposable: SynchronizedCancelable, SynchronizedDisp
      - parameter scheduler: Scheduler where the disposable resource will be disposed on.
      - parameter disposable: Disposable resource to dispose on the given scheduler.
      */
-    public init(scheduler: ImmediateSchedulerType, disposable: SynchronizedDisposable) async {
+    public init(scheduler: ImmediateSchedulerType, disposable: AsynchronousDisposable) async {
         self.disposed = await ActualAtomicInt(0)
         self.scheduler = scheduler
         self.disposable = disposable

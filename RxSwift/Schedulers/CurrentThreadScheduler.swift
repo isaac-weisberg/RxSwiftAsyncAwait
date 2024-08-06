@@ -92,9 +92,9 @@
 //    public func schedule<StateType>(
 //        _ state: StateType,
 //        _ c: C,
-//        action: @escaping (C, StateType) async -> SynchronizedDisposable
+//        action: @escaping (C, StateType) async -> AsynchronousDisposable
 //    )
-//        async -> SynchronizedDisposable {
+//        async -> AsynchronousDisposable {
 //
 //        let disposable = await action(c.call(), state)
 //        return disposable

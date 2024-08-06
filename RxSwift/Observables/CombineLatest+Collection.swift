@@ -38,7 +38,7 @@ public extension ObservableType {
 }
 
 final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observer: ObserverType>:
-    SynchronizedDisposable where Collection.Element: ObservableType {
+    AsynchronousDisposable where Collection.Element: ObservableType {
     typealias Result = Observer.Element
     typealias SourceElement = Collection.Element.Element
     typealias ResultSelector = ([SourceElement]) throws -> Observer.Element
@@ -53,7 +53,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
     var values: [SourceElement?]
     var isDone: [Bool]
     var numberOfDone = 0
-    var subscriptions: [SynchronizedDisposable?]
+    var subscriptions: [AsynchronousDisposable?]
     var disposed = false
 
     init(parentSources: Collection, resultSelector: @escaping ResultSelector, observer: Observer) {
@@ -193,7 +193,7 @@ final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: O
         await super.init()
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any SynchronizedDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where Result == Observer.Element, Observer: ObserverType {
         let sink = CombineLatestCollectionTypeSink(
             parentSources: sources,

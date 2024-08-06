@@ -45,7 +45,7 @@ private final class BufferTimeCount<Element>: Producer<[Element]> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == [Element] {
+        async -> AsynchronousDisposable where Observer.Element == [Element] {
         let sink = await BufferTimeCountSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink
@@ -90,10 +90,10 @@ private final actor BufferTimeCountSink<Element, Observer: ObserverType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await synchronized_on(event, c.call())
+        await Asynchronous_on(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
             buffer.append(element)

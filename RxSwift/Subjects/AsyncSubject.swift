@@ -14,7 +14,7 @@ public final actor AsyncSubject<Element>:
     ObservableType,
     SubjectType,
     ObserverType,
-    SynchronizedUnsubscribeType {
+    AsynchronousUnsubscribeType {
     public typealias SubjectObserverType = AsyncSubject<Element>
 
     typealias Observers = AnyObserver<Element>.s
@@ -59,7 +59,7 @@ public final actor AsyncSubject<Element>:
             await synchronizationTracker.register(synchronizationErrorMessage: .default)
         #endif
         await scope {
-            let (observers, event) = await self.synchronized_on(event, c.call())
+            let (observers, event) = await self.Asynchronous_on(event, c.call())
             switch event {
             case .next:
                 await dispatch(observers, event, c.call())
@@ -75,7 +75,7 @@ public final actor AsyncSubject<Element>:
         #endif
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async -> (Observers, Event<Element>) {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async -> (Observers, Event<Element>) {
         if isStopped {
             return (Observers(), .completed)
         }
@@ -110,12 +110,12 @@ public final actor AsyncSubject<Element>:
     ///
     /// - parameter observer: Observer to subscribe to the subject.
     /// - returns: Disposable object that can be used to unsubscribe the observer from the subject.
-    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
-        await synchronized_subscribe(c.call(), observer)
+        await Asynchronous_subscribe(c.call(), observer)
     }
 
-    func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+    func Asynchronous_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
         where Observer.Element == Element {
         if let stoppedEvent {
             switch stoppedEvent {
@@ -135,11 +135,11 @@ public final actor AsyncSubject<Element>:
         return SubscriptionDisposable(owner: self, key: key)
     }
 
-    func synchronizedUnsubscribe(_ disposeKey: DisposeKey) async {
-        synchronized_unsubscribe(disposeKey)
+    func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) async {
+        Asynchronous_unsubscribe(disposeKey)
     }
 
-    func synchronized_unsubscribe(_ disposeKey: DisposeKey) {
+    func Asynchronous_unsubscribe(_ disposeKey: DisposeKey) {
         _ = observers.removeKey(disposeKey)
     }
 

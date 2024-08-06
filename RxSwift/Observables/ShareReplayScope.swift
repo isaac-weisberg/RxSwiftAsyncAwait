@@ -155,7 +155,7 @@ public extension ObservableType {
 
 private final actor ShareReplay1WhileConnectedConnection<Element>:
     ObserverType,
-    SynchronizedUnsubscribeType {
+    AsynchronousUnsubscribeType {
     typealias Observers = AnyObserver<Element>.s
     typealias DisposeKey = Observers.KeyType
 
@@ -177,11 +177,11 @@ private final actor ShareReplay1WhileConnectedConnection<Element>:
     }
 
     final func on(_ event: Event<Element>, _ c: C) async {
-        let observers = await synchronized_on(event)
+        let observers = await Asynchronous_on(event)
         await dispatch(observers, event, c.call())
     }
 
-    private final func synchronized_on(_ event: Event<Element>) async -> Observers {
+    private final func Asynchronous_on(_ event: Event<Element>) async -> Observers {
         if disposed {
             return Observers()
         }
@@ -192,7 +192,7 @@ private final actor ShareReplay1WhileConnectedConnection<Element>:
             return observers
         case .error, .completed:
             let observers = observers
-            await synchronized_dispose()
+            await Asynchronous_dispose()
             return observers
         }
     }
@@ -201,7 +201,7 @@ private final actor ShareReplay1WhileConnectedConnection<Element>:
         await subscription.setDisposable(parent.source.subscribe(C(), self))
     }
 
-    final func synchronized_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    final func Asynchronous_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
         if let element {
             await observer.on(.next(element), c.call())
@@ -212,7 +212,7 @@ private final actor ShareReplay1WhileConnectedConnection<Element>:
         return SubscriptionDisposable(owner: self, key: disposeKey)
     }
 
-    private final func synchronized_dispose() async {
+    private final func Asynchronous_dispose() async {
         disposed = true
         if await parent.connection === self {
             await parent.setConnection(nil)
@@ -220,21 +220,21 @@ private final actor ShareReplay1WhileConnectedConnection<Element>:
         observers = Observers()
     }
 
-    final func synchronizedUnsubscribe(_ disposeKey: DisposeKey) async {
-        if await synchronized_unsubscribe(disposeKey) {
+    final func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) async {
+        if await Asynchronous_unsubscribe(disposeKey) {
             await subscription.dispose()
         }
     }
 
     @inline(__always)
-    private final func synchronized_unsubscribe(_ disposeKey: DisposeKey) async -> Bool {
+    private final func Asynchronous_unsubscribe(_ disposeKey: DisposeKey) async -> Bool {
         // if already unsubscribed, just return
         if observers.removeKey(disposeKey) == nil {
             return false
         }
 
         if observers.count == 0 {
-            await synchronized_dispose()
+            await Asynchronous_dispose()
             return true
         }
 
@@ -267,12 +267,12 @@ private final actor ShareReplay1WhileConnected<Element>:
         self.source = source
     }
 
-    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
-        let connection = await self.synchronized_subscribe(observer)
+        let connection = await self.Asynchronous_subscribe(observer)
         let count = await connection.observers.count
 
-        let disposable = await connection.synchronized_subscribe(c.call(), observer)
+        let disposable = await connection.Asynchronous_subscribe(c.call(), observer)
 
         if count == 0 {
             await connection.connect()
@@ -282,7 +282,7 @@ private final actor ShareReplay1WhileConnected<Element>:
     }
 
     @inline(__always)
-    private func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) async -> Connection
+    private func Asynchronous_subscribe<Observer: ObserverType>(_ observer: Observer) async -> Connection
         where Observer.Element == Element {
         let connection: Connection
 
@@ -305,7 +305,7 @@ private final actor ShareReplay1WhileConnected<Element>:
 
 private final actor ShareWhileConnectedConnection<Element>:
     ObserverType,
-    SynchronizedUnsubscribeType {
+    AsynchronousUnsubscribeType {
     typealias Observers = AnyObserver<Element>.s
     typealias DisposeKey = Observers.KeyType
 
@@ -326,11 +326,11 @@ private final actor ShareWhileConnectedConnection<Element>:
     }
 
     final func on(_ event: Event<Element>, _ c: C) async {
-        let observers = synchronized_on(event)
+        let observers = Asynchronous_on(event)
         await dispatch(observers, event, c.call())
     }
 
-    private final func synchronized_on(_ event: Event<Element>) -> Observers {
+    private final func Asynchronous_on(_ event: Event<Element>) -> Observers {
         if disposed {
             return Observers()
         }
@@ -340,7 +340,7 @@ private final actor ShareWhileConnectedConnection<Element>:
             return observers
         case .error, .completed:
             let observers = observers
-            synchronized_dispose()
+            Asynchronous_dispose()
             return observers
         }
     }
@@ -349,14 +349,14 @@ private final actor ShareWhileConnectedConnection<Element>:
         await subscription.setDisposable(parent.source.subscribe(C(), self))
     }
 
-    final func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) async -> SynchronizedDisposable
+    final func Asynchronous_subscribe<Observer: ObserverType>(_ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
         let disposeKey = observers.insert(observer.on)
 
         return SubscriptionDisposable(owner: self, key: disposeKey)
     }
 
-    private final func synchronized_dispose() {
+    private final func Asynchronous_dispose() {
         disposed = true
         if parent.connection === self {
             parent.connection = nil
@@ -364,21 +364,21 @@ private final actor ShareWhileConnectedConnection<Element>:
         observers = Observers()
     }
 
-    final func synchronizedUnsubscribe(_ disposeKey: DisposeKey) async {
-        if synchronized_unsubscribe(disposeKey) {
+    final func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) async {
+        if Asynchronous_unsubscribe(disposeKey) {
             await subscription.dispose()
         }
     }
 
     @inline(__always)
-    private final func synchronized_unsubscribe(_ disposeKey: DisposeKey) -> Bool {
+    private final func Asynchronous_unsubscribe(_ disposeKey: DisposeKey) -> Bool {
         // if already unsubscribed, just return
         if observers.removeKey(disposeKey) == nil {
             return false
         }
 
         if observers.count == 0 {
-            synchronized_dispose()
+            Asynchronous_dispose()
             return true
         }
 
@@ -411,13 +411,13 @@ private final class ShareWhileConnected<Element>:
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
         let (connection, count, disposable) = await lock.performLocked {
-            let connection = await self.synchronized_subscribe(observer)
+            let connection = await self.Asynchronous_subscribe(observer)
             let count = await connection.observers.count
 
-            let disposable = await connection.synchronized_subscribe(observer)
+            let disposable = await connection.Asynchronous_subscribe(observer)
             return (connection, count, disposable)
         }
 
@@ -429,7 +429,7 @@ private final class ShareWhileConnected<Element>:
     }
 
     @inline(__always)
-    private func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) async -> Connection
+    private func Asynchronous_subscribe<Observer: ObserverType>(_ observer: Observer) async -> Connection
         where Observer.Element == Element {
         let connection: Connection
 

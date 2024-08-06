@@ -7,12 +7,12 @@
 //
 
 /// Represents two disposable resources that are disposed together.
-private final class BinaryDisposable: UnsynchronizedDisposeBase, UnsynchronizedCancelable {
+private final class BinaryDisposable: SynchronousDisposeBase, SynchronousCancelable {
     private let disposed: NonAtomicInt
 
     // state
-    private var disposable1: UnsynchronizedDisposable?
-    private var disposable2: UnsynchronizedDisposable?
+    private var disposable1: SynchronousDisposable?
+    private var disposable2: SynchronousDisposable?
 
     /// - returns: Was resource disposed.
     func isDisposed() -> Bool {
@@ -23,7 +23,7 @@ private final class BinaryDisposable: UnsynchronizedDisposeBase, UnsynchronizedC
     ///
     /// - parameter disposable1: First disposable
     /// - parameter disposable2: Second disposable
-    init(_ disposable1: UnsynchronizedDisposable, _ disposable2: UnsynchronizedDisposable) {
+    init(_ disposable1: SynchronousDisposable, _ disposable2: SynchronousDisposable) {
         disposed = NonAtomicInt(0)
         self.disposable1 = disposable1
         self.disposable2 = disposable2
@@ -45,7 +45,7 @@ private final class BinaryDisposable: UnsynchronizedDisposeBase, UnsynchronizedC
 
 public extension Disposables {
     /// Creates a disposable with the given disposables.
-    static func create(_ disposable1: UnsynchronizedDisposable, _ disposable2: UnsynchronizedDisposable) -> UnsynchronizedCancelable {
+    static func create(_ disposable1: SynchronousDisposable, _ disposable2: SynchronousDisposable) -> SynchronousCancelable {
         BinaryDisposable(disposable1, disposable2)
     }
 }

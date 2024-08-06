@@ -169,7 +169,7 @@ private final class Amb<Element>: Producer<Element> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable
+        async -> AsynchronousDisposable
         where Observer.Element == Element {
         let sink = await AmbSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())

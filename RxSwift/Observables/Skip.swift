@@ -88,7 +88,7 @@ private final class SkipCount<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await SkipCountSink(parent: self, observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
 
@@ -155,7 +155,7 @@ private final class SkipTime<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await SkipTimeSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink

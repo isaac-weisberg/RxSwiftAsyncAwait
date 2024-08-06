@@ -9,9 +9,9 @@
 /// Represents a disposable that does nothing on disposal.
 ///
 /// Nop = No Operation
-private struct NopDisposable : UnsynchronizedDisposable {
+private struct NopDisposable : SynchronousDisposable {
  
-    fileprivate static let noOp: UnsynchronizedDisposable = NopDisposable()
+    fileprivate static let noOp: SynchronousDisposable = NopDisposable()
     
     private init() {
         
@@ -26,13 +26,13 @@ extension Disposables {
     /**
      Creates a disposable that does nothing on disposal.
      */
-    static public func create() -> UnsynchronizedDisposable { NopDisposable.noOp }
-    static public func createSync() -> SynchronizedDisposable { NopSyncDisposable.noOp }
+    static public func create() -> SynchronousDisposable { NopDisposable.noOp }
+    static public func createSync() -> AsynchronousDisposable { NopSyncDisposable.noOp }
 }
 
-private struct NopSyncDisposable : SynchronizedDisposable {
+private struct NopSyncDisposable : AsynchronousDisposable {
  
-    fileprivate static let noOp: SynchronizedDisposable = NopSyncDisposable()
+    fileprivate static let noOp: AsynchronousDisposable = NopSyncDisposable()
     
     private init() {
         

@@ -1,5 +1,5 @@
 //
-//  Synchronized.swift
+//  Asynchronous.swift
 //  Tests
 //
 //  Created by Krunoslav Zaher on 1/29/19.
@@ -8,7 +8,7 @@
 
 import Foundation
 
-class Synchronized<Value> {
+class Asynchronous<Value> {
   private let lock = NSRecursiveLock()
   private var _value: Value
 

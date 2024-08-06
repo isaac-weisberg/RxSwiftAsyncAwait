@@ -50,7 +50,7 @@ private final class Dematerialize<T: EventConvertible>: Producer<T.Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == T.Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == T.Element {
         let sink = await DematerializeSink<T, Observer>(observer: observer)
         let subscription = await self.source.subscribe(c.call(), sink)
         return sink

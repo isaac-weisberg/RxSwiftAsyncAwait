@@ -27,7 +27,7 @@ public extension ObservableType {
 private final actor DebounceSink<Observer: ObserverType>:
     Sink,
     ObserverType,
-    SynchronizedOnType {
+    AsynchronousOnType {
     typealias Element = Observer.Element
     typealias ParentType = Debounce<Element>
 
@@ -55,10 +55,10 @@ private final actor DebounceSink<Observer: ObserverType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await synchronizedOn(event, c.call())
+        await AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
             id = id &+ 1
@@ -113,7 +113,7 @@ private final class Debounce<Element>: Producer<Element> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == Element {
+        async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await DebounceSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink

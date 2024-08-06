@@ -215,7 +215,7 @@
 ////        await super.init()
 ////    }
 ////
-////    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+////    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
 ////        let sink = await RetryWhenSequenceSink<Sequence, Observer, TriggerObservable, Error>(parent: self, observer: observer)
 ////        let subscription = await sink.run(c.call(), (self.sources.makeIterator(), nil))
 ////        return sink

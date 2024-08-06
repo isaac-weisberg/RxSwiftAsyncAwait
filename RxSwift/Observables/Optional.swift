@@ -77,7 +77,7 @@ private final class ObservableOptionalScheduled<Element>: Producer<Element> {
         _ c: C,
         _ observer: Observer
     )
-        async -> SynchronizedDisposable where Observer.Element == Element {
+        async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await ObservableOptionalScheduledSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink
@@ -92,7 +92,7 @@ private final class ObservableOptional<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
         if let element = optional {
             await observer.on(.next(element), c.call())

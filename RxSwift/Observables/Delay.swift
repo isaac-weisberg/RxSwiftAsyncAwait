@@ -58,7 +58,7 @@ private final actor DelaySink<Observer: ObserverType>:
 
     // All of these complications in this method are caused by the fact that
     // error should be propagated immediately. Error can be potentially received on different
-    // scheduler so this process needs to be synchronized somehow.
+    // scheduler so this process needs to be Asynchronous somehow.
     //
     // Another complication is that scheduler is potentially concurrent so internal queue is used.
     func drainQueue(_: Void, _ c: C, scheduler: AnyRecursiveScheduler<Void>) async {
@@ -176,7 +176,7 @@ private final class Delay<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await DelaySink(observer: observer, dueTime: dueTime, scheduler: scheduler)
         let subscription = await sink.run(c.call(), source: source)
         return sink

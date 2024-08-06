@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-struct SubscriptionDisposable<T: SynchronizedUnsubscribeType>: SynchronizedDisposable {
+struct SubscriptionDisposable<T: AsynchronousUnsubscribeType>: AsynchronousDisposable {
     private let key: T.DisposeKey
     private weak var owner: T?
 
@@ -16,6 +16,6 @@ struct SubscriptionDisposable<T: SynchronizedUnsubscribeType>: SynchronizedDispo
     }
 
     func dispose() async {
-        await self.owner?.synchronizedUnsubscribe(self.key)
+        await self.owner?.AsynchronousUnsubscribe(self.key)
     }
 }

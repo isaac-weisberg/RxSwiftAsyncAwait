@@ -30,7 +30,7 @@ public extension ObservableType {
 
 private final actor SamplerSink<Observer: ObserverType, SampleType>:
     ObserverType,
-    SynchronizedOnType
+    AsynchronousOnType
 {
     typealias Element = SampleType
 
@@ -43,10 +43,10 @@ private final actor SamplerSink<Observer: ObserverType, SampleType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.synchronizedOn(event, c.call())
+        await self.AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next, .completed:
             if let element = await parent.element ?? self.parent.defaultValue {
@@ -68,7 +68,7 @@ private final actor SamplerSink<Observer: ObserverType, SampleType>:
 private final actor SampleSequenceSink<Observer: ObserverType, SampleType>:
     Sink,
     ObserverType,
-    SynchronizedOnType
+    AsynchronousOnType
 {
     typealias Element = Observer.Element
     typealias Parent = Sample<Element, SampleType>
@@ -102,10 +102,10 @@ private final actor SampleSequenceSink<Observer: ObserverType, SampleType>:
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.synchronizedOn(event, c.call())
+        await self.AsynchronousOn(event, c.call())
     }
 
-    func synchronized_on(_ event: Event<Element>, _ c: C) async {
+    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
             self.element = element
@@ -131,7 +131,7 @@ private final class Sample<Element, SampleType>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await SampleSequenceSink(parent: self, observer: observer, cancel: cancel, defaultValue: self.defaultValue)
         let subscription = await sink.run(c.call())
         return sink
