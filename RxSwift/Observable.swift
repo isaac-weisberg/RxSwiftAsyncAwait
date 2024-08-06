@@ -31,11 +31,29 @@ public class Observable<Element>: ObservableType {
         await ObservableInit()
     }
 
-    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    public func subscribe<Observer: SynchronizedObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
         rxAbstractMethod()
     }
 
     public func asObservable() -> Observable<Element> { self }
+
+    deinit {
+        ObservableDeinit()
+    }
+}
+
+public class UnsynchronizedObservable<Element>: UnsynchronizedObservableType {
+    init() {
+        Task {
+            await ObservableInit()
+        }
+    }
+
+    public func subscribe<Observer: UnsynchronizedObserverType>(_ c: C, _ observer: Observer) -> UnsynchronizedDisposable where Observer.Element == Element {
+        rxAbstractMethod()
+    }
+
+    public func asObservable() -> UnsynchronizedObservable<Element> { self }
 
     deinit {
         ObservableDeinit()

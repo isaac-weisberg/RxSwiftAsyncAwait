@@ -16,3 +16,14 @@ public protocol ObservableConvertibleType {
     /// - returns: Observable sequence that represents `self`.
     func asObservable() async -> Observable<Element>
 }
+
+/// Type that can be converted to observable sequence (`Observable<Element>`).
+public protocol UnsynchronizedObservableConvertibleType {
+    /// Type of elements in sequence.
+    associatedtype Element
+
+    /// Converts `self` to `Observable` sequence.
+    ///
+    /// - returns: Observable sequence that represents `self`.
+    func asObservable() async -> UnsynchronizedObservable<Element>
+}

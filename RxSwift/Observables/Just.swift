@@ -41,12 +41,12 @@ private final actor JustScheduledSink<Observer: ObserverType>: Sink {
 
     init(parent: Parent, observer: Observer) async {
         self.parent = parent
-        self.baseSink = BaseSink(observer: observer)
+        baseSink = BaseSink(observer: observer)
     }
 
     func run(_ c: C) async -> Disposable {
-        let scheduler = self.parent.scheduler
-        return await scheduler.schedule(self.parent.element, c.call()) { c, element in
+        let scheduler = parent.scheduler
+        return await scheduler.schedule(parent.element, c.call()) { c, element in
             await self.forwardOn(.next(element), c.call())
             return await scheduler.schedule((), c.call()) { c, _ in
                 await self.forwardOn(.completed, c.call())
@@ -67,14 +67,15 @@ private final class JustScheduled<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable
+        where Observer.Element == Element {
         let sink = await JustScheduledSink(parent: self, observer: observer)
         let subscription = await sink.run(c.call())
         return sink
     }
 }
 
-private final class Just<Element>: Producer<Element> {
+private final class Just<Element>: Observable<Element> {
     private let element: Element
 
     init(element: Element) async {
@@ -82,9 +83,13 @@ private final class Just<Element>: Producer<Element> {
         await super.init()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> SynchronizedDisposable where Observer.Element == Element {
-        await observer.on(.next(self.element), c.call())
-        await observer.on(.completed, c.call())
-        return Disposables.createSync()
+    func subscribe<Observer: UnsynchronizedObserverType>(
+        _ c: C,
+        _ observer: Observer
+    )
+        async -> UnsynchronizedDisposable where Observer.Element == Element {
+        observer.on(.next(element), c.call())
+        observer.on(.completed, c.call())
+        return Disposables.create()
     }
 }
