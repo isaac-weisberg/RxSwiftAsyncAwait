@@ -118,55 +118,57 @@ public protocol SubscribeCallType: Sendable {
     associatedtype Element: Sendable
 }
 
-public enum AnySubscribeCall<Element: Sendable>: Sendable {
-    case sync(@Sendable (C, AnySyncObserver<Element>) async -> AnyDisposable)
-    case async(@Sendable (C, AnyAsyncObserver<Element>) async -> AnyDisposable)
-}
-
-public protocol SubscribeToSyncCallType: SubscribeCallType {
-    @Sendable
-    func subscribe(_ c: C, _ observer: AnySyncObserver<Element>) async -> AnyDisposable
-}
+// public enum AnySubscribeCall<Element: Sendable>: Sendable {
+//    case sync(@Sendable (C, AnySyncObserver<Element>) async -> AnyDisposable)
+//    case async(@Sendable (C, AnyAsyncObserver<Element>) async -> AnyDisposable)
+// }
+//
+// public protocol SubscribeToSyncCallType: SubscribeCallType {
+//    @Sendable
+//    func subscribe(_ c: C, _ observer: AnySyncObserver<Element>) async -> AnyDisposable
+// }
+//
 
 public protocol SubscribeToAsyncCallType: SubscribeCallType {
     @Sendable
-    func subscribe(_ c: C, _ observer: AnyAsyncObserver<Element>) async -> AnyDisposable
+    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AnyDisposable
 }
 
-extension SubscribeToAsyncCallType {
-    func asSubscribeToAny() -> AnySubscribeToCall<Element> {
-        AnySubscribeToCall(call: .async(subscribe))
-    }
-}
-
-extension SubscribeToSyncCallType {
-    func asSubscribeToAny() -> AnySubscribeToCall<Element> {
-        AnySubscribeToCall(call: .sync(subscribe))
-    }
-}
-
-struct AnySubscribeToCall<Element: Sendable>: SubscribeCallType, Sendable {
-    let call: AnySubscribeCall<Element>
-
-    func subscribe(_ c: C, _ observer: AnyObserver<Element>) async -> AnyDisposable {
-        switch call {
-        case .sync(let subscribe):
-            switch observer {
-            case .sync(let anySyncObserver):
-                return await subscribe(c.call(), anySyncObserver)
-            case .async:
-                fatalError()
-            }
-        case .async(let subscribe):
-            switch observer {
-            case .async(let anyAsyncObserver):
-                return await subscribe(c.call(), anyAsyncObserver)
-            case .sync:
-                fatalError()
-            }
-        }
-    }
-}
+//
+// extension SubscribeToAsyncCallType {
+//    func asSubscribeToAny() -> AnySubscribeToCall<Element> {
+//        AnySubscribeToCall(call: .async(subscribe))
+//    }
+// }
+//
+// extension SubscribeToSyncCallType {
+//    func asSubscribeToAny() -> AnySubscribeToCall<Element> {
+//        AnySubscribeToCall(call: .sync(subscribe))
+//    }
+// }
+//
+// struct AnySubscribeToCall<Element: Sendable>: SubscribeCallType, Sendable {
+//    let call: AnySubscribeCall<Element>
+//
+//    func subscribe(_ c: C, _ observer: AnyObserver<Element>) async -> AnyDisposable {
+//        switch call {
+//        case .sync(let subscribe):
+//            switch observer {
+//            case .sync(let anySyncObserver):
+//                return await subscribe(c.call(), anySyncObserver)
+//            case .async:
+//                fatalError()
+//            }
+//        case .async(let subscribe):
+//            switch observer {
+//            case .async(let anyAsyncObserver):
+//                return await subscribe(c.call(), anyAsyncObserver)
+//            case .sync:
+//                fatalError()
+//            }
+//        }
+//    }
+// }
 
 //
 // public struct AnySyncSubscribeCall<Observer: ObserverType, Disposable: DisposableType>: SyncSubscribeCallType {

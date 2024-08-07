@@ -6,54 +6,54 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public enum ObserverOnCompletedHandler {
-    case sync((C) -> Void)
-    case async((C) async -> Void)
-}
+//public enum ObserverOnCompletedHandler {
+//    case sync((C) -> Void)
+//    case async((C) async -> Void)
+//}
+//
+//public enum ObserverOnErrorHandler {
+//    case sync((Swift.Error, C) -> Void)
+//    case async((Swift.Error, C) async -> Void)
+//}
+//
+//public enum ObserverOnNextHandler<Element> {
+//    case sync((Element, C) -> Void)
+//    case async((Element, C) async -> Void)
+//}
 
-public enum ObserverOnErrorHandler {
-    case sync((Swift.Error, C) -> Void)
-    case async((Swift.Error, C) async -> Void)
-}
+//public typealias SyncObserverEventHandler<Element> = @Sendable (Event<Element>, C) -> Void
+//public typealias AsyncObserverEventHandler<Element> = @Sendable (Event<Element>, C) async -> Void
 
-public enum ObserverOnNextHandler<Element> {
-    case sync((Element, C) -> Void)
-    case async((Element, C) async -> Void)
-}
-
-public typealias SyncObserverEventHandler<Element> = @Sendable (Event<Element>, C) -> Void
-public typealias AsyncObserverEventHandler<Element> = @Sendable (Event<Element>, C) async -> Void
-
-public enum ObserverEventHandler<Element>: Sendable {
-    case sync(SyncObserverEventHandler<Element>)
-    case async(AsyncObserverEventHandler<Element>)
-}
+//public enum ObserverEventHandler<Element>: Sendable {
+//    case sync(SyncObserverEventHandler<Element>)
+//    case async(AsyncObserverEventHandler<Element>)
+//}
 
 public protocol ObserverType: Sendable {
     associatedtype Element: Sendable
 
-    func asAnyObserver() -> AnyAsyncObserver<Element>
+//    func asAnyObserver() -> AnyAsyncObserver<Element>
 }
+//
+//public protocol SyncObserverType: Sendable, ObserverType {
+//    @Sendable func on(_ event: Event<Element>, _ c: C) -> Void
+//}
 
-public protocol SyncObserverType: Sendable, ObserverType {
-    @Sendable func on(_ event: Event<Element>, _ c: C) -> Void
-}
-
-public extension SyncObserverType {
-    func asAnyObserver() -> AnySyncObserver<Element> {
-        AnySyncObserver(eventHandler: on(_:_:))
-    }
-}
+//public extension SyncObserverType {
+//    func asAnyObserver() -> AnySyncObserver<Element> {
+//        AnySyncObserver(eventHandler: on(_:_:))
+//    }
+//}
 
 public protocol AsyncObserverType: Sendable, ObserverType {
     @Sendable func on(_ event: Event<Element>, _ c: C) async -> Void
 }
 
-public extension AsyncObserverType {
-    func asAnyObserver() -> AnyAsyncObserver<Element> {
-        AnyAsyncObserver(eventHandler: on(_:_:))
-    }
-}
+//public extension AsyncObserverType {
+//    func asAnyObserver() -> AnyAsyncObserver<Element> {
+//        AnyAsyncObserver(eventHandler: on(_:_:))
+//    }
+//}
 
 //
 // public protocol ObserverType: Sendable {

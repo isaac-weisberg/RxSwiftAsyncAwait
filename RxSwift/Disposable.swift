@@ -66,28 +66,28 @@ private struct A: AsynchronousDisposable {
 }
 
 extension SynchronousDisposable {
-    func asAsync() -> AsynchronousDisposable {
-        A(disposable: self)
-    }
+//    func asAsync() -> AsynchronousDisposable {
+//        A(disposable: self)
+//    }
 
-    func sync(on actor: Actor) -> DisposableSynchedOnActor<Self> {
-        DisposableSynchedOnActor(actor: actor, unsyncDisposable: self)
-    }
+//    func sync(on actor: Actor) -> DisposableSynchedOnActor<Self> {
+//        DisposableSynchedOnActor(actor: actor, unsyncDisposable: self)
+//    }
 }
 
-struct DisposableSynchedOnActor<Disposable: SynchronousDisposable>: AsynchronousDisposable, Sendable {
-    weak var actor: Actor?
-    let unsyncDisposable: SynchronousDisposable
-
-    func dispose() async {
-        guard let actor else {
-            return
-        }
-        await actor.perform(C()) { _ in
-            unsyncDisposable.dispose()
-        }
-    }
-}
+// struct DisposableSynchedOnActor<Disposable: SynchronousDisposable>: AsynchronousDisposable, Sendable {
+//    weak var actor: Actor?
+//    let unsyncDisposable: SynchronousDisposable
+//
+//    func dispose() async {
+//        guard let actor else {
+//            return
+//        }
+//        await actor.perform(C()) { _ in
+//            unsyncDisposable.dispose()
+//        }
+//    }
+// }
 
 // struct DisposableSynchedOnNothing: AsynchronousDisposable {
 //    let unsyncDisposable: SynchronousDisposable

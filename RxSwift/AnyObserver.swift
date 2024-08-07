@@ -6,36 +6,36 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public struct AnySyncObserver<Element: Sendable>: /* SyncObserverType, */ Sendable {
-    /// Anonymous event handler type.
-    public typealias EventHandler = SyncObserverEventHandler<Element>
+//public struct AnySyncObserver<Element: Sendable>: /* SyncObserverType, */ Sendable {
+//    /// Anonymous event handler type.
+//    public typealias EventHandler = SyncObserverEventHandler<Element>
+//
+//    public let on: EventHandler
+//
+//    /// Construct an instance whose `on(event)` calls `eventHandler(event)`
+//    ///
+//    /// - parameter eventHandler: Event handler that observes sequences events.
+//    public init(eventHandler: @escaping EventHandler) {
+//        on = eventHandler
+//    }
+//
+//    public func on(_ event: Event<Element>, _ c: C) {
+//        on(event, c.call())
+//    }
+//
+//    /// Construct an instance whose `on(event)` calls `observer.on(event)`
+//    ///
+//    /// - parameter observer: Observer that receives sequence events.
+//    public init<Observer: SyncObserverType>(_ observer: Observer) where Observer.Element == Element {
+//        on = observer.on(_:_:)
+//    }
+//
+//    public func asAnyObserver() -> AnyObserver<Element> {
+//        .sync(self)
+//    }
+//}
 
-    public let on: EventHandler
-
-    /// Construct an instance whose `on(event)` calls `eventHandler(event)`
-    ///
-    /// - parameter eventHandler: Event handler that observes sequences events.
-    public init(eventHandler: @escaping EventHandler) {
-        on = eventHandler
-    }
-
-    public func on(_ event: Event<Element>, _ c: C) {
-        on(event, c.call())
-    }
-
-    /// Construct an instance whose `on(event)` calls `observer.on(event)`
-    ///
-    /// - parameter observer: Observer that receives sequence events.
-    public init<Observer: SyncObserverType>(_ observer: Observer) where Observer.Element == Element {
-        on = observer.on(_:_:)
-    }
-
-    public func asAnyObserver() -> AnyObserver<Element> {
-        .sync(self)
-    }
-}
-
-public struct AnyAsyncObserver<Element: Sendable>: /* AsyncObserverType, */ Sendable {
+public struct AnyAsyncObserver<Element: Sendable>: AsyncObserverType, Sendable {
     /// Anonymous event handler type.
     public typealias EventHandler = AsyncObserverEventHandler<Element>
 
@@ -58,16 +58,16 @@ public struct AnyAsyncObserver<Element: Sendable>: /* AsyncObserverType, */ Send
     public init<Observer: SyncObserverType>(_ observer: Observer) where Observer.Element == Element {
         on = observer.on(_:_:)
     }
-
-    public func asAnyObserver() -> AnyObserver<Element> {
-        .async(self)
-    }
+//
+//    public func asAnyObserver() -> AnyObserver<Element> {
+//        .async(self)
+//    }
 }
-
-public enum AnyObserver<Element> {
-    case async(AnyAsyncObserver<Element>)
-    case sync(AnySyncObserver<Element>)
-}
+//
+//public enum AnyObserver<Element> {
+//    case async(AnyAsyncObserver<Element>)
+//    case sync(AnySyncObserver<Element>)
+//}
 
 ///// A type-erased `ObserverType`.
 /////
