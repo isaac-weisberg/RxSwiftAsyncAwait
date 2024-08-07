@@ -15,11 +15,12 @@ public final class ObserveOn<Scheduler: ActorScheduler, Source: SubscribeToAsync
         self.source = source
     }
 
-    public func subscribe(_ c: C, _ observer: some AsyncObserverType) async -> AnyDisposable {
+    public func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element {
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
         let disposable = await source.subscribe(c.call(), sink)
         await sink.setInnerSyncDisposable(disposable)
-        return sink.asAnyDisposable().asAnyDisposable()
+        return sink
     }
 }
 
@@ -105,14 +106,14 @@ public final class ObserveOn<Scheduler: ActorScheduler, Source: SubscribeToAsync
 //    }
 // }
 
-public final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
+final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
     AsynchronousDisposable, Sendable {
 
     public typealias Element = Observer.Element
 
     let scheduler: ActorScheduler
     let observer: Observer
-    private var innerSyncDisposable: AnyDisposable?
+    private var innerSyncDisposable: AsynchronousDisposable?
     var disposed = false
 
     init(scheduler: ActorScheduler, observer: Observer) {
@@ -130,14 +131,7 @@ public final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType
 
             let innerSyncDisposable = innerSyncDisposable
             self.innerSyncDisposable = nil
-            switch innerSyncDisposable {
-            case .sync(let synchronousDisposable):
-                synchronousDisposable.dispose()
-            case .async(let asynchronousDisposable):
-                await asynchronousDisposable.dispose()
-            case nil:
-                break
-            }
+            await innerSyncDisposable?.dispose()
         }
     }
 
@@ -151,16 +145,9 @@ public final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType
         }
     }
 
-    func setInnerSyncDisposable(_ disposable: AnyDisposable) async {
+    func setInnerSyncDisposable(_ disposable: AsynchronousDisposable) async {
         if disposed {
-            switch innerSyncDisposable {
-            case .sync(let synchronousDisposable):
-                synchronousDisposable.dispose()
-            case .async(let asynchronousDisposable):
-                await asynchronousDisposable.dispose()
-            case nil:
-                break
-            }
+            await disposable.dispose()
             return
         }
 

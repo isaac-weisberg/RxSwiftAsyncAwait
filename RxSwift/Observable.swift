@@ -129,9 +129,11 @@ public protocol SubscribeCallType: Sendable {
 // }
 //
 
-public protocol SubscribeToAsyncCallType: SubscribeCallType {
+public protocol SubscribeToAsyncCallType: Sendable /* : SubscribeCallType */ {
+    associatedtype Element
     @Sendable
-    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AnyDisposable
+    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element
 }
 
 //
