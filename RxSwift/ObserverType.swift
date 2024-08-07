@@ -31,6 +31,8 @@ public enum ObserverEventHandler<Element>: Sendable {
 
 public protocol ObserverType: Sendable {
     associatedtype Element: Sendable
+
+//    func asAnyObserver() -> AnyAsyncObserver<Element>
 }
 
 public protocol SyncObserverType: Sendable, ObserverType {

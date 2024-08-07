@@ -1,101 +1,53 @@
-public extension SubscribeToSyncCall {
-    func observe<Scheduler: ActorScheduler>(on scheduler: Scheduler) -> SubscribeToSyncCall<Element> {
-        switch self {
-        case .async(let subscribe):
-            
-        case .sync(let subscribe):
-            return .async { c, observer in
-                let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
-                let disposable = subscribe(c.call(), sink.asAnyObserver())
-                await sink.setInnerSyncDisposable(disposable)
-                
-                return sink.asAnyDisposable().asAnyDisposable()
-            }
-            
-        }
-        AsyncObserveOn<Scheduler, Self>(scheduler: scheduler, source: self)
+public extension SubscribeToSyncCallType {
+    func observe<Scheduler: ActorScheduler>(on scheduler: Scheduler) -> SyncObserveOn<Scheduler, Self> {
+        SyncObserveOn(scheduler: scheduler, source: self)
     }
 }
 
-public final class AsyncObserveOn<Scheduler: ActorScheduler, Source: SubscribeCallType>: SubscribeToSyncCall<Source.Element> {
-    let scheduler: ActorScheduler
-    let source: Source
-    
-    public init(scheduler: ActorScheduler, source: Source) {
-        self.scheduler = scheduler
-        self.source = source
+public extension SubscribeToAsyncCallType {
+    func observe<Scheduler: ActorScheduler>(on scheduler: Scheduler) -> AsyncObserveOn<Scheduler, Self> {
+        AsyncObserveOn(scheduler: scheduler, source: self)
     }
 }
 
-extension AsyncObserveOn: AsyncToSyncSubscribeCallType {
+public final class SyncObserveOn<Scheduler: ActorScheduler, Source: SubscribeToSyncCallType>: SubscribeToSyncCallType {
     public typealias Element = Source.Element
-    
-    public func subscribe(_ c: C, _ observer: AnySyncObserver<Source.Element>) async -> AnyDisposable where Source: AsyncToSyncSubscribeCallType {
-        
-    }
-    
-    public func subscribe(_ c: C, _ observer: AnySyncObserver<Source.Element>) async -> AnyDisposable where Source: AsyncToAsyncSubscribeCallType {
-        
-    }
-}
 
-extension AsyncObserveOn: SyncToSyncSubscribeCallType where Source: SyncToSyncSubscribeCallType {
-    public func subscribe(_ c: C, _ observer: AnySyncObserver<Source.Element>) async -> AnyDisposable where Source: SyncToSyncSubscribeCallType {
-        
-    }
-    
-    public func subscribe(_ c: C, _ observer: AnySyncObserver<Source.Element>) async -> AnyDisposable where Source: SyncToAsyncSubscribeCallType {
-        
-    }
-}
-
-public extension AsyncObservableToSyncObserver {
-    func observe(on scheduler: ActorScheduler) -> AsyncObservableToSyncObserver<Element> {
-        ObserveOnAsyncToSync(source: self, scheduler: scheduler)
-    }
-}
-
-final class ObserveOnAsyncToSync<Element: Sendable>: AsyncObservableToSyncObserver<Element> {
-    typealias Source = AsyncObservableToSyncObserver<Element>
+    let scheduler: Scheduler
     let source: Source
-    let scheduler: ActorScheduler
 
-    init(source: Source, scheduler: ActorScheduler) {
-        self.source = source
+    public init(scheduler: Scheduler, source: Source) {
         self.scheduler = scheduler
+        self.source = source
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> AnyDisposable
-        where Element == Observer.Element, Observer: SyncObserverType {
+    public func subscribe(_ c: C, _ observer: AnySyncObserver<Element>) async -> AnyDisposable {
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
-        let disp = await source.subscribe(c.call(), sink)
-        await sink.setInnerSyncDisposable(disp)
-        return .async(sink)
+        let disposable = await source.subscribe(c.call(), sink.asAnyObserver())
+        await sink.setInnerSyncDisposable(disposable)
+        return sink.asAnyDisposable().asAnyDisposable()
     }
 }
 
-public extension AsyncObservableToAsyncObserver {
-    func observe(on scheduler: ActorScheduler) -> AsyncObservableToSyncObserver<Element> {
-        ObserveOnAsyncToAsync(source: self, scheduler: scheduler)
-    }
-}
+public final class AsyncObserveOn<
+    Scheduler: ActorScheduler,
+    Source: SubscribeToAsyncCallType
+>: SubscribeToSyncCallType {
+    public typealias Element = Source.Element
 
-final class ObserveOnAsyncToAsync<Element: Sendable>: AsyncObservableToSyncObserver<Element> {
-    typealias Source = AsyncObservableToAsyncObserver<Element>
+    let scheduler: Scheduler
     let source: Source
-    let scheduler: ActorScheduler
 
-    init(source: Source, scheduler: ActorScheduler) {
-        self.source = source
+    public init(scheduler: Scheduler, source: Source) {
         self.scheduler = scheduler
+        self.source = source
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> AnyDisposable
-        where Element == Observer.Element, Observer: SyncObserverType {
+    public func subscribe(_ c: C, _ observer: AnySyncObserver<Element>) async -> AnyDisposable {
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
-        let disp = await source.subscribe(c.call(), sink)
-        await sink.setInnerSyncDisposable(disp)
-        return .async(sink)
+        let disposable = await source.subscribe(c.call(), sink.asAnyObserver())
+        await sink.setInnerSyncDisposable(disposable)
+        return sink.asAnyDisposable().asAnyDisposable()
     }
 }
 
