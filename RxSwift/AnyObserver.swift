@@ -31,31 +31,31 @@ public struct AnySyncObserver<Element: Sendable>: SyncObserverType, Sendable {
     }
 }
 
-//public struct AnyAsyncObserver<Element: Sendable>: AsyncObserverType {
-//    /// Anonymous event handler type.
-//    public typealias EventHandler = AsyncObserverEventHandler<Element>
-//
-//    public let on: EventHandler
-//
-//    /// Construct an instance whose `on(event)` calls `eventHandler(event)`
-//    ///
-//    /// - parameter eventHandler: Event handler that observes sequences events.
-//    public init(eventHandler: @escaping EventHandler) {
-//        on = eventHandler
-//    }
-//    
-//    public func on(_ event: Event<Element>, _ c: C) async {
-//        await self.on(event, c.call())
-//    }
-//
-//    /// Construct an instance whose `on(event)` calls `observer.on(event)`
-//    ///
-//    /// - parameter observer: Observer that receives sequence events.
-//    public init<Observer: SyncObserverType>(_ observer: Observer) where Observer.Element == Element {
-//        self.on = observer.on(_:_:)
-//    }
-//}
-//
+public struct AnyAsyncObserver<Element: Sendable>: AsyncObserverType, Sendable {
+    /// Anonymous event handler type.
+    public typealias EventHandler = AsyncObserverEventHandler<Element>
+
+    public let on: EventHandler
+
+    /// Construct an instance whose `on(event)` calls `eventHandler(event)`
+    ///
+    /// - parameter eventHandler: Event handler that observes sequences events.
+    public init(eventHandler: @escaping EventHandler) {
+        on = eventHandler
+    }
+    
+    public func on(_ event: Event<Element>, _ c: C) async {
+        await self.on(event, c.call())
+    }
+
+    /// Construct an instance whose `on(event)` calls `observer.on(event)`
+    ///
+    /// - parameter observer: Observer that receives sequence events.
+    public init<Observer: SyncObserverType>(_ observer: Observer) where Observer.Element == Element {
+        self.on = observer.on(_:_:)
+    }
+}
+
 ///// A type-erased `ObserverType`.
 /////
 ///// Forwards operations to an arbitrary underlying observer with the same `Element` type, hiding the specifics of the

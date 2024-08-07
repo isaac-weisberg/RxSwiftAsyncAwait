@@ -115,23 +115,33 @@ public class SyncObservableToSyncObserver<Element: Sendable>: SyncObservableToSy
 }
 
 public protocol SubscribeCallType: Sendable {
-    
+    associatedtype Element
+}
+
+public enum SubscribeToSyncCall<Element: Sendable>: Sendable {
+    case sync(@Sendable (C, AnySyncObserver<Element>) -> AnyDisposable)
+    case async(@Sendable (C, AnySyncObserver<Element>) async -> AnyDisposable)
+}
+
+public enum SubscribeToAsyncCall<Element: Sendable>: Sendable {
+    case sync(@Sendable (C, AnyAsyncObserver<Element>) -> AnyDisposable)
+    case async(@Sendable (C, AnyAsyncObserver<Element>) async -> AnyDisposable)
 }
 
 public protocol SyncToSyncSubscribeCallType: SubscribeCallType {
-    func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) -> DisposableType
+    func subscribe(_ c: C, _ observer: AnySyncObserver<Element>) -> AnyDisposable
 }
 
 public protocol SyncToAsyncSubscribeCallType: SubscribeCallType {
-    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) -> DisposableType
+    func subscribe(_ c: C, _ observer: AnyAsyncObserver<Element>) -> AnyDisposable
 }
 
 public protocol AsyncToSyncSubscribeCallType: SubscribeCallType {
-    func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) async -> DisposableType
+    func subscribe(_ c: C, _ observer: AnySyncObserver<Element>) async -> AnyDisposable
 }
 
 public protocol AsyncToAsyncSubscribeCallType: SubscribeCallType {
-    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> DisposableType
+    func subscribe(_ c: C, _ observer: AnyAsyncObserver<Element>) async -> AnyDisposable
 }
 
 //

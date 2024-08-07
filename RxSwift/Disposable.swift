@@ -6,9 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public protocol DisposableType: Sendable {
-    
-}
+public protocol DisposableType: Sendable {}
 
 public protocol SynchronousDisposable: Sendable, DisposableType {
     @Sendable
@@ -23,12 +21,13 @@ public protocol AsynchronousDisposable: Sendable, DisposableType {
 }
 
 extension SynchronousDisposable {
-    func asAny() -> AnySynchronousDisposable {
+    func asAnyDisposable() -> AnySynchronousDisposable {
         AnySynchronousDisposable(dispose: dispose)
     }
 }
+
 extension AsynchronousDisposable {
-    func asAny() -> AnyAsynchronousDisposable {
+    func asAnyDisposable() -> AnyAsynchronousDisposable {
         AnyAsynchronousDisposable(dispose: dispose)
     }
 }
@@ -41,9 +40,21 @@ public struct AnyAsynchronousDisposable: Sendable, DisposableType {
     let dispose: @Sendable () async -> Void
 }
 
+extension AnyAsynchronousDisposable {
+    func asAnyDisposable() -> AnyDisposable {
+        .async(self)
+    }
+}
+
+extension AnySynchronousDisposable {
+    func asAnyDisposable() -> AnyDisposable {
+        .sync(self)
+    }
+}
+
 public enum AnyDisposable: Sendable {
-    case sync(SynchronousDisposable)
-    case async(AsynchronousDisposable)
+    case sync(AnySynchronousDisposable)
+    case async(AnyAsynchronousDisposable)
 }
 
 private struct A: AsynchronousDisposable {
