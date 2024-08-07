@@ -6,13 +6,6 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public extension AsyncObservableToSyncObserverType {
-    func map<Result>(_ transform: @escaping (Element) throws -> Result) async
-        -> AsyncObservableToSyncObserver<Result> {
-        await Map(source: asObservable(), transform: transform)
-    }
-}
-
 public extension ObservableType {
     /**
      Projects each element of an observable sequence into a new form.
@@ -23,23 +16,24 @@ public extension ObservableType {
      - returns: An observable sequence whose elements are the result of invoking the transform function on each element of source.
 
      */
-    func map<Result>(_ transform: @escaping (Element) throws -> Result) async
+    func map<Result>(_ transform: @escaping (Element) throws -> Result)
         -> Observable<Result> {
-        await Map(source: asObservable(), transform: transform)
+        Map(source: self, transform: transform)
     }
 }
 
-private final class Map<SourceType, ResultType>: Producer<ResultType> {
+private final class Map<Source: ObservableType, ResultType: Sendable>: Producer<ResultType> {
+    typealias SourceType = Source.Element
     typealias Transform = (SourceType) throws -> ResultType
 
-    private let source: Observable<SourceType>
+    private let source: Source
 
     private let transform: Transform
 
-    init(source: Observable<SourceType>, transform: @escaping Transform) async {
+    init(source: Source, transform: @escaping Transform) {
         self.source = source
         self.transform = transform
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable

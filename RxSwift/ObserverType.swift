@@ -36,6 +36,21 @@ public protocol ObserverType: Sendable {
     @Sendable
     func on(_ event: Event<Element>, _ c: C) async -> Void
 }
+
+public extension ObserverType {
+    func onNext(_ element: Element, _ c: C) async {
+        await on(.next(element), c)
+    }
+    
+    func onCompleted(_ c: C) async {
+        await on(.completed, c)
+    }
+    
+    func onError(_ error: Error, _ c: C) async {
+        await on(.error(error), c)
+    }
+}
+
 //
 //public protocol SyncObserverType: Sendable, ObserverType {
 //    @Sendable func on(_ event: Event<Element>, _ c: C) -> Void

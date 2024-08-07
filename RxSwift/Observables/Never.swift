@@ -14,13 +14,14 @@ public extension ObservableType {
 
      - returns: An observable sequence whose observers will never get called.
      */
-    static func never() async -> Observable<Element> {
-        await NeverProducer()
+    static func never() -> Observable<Element> {
+        NeverProducer()
     }
 }
 
 private final class NeverProducer<Element>: Producer<Element> {
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element {
         Disposables.create()
     }
 }
