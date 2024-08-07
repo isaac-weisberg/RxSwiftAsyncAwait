@@ -6,9 +6,9 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public protocol SynchronousCancelable: SynchronousDisposable {
-    func isDisposed() -> Bool
-}
+//public protocol SynchronousCancelable: SynchronousDisposable {
+//    func isDisposed() -> Bool
+//}
 
 /// Represents disposable resource with state tracking.
 public protocol AsynchronousCancelable: AsynchronousDisposable {

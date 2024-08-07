@@ -8,8 +8,8 @@
 
 /// Represents a disposable resource that only disposes its underlying disposable resource when all dependent disposable
 /// objects have been disposed.
-public final class RefCountDisposable: SynchronousDisposable, SynchronousCancelable {
-    private var disposable = nil as SynchronousDisposable?
+public final actor RefCountDisposable: AsynchronousCancelable {
+    private var disposable = nil as AsynchronousDisposable?
     private var primaryDisposed = false
     private var count = 0
 
@@ -19,7 +19,7 @@ public final class RefCountDisposable: SynchronousDisposable, SynchronousCancela
     }
 
     /// Initializes a new instance of the `RefCountDisposable`.
-    public init(disposable: SynchronousDisposable) {
+    public init(disposable: AsynchronousDisposable) {
         self.disposable = disposable
     }
 
@@ -28,7 +28,7 @@ public final class RefCountDisposable: SynchronousDisposable, SynchronousCancela
 
      When getter is called, a dependent disposable contributing to the reference count that manages the underlying disposable's lifetime is returned.
      */
-    public func retain() -> SynchronousDisposable {
+    public func retain() -> AsynchronousDisposable {
         if disposable != nil {
             do {
                 _ = try incrementChecked(&count)
@@ -43,8 +43,8 @@ public final class RefCountDisposable: SynchronousDisposable, SynchronousCancela
     }
 
     /// Disposes the underlying disposable only when all dependent disposables have been disposed.
-    public func dispose() {
-        let oldDisposable: SynchronousDisposable? = {
+    public func dispose() async {
+        let oldDisposable: AsynchronousDisposable? = {
             if let oldDisposable = self.disposable, !self.primaryDisposed {
                 self.primaryDisposed = true
 
@@ -58,12 +58,12 @@ public final class RefCountDisposable: SynchronousDisposable, SynchronousCancela
         }()
 
         if let disposable = oldDisposable {
-            disposable.dispose()
+            await disposable.dispose()
         }
     }
 
-    fileprivate func release() {
-        let oldDisposable: SynchronousDisposable? = {
+    fileprivate func release() async {
+        let oldDisposable: AsynchronousDisposable? = {
             if let oldDisposable = self.disposable {
                 do {
                     _ = try decrementChecked(&self.count)
@@ -85,23 +85,29 @@ public final class RefCountDisposable: SynchronousDisposable, SynchronousCancela
         }()
 
         if let disposable = oldDisposable {
-            disposable.dispose()
+            await disposable.dispose()
         }
     }
 }
 
-final class RefCountInnerDisposable: SynchronousDisposeBase, SynchronousDisposable {
+final actor RefCountInnerDisposable: AsynchronousDisposable {
     private let parent: RefCountDisposable
     private let isDisposed: NonAtomicInt
 
     init(_ parent: RefCountDisposable) {
         isDisposed = NonAtomicInt(0)
         self.parent = parent
+
+        SynchronousDisposeBaseInit()
     }
 
-    func dispose() {
+    deinit {
+        SynchronousDisposeBaseDeinit()
+    }
+
+    func dispose() async {
         if fetchOr(isDisposed, 1) == 0 {
-            parent.release()
+            await parent.release()
         }
     }
 }

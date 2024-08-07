@@ -11,7 +11,7 @@
 
  If an underlying disposable resource has already been set, future attempts to set the underlying disposable resource will throw an exception.
  */
-public final class SingleAssignmentDisposable: SynchronousDisposeBase, SynchronousCancelable {
+public final actor SingleAssignmentDisposable: AsynchronousCancelable {
     private struct DisposeState: OptionSet {
         let rawValue: Int32
 
@@ -21,7 +21,7 @@ public final class SingleAssignmentDisposable: SynchronousDisposeBase, Synchrono
 
     // state
     private let state: NonAtomicInt
-    private var disposable = nil as SynchronousDisposable?
+    private var disposable = nil as AsynchronousDisposable?
 
     /// - returns: A value that indicates whether the object is disposed.
     public func isDisposed() -> Bool {
@@ -29,15 +29,19 @@ public final class SingleAssignmentDisposable: SynchronousDisposeBase, Synchrono
     }
 
     /// Initializes a new instance of the `SingleAssignmentDisposable`.
-    override public init() {
+    public init() {
         state = NonAtomicInt(0)
-        super.init()
+        SynchronousDisposeBaseInit()
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
     }
 
     /// Gets or sets the underlying disposable. After disposal, the result of getting this property is undefined.
     ///
     /// **Throws exception if the `SingleAssignmentDisposable` has already been assigned to.**
-    public func setDisposable(_ disposable: SynchronousDisposable) {
+    public func setDisposable(_ disposable: AsynchronousDisposable) async {
         self.disposable = disposable
 
         let previousState = fetchOr(state, DisposeState.disposableSet.rawValue)
@@ -47,13 +51,13 @@ public final class SingleAssignmentDisposable: SynchronousDisposeBase, Synchrono
         }
 
         if (previousState & DisposeState.disposed.rawValue) != 0 {
-            disposable.dispose()
+            await disposable.dispose()
             self.disposable = nil
         }
     }
 
     /// Disposes the underlying disposable.
-    public func dispose() {
+    public func dispose() async {
         let previousState = fetchOr(state, DisposeState.disposed.rawValue)
 
         if (previousState & DisposeState.disposed.rawValue) != 0 {
@@ -64,7 +68,7 @@ public final class SingleAssignmentDisposable: SynchronousDisposeBase, Synchrono
             guard let disposable else {
                 rxFatalError("Disposable not set")
             }
-            disposable.dispose()
+            await disposable.dispose()
             self.disposable = nil
         }
     }

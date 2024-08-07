@@ -6,8 +6,8 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-protocol AsynchronousUnsubscribeType: AnyObject {
-    associatedtype DisposeKey
+protocol AsynchronousUnsubscribeType: AnyObject, Sendable {
+    associatedtype DisposeKey: Sendable
 
     func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) async
 }

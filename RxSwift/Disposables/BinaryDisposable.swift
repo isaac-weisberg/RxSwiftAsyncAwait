@@ -7,12 +7,12 @@
 //
 
 /// Represents two disposable resources that are disposed together.
-private final class BinaryDisposable: SynchronousDisposeBase, SynchronousCancelable {
+private final actor BinaryDisposable: AsynchronousCancelable {
     private let disposed: NonAtomicInt
 
     // state
-    private var disposable1: SynchronousDisposable?
-    private var disposable2: SynchronousDisposable?
+    private var disposable1: AsynchronousDisposable?
+    private var disposable2: AsynchronousDisposable?
 
     /// - returns: Was resource disposed.
     func isDisposed() -> Bool {
@@ -23,29 +23,36 @@ private final class BinaryDisposable: SynchronousDisposeBase, SynchronousCancela
     ///
     /// - parameter disposable1: First disposable
     /// - parameter disposable2: Second disposable
-    init(_ disposable1: SynchronousDisposable, _ disposable2: SynchronousDisposable) {
+    init(_ disposable1: AsynchronousDisposable, _ disposable2: AsynchronousDisposable) {
         disposed = NonAtomicInt(0)
         self.disposable1 = disposable1
         self.disposable2 = disposable2
-        super.init()
+        SynchronousDisposeBaseInit()
     }
 
     /// Calls the disposal action if and only if the current instance hasn't been disposed yet.
     ///
     /// After invoking disposal action, disposal action will be dereferenced.
-    func dispose() {
+    func dispose() async {
         if fetchOr(disposed, 1) == 0 {
-            disposable1?.dispose()
-            disposable2?.dispose()
+            await disposable1?.dispose()
+            await disposable2?.dispose()
             disposable1 = nil
             disposable2 = nil
         }
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
     }
 }
 
 public extension Disposables {
     /// Creates a disposable with the given disposables.
-    static func create(_ disposable1: SynchronousDisposable, _ disposable2: SynchronousDisposable) -> SynchronousCancelable {
+    static func create(
+        _ disposable1: AsynchronousDisposable,
+        _ disposable2: AsynchronousDisposable
+    ) -> AsynchronousCancelable {
         BinaryDisposable(disposable1, disposable2)
     }
 }

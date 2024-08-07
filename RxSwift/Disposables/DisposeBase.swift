@@ -24,13 +24,13 @@ func SynchronousDisposeBaseDeinit() {
         #endif
 }
 
-/// Base class for all disposables.
-public class SynchronousDisposeBase {
-    init() {
-        SynchronousDisposeBaseInit()
-    }
-
-    deinit {
-        SynchronousDisposeBaseDeinit()
-    }
-}
+///// Base class for all disposables.
+//public class SynchronousDisposeBase {
+//    init() {
+//        SynchronousDisposeBaseInit()
+//    }
+//
+//    deinit {
+//        SynchronousDisposeBaseDeinit()
+//    }
+//}

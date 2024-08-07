@@ -8,9 +8,9 @@
 
 /// Represents a disposable resource whose underlying disposable resource can be replaced by another disposable
 /// resource, causing automatic disposal of the previous underlying disposable resource.
-public final class SerialDisposable: SynchronousDisposeBase, SynchronousCancelable {
+public final actor SerialDisposable: AsynchronousCancelable {
     // state
-    private var current = nil as SynchronousDisposable?
+    private var current = nil as AsynchronousDisposable?
     private var disposed = false
 
     /// - returns: Was resource disposed.
@@ -19,8 +19,12 @@ public final class SerialDisposable: SynchronousDisposeBase, SynchronousCancelab
     }
 
     /// Initializes a new instance of the `SerialDisposable`.
-    override public init() {
-        super.init()
+    public init() {
+        SynchronousDisposeBaseInit()
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
     }
 
     /**
@@ -31,12 +35,12 @@ public final class SerialDisposable: SynchronousDisposeBase, SynchronousCancelab
      If the `SerialDisposable` has already been disposed, assignment to this property causes immediate disposal of the given disposable object.
      */
 
-    public func getDisposable() -> SynchronousDisposable {
+    public func getDisposable() -> AsynchronousDisposable {
         current ?? Disposables.create()
     }
 
-    public func setDisposable(_ newDisposable: SynchronousDisposable) {
-        let disposable: SynchronousDisposable? = {
+    public func setDisposable(_ newDisposable: AsynchronousDisposable) async {
+        let disposable: AsynchronousDisposable? = {
             if self.isDisposed() {
                 return newDisposable
             } else {
@@ -47,16 +51,16 @@ public final class SerialDisposable: SynchronousDisposeBase, SynchronousCancelab
         }()
 
         if let disposable {
-            disposable.dispose()
+            await disposable.dispose()
         }
     }
 
     /// Disposes the underlying disposable as well as all future replacements.
-    public func dispose() {
-        _dispose()?.dispose()
+    public func dispose() async {
+        await _dispose()?.dispose()
     }
 
-    private func _dispose() -> SynchronousDisposable? {
+    private func _dispose() -> AsynchronousDisposable? {
         guard !isDisposed() else { return nil }
 
         disposed = true

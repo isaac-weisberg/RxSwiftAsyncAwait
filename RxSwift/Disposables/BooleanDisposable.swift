@@ -7,7 +7,7 @@
 //
 
 /// Represents a disposable resource that can be checked for disposal status.
-public final class BooleanDisposable: SynchronousCancelable {
+public final actor BooleanDisposable: AsynchronousCancelable {
     static let BooleanDisposableTrue = BooleanDisposable(isDisposed: true)
     
     private let disposed: NonAtomicInt
