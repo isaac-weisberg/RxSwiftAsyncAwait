@@ -45,7 +45,8 @@ public class Observable<Element: Sendable>: ObservableType, @unchecked Sendable 
     }
 }
 
-public class AsyncObservableToAsyncObserver<Element: Sendable>: AsyncObservableToAsyncObserverType, @unchecked Sendable {
+public class AsyncObservableToAsyncObserver<Element: Sendable>: AsyncObservableToAsyncObserverType,
+    @unchecked Sendable {
     init() {
         ObservableInit()
     }
@@ -67,8 +68,8 @@ public class AsyncObservableToSyncObserver<Element: Sendable>: AsyncObservableTo
         ObservableInit()
     }
 
-    public func subscribe<Observer>(_ c: C, _ observer: Observer) async -> AnyDisposable
-        where Observer: SyncObserverType, Element == Observer.Element {
+    public func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) async -> AnyDisposable
+        where Element == Observer.Element {
         rxAbstractMethod()
     }
 
@@ -84,8 +85,8 @@ public class SyncObservableToAsyncObserver<Element: Sendable>: SyncObservableToA
         ObservableInit()
     }
 
-    public func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
-        where Observer: AsyncObserverType, Element == Observer.Element {
+    public func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
+        where Element == Observer.Element {
         rxAbstractMethod()
     }
 
@@ -101,8 +102,8 @@ public class SyncObservableToSyncObserver<Element: Sendable>: SyncObservableToSy
         ObservableInit()
     }
 
-    public func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
-        where Observer: SyncObserverType, Element == Observer.Element {
+    public func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
+        where Element == Observer.Element {
         rxAbstractMethod()
     }
 
@@ -111,4 +112,13 @@ public class SyncObservableToSyncObserver<Element: Sendable>: SyncObservableToSy
     deinit {
         ObservableDeinit()
     }
+}
+
+public enum SubscribeCall<Observer: ObserverType, Disposable: DisposableType> {
+    case async((C, Observer) async -> Disposable)
+    case sync((C, Observer) -> Disposable)
+}
+
+public struct AnyObservable<Observer: ObserverType, Disposable: DisposableType> {
+    let subscribe: SubscribeCall<Observer, Disposable>
 }

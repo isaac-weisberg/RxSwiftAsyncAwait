@@ -6,12 +6,16 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public protocol SynchronousDisposable: Sendable {
+public protocol DisposableType: Sendable {
+    
+}
+
+public protocol SynchronousDisposable: Sendable, DisposableType {
     func dispose()
 }
 
 /// Represents a disposable resource.
-public protocol AsynchronousDisposable: Sendable {
+public protocol AsynchronousDisposable: Sendable, DisposableType {
     /// Dispose resource.
     func dispose() async
 }

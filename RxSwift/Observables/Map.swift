@@ -6,6 +6,13 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
+public extension AsyncObservableToSyncObserverType {
+    func map<Result>(_ transform: @escaping (Element) throws -> Result) async
+        -> AsyncObservableToSyncObserver<Result> {
+        await Map(source: asObservable(), transform: transform)
+    }
+}
+
 public extension ObservableType {
     /**
      Projects each element of an observable sequence into a new form.

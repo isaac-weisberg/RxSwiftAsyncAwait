@@ -29,61 +29,61 @@ public enum ObserverEventHandler<Element>: Sendable {
     case async(AsyncObserverEventHandler<Element>)
 }
 
-public protocol SyncObserverType: Sendable {
+public protocol ObserverType: Sendable {
     associatedtype Element: Sendable
-    
+}
+
+public protocol SyncObserverType: Sendable, ObserverType {
     @Sendable func on(_ event: Event<Element>, _ c: C) -> Void
 }
 
-public protocol AsyncObserverType: Sendable {
-    associatedtype Element: Sendable
-    
+public protocol AsyncObserverType: Sendable, ObserverType {
     @Sendable func on(_ event: Event<Element>, _ c: C) async -> Void
 }
-
-public protocol ObserverType: Sendable {
-    associatedtype Element: Sendable
-
-    var on: ObserverEventHandler<Element> { get }
-}
-
-public extension ObserverType {
-    var onNext: ObserverOnNextHandler<Element> {
-        switch on {
-        case .sync(let on):
-            return .sync { e, c in
-                on(.next(e), c.call())
-            }
-        case .async(let on):
-            return .async { e, c in
-                await on(.next(e), c.call())
-            }
-        }
-    }
-
-    var onError: ObserverOnErrorHandler {
-        switch on {
-        case .sync(let on):
-            return .sync { e, c in
-                on(.error(e), c.call())
-            }
-        case .async(let on):
-            return .async { e, c in
-                await on(.error(e), c.call())
-            }
-        }
-    }
-
-    var onCompleted: ObserverOnCompletedHandler {
-        switch on {
-        case .sync(let on):
-            return .sync { c in
-                on(.completed, c.call())
-            }
-        case .async(let on):
-            return .async { c in
-                await on(.completed, c.call())
-            }
-        }
-    }
-}
+//
+//public protocol ObserverType: Sendable {
+//    associatedtype Element: Sendable
+//
+//    var on: ObserverEventHandler<Element> { get }
+//}
+//
+//public extension ObserverType {
+//    var onNext: ObserverOnNextHandler<Element> {
+//        switch on {
+//        case .sync(let on):
+//            return .sync { e, c in
+//                on(.next(e), c.call())
+//            }
+//        case .async(let on):
+//            return .async { e, c in
+//                await on(.next(e), c.call())
+//            }
+//        }
+//    }
+//
+//    var onError: ObserverOnErrorHandler {
+//        switch on {
+//        case .sync(let on):
+//            return .sync { e, c in
+//                on(.error(e), c.call())
+//            }
+//        case .async(let on):
+//            return .async { e, c in
+//                await on(.error(e), c.call())
+//            }
+//        }
+//    }
+//
+//    var onCompleted: ObserverOnCompletedHandler {
+//        switch on {
+//        case .sync(let on):
+//            return .sync { c in
+//                on(.completed, c.call())
+//            }
+//        case .async(let on):
+//            return .async { c in
+//                await on(.completed, c.call())
+//            }
+//        }
+//    }
+//}
