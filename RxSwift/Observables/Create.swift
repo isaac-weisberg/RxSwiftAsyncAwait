@@ -17,25 +17,9 @@ public extension ObservableType {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(_ subscribe: @escaping (C, AnyAsyncObserver<Element>) async -> AsynchronousDisposable) async
+    static func create(_ subscribe: @Sendable @escaping (C, AnyAsyncObserver<Element>) async -> AsynchronousDisposable)
         -> Observable<Element> {
-        await AnonymousObservable(subscribe)
-    }
-
-    /**
-     Creates an observable sequence from a specified subscribe method implementation.
-
-     - seealso: [create operator on reactivex.io](http://reactivex.io/documentation/operators/create.html)
-
-     - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
-     - returns: The observable sequence with the specified implementation for the `subscribe` method.
-     */
-    static func createSynchronous(
-        _ subscribe: @escaping (C, AnySyncObserver<Element>)
-            -> SynchronousDisposable
-    )
-        -> SynchronousObservable<Element> {
-        AnonymousSynchronousObservable(subscribe)
+        AnonymousObservable(subscribe)
     }
 }
 
@@ -72,37 +56,30 @@ private final actor AnonymousObservableSink<
 
     func dispose() async {
         if fetchOr(isStopped, 1) == 0 {
-            let innerDisposable = self.innerDisposable
+            let innerDisposable = innerDisposable
             self.innerDisposable = nil
             await innerDisposable?.dispose()
         }
     }
 
     func run(_ subscribeHandler: SubscribeHandler, _ c: C) async {
-        innerDisposable = await subscribeHandler(c.call(), AnyAsyncObserver(eventHandler: on))
+        innerDisposable = await subscribeHandler(c.call(), AnyAsyncObserver(self))
     }
 }
 
-private final class AnonymousObservable<Element>: Observable<Element> {
-    typealias SubscribeHandler = (C, AnyAsyncObserver<Element>) async -> AsynchronousDisposable
+private final class AnonymousObservable<Element: Sendable>: Observable<Element> {
+    typealias SubscribeHandler = @Sendable (C, AnyAsyncObserver<Element>) async -> AsynchronousDisposable
 
     let subscribeHandler: SubscribeHandler
 
-    init(_ subscribeHandler: @escaping SubscribeHandler) async {
+    init(_ subscribeHandler: @escaping SubscribeHandler) {
         self.subscribeHandler = subscribeHandler
-        await super.init()
+        ObservableInit()
     }
 
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any Disposable
         where Element == Observer.Element, Observer: ObserverType {
-        let sink = AnonymousObservableSink(observer: AnyAsyncObserver(eventHandler: { e, c in
-            switch observer.on {
-            case .sync(let syncObserverEventHandler):
-                syncObserverEventHandler(e, c.call())
-            case .async(let asyncObserverEventHandler):
-                await asyncObserverEventHandler(e, c.call())
-            }
-        }))
+        let sink = AnonymousObservableSink(observer: observer)
         await sink.run(subscribeHandler, c.call())
         return sink
     }
@@ -110,78 +87,4 @@ private final class AnonymousObservable<Element>: Observable<Element> {
 
 func scope<R>(_ work: () async -> R) async -> R {
     await work()
-}
-
-private final class AnonymousSynchronousObservableSink<
-    Observer: SyncObserverType
->: SyncObserverType, SynchronousDisposable {
-    typealias Element = Observer.Element
-    typealias SubscribeHandler = AnonymousSynchronousObservable<Element>.SubscribeHandler
-
-    // state
-    private let isStopped: NonAtomicInt
-    private var innerDisposable: SynchronousDisposable?
-    private let observer: Observer
-
-    init(observer: Observer) {
-        isStopped = NonAtomicInt(0)
-        self.observer = observer
-    }
-
-    func on(_ event: Event<Element>, _ c: C) {
-        switch event {
-        case .next:
-            if load(isStopped) == 1 {
-                return
-            }
-            forwardOn(event, c.call())
-        case .error, .completed:
-            if fetchOr(isStopped, 1) == 0 {
-                forwardOn(event, c.call())
-                dispose()
-            }
-        }
-    }
-
-    func dispose() {
-        if fetchOr(isStopped, 1) == 0 {
-            innerDisposable?.dispose()
-            innerDisposable = nil
-        }
-    }
-
-    func forwardOn(_ event: Event<Observer.Element>, _ c: C) {
-        observer.on(event, c.call())
-    }
-
-    func run(_ subscribeHandler: SubscribeHandler, _ c: C) {
-        innerDisposable = subscribeHandler(c.call(), AnySyncObserver(eventHandler: on))
-    }
-}
-
-private final class AnonymousSynchronousObservable<Element>: SynchronousObservable<Element> {
-    typealias SubscribeHandler = (C, AnySyncObserver<Element>) -> SynchronousDisposable
-
-    let subscribeHandler: SubscribeHandler
-
-    init(_ subscribeHandler: @escaping SubscribeHandler) {
-        self.subscribeHandler = subscribeHandler
-        super.init()
-    }
-
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) -> any SynchronousDisposable
-        where Observer: ObserverType, Observer.Element == Element {
-        let sink = AnonymousSynchronousObservableSink(observer: AnySyncObserver(eventHandler: { event, c in
-            switch observer.on {
-            case .sync(let syncObserverEventHandler):
-                syncObserverEventHandler(event, c.call())
-            case .async(let asyncObserverEventHandler):
-                Task {
-                    await asyncObserverEventHandler(event, c.call())
-                }
-            }
-        }))
-        sink.run(subscribeHandler, c.call())
-        return sink
-    }
 }

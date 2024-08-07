@@ -16,9 +16,10 @@
 /// Represents a disposable resource.
 public protocol AsynchronousDisposable: Sendable {//}, DisposableType {
     /// Dispose resource.
-    @Sendable
     func dispose() async
 }
+
+public typealias Disposable = AsynchronousDisposable
 //
 //extension SynchronousDisposable {
 //    func asAnyDisposable() -> AnySynchronousDisposable {

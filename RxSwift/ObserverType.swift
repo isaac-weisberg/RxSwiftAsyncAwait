@@ -22,7 +22,7 @@
 //}
 
 //public typealias SyncObserverEventHandler<Element> = @Sendable (Event<Element>, C) -> Void
-//public typealias AsyncObserverEventHandler<Element> = @Sendable (Event<Element>, C) async -> Void
+public typealias AsyncObserverEventHandler<Element> = @Sendable (Event<Element>, C) async -> Void
 
 //public enum ObserverEventHandler<Element>: Sendable {
 //    case sync(SyncObserverEventHandler<Element>)
@@ -33,6 +33,8 @@ public protocol ObserverType: Sendable {
     associatedtype Element: Sendable
 
 //    func asAnyObserver() -> AnyAsyncObserver<Element>
+    @Sendable
+    func on(_ event: Event<Element>, _ c: C) async -> Void
 }
 //
 //public protocol SyncObserverType: Sendable, ObserverType {
@@ -45,9 +47,8 @@ public protocol ObserverType: Sendable {
 //    }
 //}
 
-public protocol AsyncObserverType: Sendable, ObserverType {
-    @Sendable func on(_ event: Event<Element>, _ c: C) async -> Void
-}
+public typealias AsyncObserverType = ObserverType
+public typealias SyncObserverType = ObserverType
 
 //public extension AsyncObserverType {
 //    func asAnyObserver() -> AnyAsyncObserver<Element> {
