@@ -1,17 +1,17 @@
+////
+////  InvocableType.swift
+////  RxSwift
+////
+////  Created by Krunoslav Zaher on 11/7/15.
+////  Copyright © 2015 Krunoslav Zaher. All rights reserved.
+////
 //
-//  InvocableType.swift
-//  RxSwift
+//protocol InvocableType {
+//    func invoke(_ c: C) async
+//}
 //
-//  Created by Krunoslav Zaher on 11/7/15.
-//  Copyright © 2015 Krunoslav Zaher. All rights reserved.
+//protocol InvocableWithValueType {
+//    associatedtype Value
 //
-
-protocol InvocableType {
-    func invoke(_ c: C) async
-}
-
-protocol InvocableWithValueType {
-    associatedtype Value
-
-    func invoke(_ c: C, _ value: Value) async
-}
+//    func invoke(_ c: C, _ value: Value) async
+//}
