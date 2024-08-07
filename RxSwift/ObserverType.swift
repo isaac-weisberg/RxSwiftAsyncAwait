@@ -32,14 +32,14 @@ public enum ObserverEventHandler<Element>: Sendable {
 public protocol ObserverType: Sendable {
     associatedtype Element: Sendable
 
-//    func asAnyObserver() -> AnyAsyncObserver<Element>
+    func asAnyObserver() -> AnyAsyncObserver<Element>
 }
 
 public protocol SyncObserverType: Sendable, ObserverType {
     @Sendable func on(_ event: Event<Element>, _ c: C) -> Void
 }
 
-extension SyncObserverType {
+public extension SyncObserverType {
     func asAnyObserver() -> AnySyncObserver<Element> {
         AnySyncObserver(eventHandler: on(_:_:))
     }
@@ -49,7 +49,7 @@ public protocol AsyncObserverType: Sendable, ObserverType {
     @Sendable func on(_ event: Event<Element>, _ c: C) async -> Void
 }
 
-extension AsyncObserverType {
+public extension AsyncObserverType {
     func asAnyObserver() -> AnyAsyncObserver<Element> {
         AnyAsyncObserver(eventHandler: on(_:_:))
     }

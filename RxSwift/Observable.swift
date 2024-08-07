@@ -118,17 +118,54 @@ public protocol SubscribeCallType: Sendable {
     associatedtype Element: Sendable
 }
 
-public enum SubscribeCall<Element: Sendable>: Sendable {
-    case sync(@Sendable (C, AnySyncObserver<Element>) -> AnyDisposable)
-    case async(@Sendable (C, AnyAsyncObserver<Element>) -> AnyDisposable)
+public enum AnySubscribeCall<Element: Sendable>: Sendable {
+    case sync(@Sendable (C, AnySyncObserver<Element>) async -> AnyDisposable)
+    case async(@Sendable (C, AnyAsyncObserver<Element>) async -> AnyDisposable)
 }
 
 public protocol SubscribeToSyncCallType: SubscribeCallType {
+    @Sendable
     func subscribe(_ c: C, _ observer: AnySyncObserver<Element>) async -> AnyDisposable
 }
 
 public protocol SubscribeToAsyncCallType: SubscribeCallType {
+    @Sendable
     func subscribe(_ c: C, _ observer: AnyAsyncObserver<Element>) async -> AnyDisposable
+}
+
+extension SubscribeToAsyncCallType {
+    func asSubscribeToAny() -> AnySubscribeToCall<Element> {
+        AnySubscribeToCall(call: .async(subscribe))
+    }
+}
+
+extension SubscribeToSyncCallType {
+    func asSubscribeToAny() -> AnySubscribeToCall<Element> {
+        AnySubscribeToCall(call: .sync(subscribe))
+    }
+}
+
+struct AnySubscribeToCall<Element: Sendable>: SubscribeCallType, Sendable {
+    let call: AnySubscribeCall<Element>
+
+    func subscribe(_ c: C, _ observer: AnyObserver<Element>) async -> AnyDisposable {
+        switch call {
+        case .sync(let subscribe):
+            switch observer {
+            case .sync(let anySyncObserver):
+                return await subscribe(c.call(), anySyncObserver)
+            case .async:
+                fatalError()
+            }
+        case .async(let subscribe):
+            switch observer {
+            case .async(let anyAsyncObserver):
+                return await subscribe(c.call(), anyAsyncObserver)
+            case .sync:
+                fatalError()
+            }
+        }
+    }
 }
 
 //
@@ -148,7 +185,3 @@ public protocol SubscribeToAsyncCallType: SubscribeCallType {
 //        await call(c.call(), observer)
 //    }
 // }
-
-public struct AnyObservable<SubscribeCall: SubscribeCallType> {
-    let subscribe: SubscribeCall
-}
