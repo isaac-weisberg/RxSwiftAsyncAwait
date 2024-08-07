@@ -1,3 +1,28 @@
+public extension SubscribeCallType {
+    func observe<Scheduler: ActorScheduler>(on scheduler: Scheduler) -> AsyncObserveOn<Scheduler, Self> {
+        AsyncObserveOn<Scheduler, Self>(scheduler: scheduler, source: self)
+    }
+}
+
+public final class AsyncObserveOn<Scheduler: ActorScheduler, Source: SubscribeCallType> {
+    let scheduler: ActorScheduler
+    let source: Source
+    
+    public init(scheduler: ActorScheduler, source: Source) {
+        self.scheduler = scheduler
+        self.source = source
+    }
+}
+
+extension AsyncObserveOn: AsyncToSyncSubscribeCallType where Source: AsyncToSyncSubscribeCallType {
+    public func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable {
+        let sink = ObserveOnSink<Observer>(scheduler: <#T##any ActorScheduler#>, observer: <#T##SyncObserverType#>)
+        let disposable = await self.source.subscribe(c.call(), )
+        sink.setInnerSyncDisposable(<#T##AnyDisposable#>)
+        return sink
+    }
+}
+
 public extension AsyncObservableToSyncObserver {
     func observe(on scheduler: ActorScheduler) -> AsyncObservableToSyncObserver<Element> {
         ObserveOnAsyncToSync(source: self, scheduler: scheduler)
@@ -98,9 +123,9 @@ final class ObserveOnSyncToSync<Element: Sendable>: AsyncObservableToSyncObserve
     }
 }
 
-final actor ObserveOnSink<Observer: SyncObserverType>: SyncObserverType, AsyncObserverType,
+public final actor ObserveOnSink<Observer: SyncObserverType>: SyncObserverType, AsyncObserverType,
     AsynchronousDisposable, Sendable {
-    typealias Element = Observer.Element
+    public typealias Element = Observer.Element
 
     let scheduler: ActorScheduler
     let observer: Observer
@@ -116,7 +141,7 @@ final actor ObserveOnSink<Observer: SyncObserverType>: SyncObserverType, AsyncOb
         disposed
     }
 
-    func dispose() async {
+    public func dispose() async {
         if !disposed {
             disposed = true
 
@@ -133,7 +158,7 @@ final actor ObserveOnSink<Observer: SyncObserverType>: SyncObserverType, AsyncOb
         }
     }
 
-    func on(_ event: Event<Element>, _ c: C) async {
+    public func on(_ event: Event<Element>, _ c: C) async {
         if disposed {
             return
         }
@@ -143,7 +168,7 @@ final actor ObserveOnSink<Observer: SyncObserverType>: SyncObserverType, AsyncOb
         }
     }
 
-    nonisolated func on(_ event: Event<Element>, _ c: C) {
+    public nonisolated func on(_ event: Event<Element>, _ c: C) {
         Task {
             await self.on(event, c)
         }

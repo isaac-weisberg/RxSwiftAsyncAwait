@@ -11,13 +11,34 @@ public protocol DisposableType: Sendable {
 }
 
 public protocol SynchronousDisposable: Sendable, DisposableType {
+    @Sendable
     func dispose()
 }
 
 /// Represents a disposable resource.
 public protocol AsynchronousDisposable: Sendable, DisposableType {
     /// Dispose resource.
+    @Sendable
     func dispose() async
+}
+
+extension SynchronousDisposable {
+    func asAny() -> AnySynchronousDisposable {
+        AnySynchronousDisposable(dispose: dispose)
+    }
+}
+extension AsynchronousDisposable {
+    func asAny() -> AnyAsynchronousDisposable {
+        AnyAsynchronousDisposable(dispose: dispose)
+    }
+}
+
+public struct AnySynchronousDisposable: Sendable, DisposableType {
+    let dispose: @Sendable () -> Void
+}
+
+public struct AnyAsynchronousDisposable: Sendable, DisposableType {
+    let dispose: @Sendable () async -> Void
 }
 
 public enum AnyDisposable: Sendable {

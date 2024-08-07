@@ -114,11 +114,43 @@ public class SyncObservableToSyncObserver<Element: Sendable>: SyncObservableToSy
     }
 }
 
-public enum SubscribeCall<Observer: ObserverType, Disposable: DisposableType> {
-    case async((C, Observer) async -> Disposable)
-    case sync((C, Observer) -> Disposable)
+public protocol SubscribeCallType: Sendable {
+    
 }
 
-public struct AnyObservable<Observer: ObserverType, Disposable: DisposableType> {
-    let subscribe: SubscribeCall<Observer, Disposable>
+public protocol SyncToSyncSubscribeCallType: SubscribeCallType {
+    func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) -> DisposableType
+}
+
+public protocol SyncToAsyncSubscribeCallType: SubscribeCallType {
+    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) -> DisposableType
+}
+
+public protocol AsyncToSyncSubscribeCallType: SubscribeCallType {
+    func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) async -> DisposableType
+}
+
+public protocol AsyncToAsyncSubscribeCallType: SubscribeCallType {
+    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> DisposableType
+}
+
+//
+//public struct AnySyncSubscribeCall<Observer: ObserverType, Disposable: DisposableType>: SyncSubscribeCallType {
+//    let call: @Sendable (C, Observer) -> Disposable
+//    
+//    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) -> Disposable where Observer == Self.O {
+//        call(c.call(), observer)
+//    }
+//}
+//
+//public struct AnyAsyncSubscribeCall<Disposable: DisposableType>: AsyncSubscribeCallType {
+//    let call: @Sendable (C, Observer) async -> Disposable
+//    
+//    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable {
+//        await call(c.call(), observer)
+//    }
+//}
+
+public struct AnyObservable<SubscribeCall: SubscribeCallType> {
+    let subscribe: SubscribeCall
 }

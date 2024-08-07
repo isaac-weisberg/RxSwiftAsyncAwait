@@ -40,6 +40,7 @@ public protocol SyncObserverType: Sendable, ObserverType {
 public protocol AsyncObserverType: Sendable, ObserverType {
     @Sendable func on(_ event: Event<Element>, _ c: C) async -> Void
 }
+
 //
 //public protocol ObserverType: Sendable {
 //    associatedtype Element: Sendable
