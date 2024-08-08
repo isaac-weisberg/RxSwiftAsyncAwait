@@ -15,8 +15,8 @@ public extension ObservableType {
      - parameter optional: Optional element in the resulting observable sequence.
      - returns: An observable sequence containing the wrapped value or not from given optional.
      */
-    static func from(optional: Element?) async -> Observable<Element> {
-        await ObservableOptional(optional: optional)
+    static func from(optional: Element?) -> Observable<Element> {
+        ObservableOptional(optional: optional)
     }
 
     /**
@@ -28,49 +28,60 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to send the optional element on.
      - returns: An observable sequence containing the wrapped value or not from given optional.
      */
-    static func from(optional: Element?, scheduler: ImmediateSchedulerType) async -> Observable<Element> {
-        await ObservableOptionalScheduled(optional: optional, scheduler: scheduler)
+    static func from<Scheduler: ActorScheduler>(optional: Element?, scheduler: Scheduler) -> Observable<Element> {
+        ObservableOptionalScheduled(optional: optional, scheduler: scheduler)
     }
 }
 
-private final actor ObservableOptionalScheduledSink<Observer: ObserverType>: Sink {
+private final actor ObservableOptionalScheduledSink<Observer: ObserverType, Scheduler: ActorScheduler>: Sink {
     typealias Element = Observer.Element
-    typealias Parent = ObservableOptionalScheduled<Element>
+    typealias Parent = ObservableOptionalScheduled<Element, Scheduler>
 
     private let parent: Parent
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer) async {
+    init(parent: Parent, observer: Observer) {
         self.parent = parent
         baseSink = BaseSink(observer: observer)
     }
 
-    func run(_ c: C) async -> Disposable {
-        await parent.scheduler.schedule(parent.optional, c.call()) { (c, optional: Element?) -> Disposable in
+    func run(_ c: C) async {
+        let optional = parent.optional
+        await parent.scheduler.perform(c.call(), { c in
+            if self.baseSink.disposed {
+                return
+            }
             if let next = optional {
                 await self.forwardOn(.next(next), c.call())
-                return await self.parent.scheduler.schedule((), c.call()) { c, _ in
+                return await self.parent.scheduler.perform(c.call(), { c in
+                    if self.baseSink.disposed {
+                        return
+                    }
                     await self.forwardOn(.completed, c.call())
                     await self.dispose()
-                    return Disposables.create()
-                }
+                })
             } else {
                 await self.forwardOn(.completed, c.call())
                 await self.dispose()
-                return Disposables.create()
             }
+        })
+    }
+    
+    func dispose() async {
+        if setDisposed() {
+            
         }
     }
 }
 
-private final class ObservableOptionalScheduled<Element>: Producer<Element> {
+private final class ObservableOptionalScheduled<Element: Sendable, Scheduler: ActorScheduler>: Producer<Element> {
     fileprivate let optional: Element?
-    fileprivate let scheduler: ImmediateSchedulerType
+    fileprivate let scheduler: Scheduler
 
-    init(optional: Element?, scheduler: ImmediateSchedulerType) async {
+    init(optional: Element?, scheduler: Scheduler) {
         self.optional = optional
         self.scheduler = scheduler
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(
@@ -78,18 +89,18 @@ private final class ObservableOptionalScheduled<Element>: Producer<Element> {
         _ observer: Observer
     )
         async -> AsynchronousDisposable where Observer.Element == Element {
-        let sink = await ObservableOptionalScheduledSink(parent: self, observer: observer)
-        let subscription = await sink.run(c.call())
+        let sink = ObservableOptionalScheduledSink(parent: self, observer: observer)
+        await sink.run(c.call())
         return sink
     }
 }
 
-private final class ObservableOptional<Element>: Producer<Element> {
+private final class ObservableOptional<Element: Sendable>: Producer<Element> {
     private let optional: Element?
 
-    init(optional: Element?) async {
+    init(optional: Element?) {
         self.optional = optional
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable

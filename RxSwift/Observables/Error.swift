@@ -14,17 +14,17 @@ public extension ObservableType {
 
      - returns: The observable sequence that terminates with specified error.
      */
-    static func error(_ error: Swift.Error) async -> Observable<Element> {
-        await ErrorProducer(error: error)
+    static func error(_ error: Swift.Error) -> Observable<Element> {
+        ErrorProducer(error: error)
     }
 }
 
-private final class ErrorProducer<Element>: Producer<Element> {
+private final class ErrorProducer<Element: Sendable>: Producer<Element> {
     private let error: Swift.Error
 
-    init(error: Swift.Error) async {
+    init(error: Swift.Error) {
         self.error = error
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {

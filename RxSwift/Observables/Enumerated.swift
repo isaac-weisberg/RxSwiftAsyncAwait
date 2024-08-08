@@ -14,55 +14,76 @@ public extension ObservableType {
 
      - returns: An observable sequence that contains tuples of source sequence elements and their indexes.
      */
-    func enumerated() async
-        -> Observable<(index: Int, element: Element)>
-    {
-        await Enumerated(source: self.asObservable())
+    func enumerated()
+        -> Observable<(index: Int, element: Element)> {
+        Enumerated(source: self)
     }
 }
 
-private final actor EnumeratedSink<Element, Observer: ObserverType>: Sink, ObserverType where Observer.Element == (index: Int, element: Element) {
+private final actor EnumeratedSink<Source: ObservableType, Observer: ObserverType>: Sink,
+    ObserverType where Observer.Element == (
+        index: Int,
+        element: Source.Element
+    ) {
     var index = 0
-    
+
+    let source: Source
     let baseSink: BaseSink<Observer>
-    
-    init(observer: Observer) async {
+
+    init(source: Source, observer: Observer) {
+        self.source = source
         baseSink = BaseSink(observer: observer)
     }
 
-    func on(_ event: Event<Element>, _ c: C) async {
+    var innerDisposable: Disposable?
+
+    func on(_ event: Event<Source.Element>, _ c: C) async {
         switch event {
         case .next(let value):
             do {
-                let nextIndex = try incrementChecked(&self.index)
+                let nextIndex = try incrementChecked(&index)
                 let next = (index: nextIndex, element: value)
-                await self.forwardOn(.next(next), c.call())
-            }
-            catch let e {
+                await forwardOn(.next(next), c.call())
+            } catch let e {
                 await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
         case .completed:
-            await self.forwardOn(.completed, c.call())
-            await self.dispose()
+            await forwardOn(.completed, c.call())
+            await dispose()
         case .error(let error):
-            await self.forwardOn(.error(error), c.call())
-            await self.dispose()
+            await forwardOn(.error(error), c.call())
+            await dispose()
+        }
+    }
+
+    func run(_ c: C) async {
+        innerDisposable = await source.subscribe(c.call(), self)
+    }
+
+    func dispose() async {
+        if setDisposed() {
+            await innerDisposable?.dispose()
+            innerDisposable = nil
         }
     }
 }
 
-private final class Enumerated<Element>: Producer<(index: Int, element: Element)> {
-    private let source: Observable<Element>
+private final class Enumerated<Source: ObservableType>: Producer<(index: Int, element: Source.Element)> {
+    private let source: Source
 
-    init(source: Observable<Element>) async {
+    init(source: Source) {
         self.source = source
-        await super.init()
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == (index: Int, element: Element) {
-        let sink = await EnumeratedSink<Element, Observer>(observer: observer)
-        let subscription = await self.source.subscribe(c.call(), sink)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+        where Observer.Element == (
+            index: Int,
+            element: Source.Element
+        ) {
+        let sink = EnumeratedSink(source: source, observer: observer)
+        await sink.run(c.call())
         return sink
     }
 }
