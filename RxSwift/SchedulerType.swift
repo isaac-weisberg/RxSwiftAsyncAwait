@@ -7,10 +7,16 @@
 ////
 //
 //import Dispatch
-//import Foundation
+import Foundation
 //
 //// Type that represents time interval in the context of RxSwift.
-//public typealias RxTimeInterval = DispatchTimeInterval
+public typealias RxTimeInterval = TimeInterval
+
+extension RxTimeInterval {
+    var nanoseconds: UInt64 {
+        UInt64(self * 1e+9)
+    }
+}
 //
 ///// Type that represents absolute time in the context of RxSwift.
 //public typealias RxTime = Date

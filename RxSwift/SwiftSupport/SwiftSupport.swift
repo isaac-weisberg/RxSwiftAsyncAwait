@@ -9,7 +9,7 @@
 import Foundation
 
 typealias IntMax = Int64
-public typealias RxAbstractInteger = FixedWidthInteger
+public typealias RxAbstractInteger = FixedWidthInteger & Sendable
 
 extension SignedInteger {
     func toIntMax() -> IntMax {

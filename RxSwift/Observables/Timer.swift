@@ -16,12 +16,11 @@ public extension ObservableType where Element: RxAbstractInteger {
      - parameter scheduler: Scheduler to run the timer on.
      - returns: An observable sequence that produces a value after each period.
      */
-    static func interval(_ period: RxTimeInterval, scheduler: SchedulerType) async
+    static func interval(_ period: RxTimeInterval)
         -> Observable<Element> {
-        await Timer(
+        Timer(
             dueTime: period,
-            period: period,
-            scheduler: scheduler
+            period: period
         )
     }
 }
@@ -37,12 +36,11 @@ public extension ObservableType where Element: RxAbstractInteger {
      - parameter scheduler: Scheduler to run timers on.
      - returns: An observable sequence that produces a value after due time has elapsed and then each period.
      */
-    static func timer(_ dueTime: RxTimeInterval, period: RxTimeInterval? = nil, scheduler: SchedulerType) async
+    static func timer(_ dueTime: RxTimeInterval, period: RxTimeInterval? = nil)
         -> Observable<Element> {
-        await Timer(
+        Timer(
             dueTime: dueTime,
-            period: period,
-            scheduler: scheduler
+            period: period
         )
     }
 }
@@ -55,57 +53,97 @@ private final actor TimerSink<Observer: ObserverType>: Sink where Observer.Eleme
     private let parent: Parent
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer) async {
+    init(parent: Parent, observer: Observer) {
         self.parent = parent
         baseSink = BaseSink(observer: observer)
     }
 
-    func run(_ c: C) async -> Disposable {
-        await parent.scheduler.schedulePeriodic(
-            0 as Observer.Element,
-            c.call(),
-            startAfter: parent.dueTime,
-            period: parent.period!
-        ) { c, state in
-            await self.forwardOn(.next(state), c.call())
-            return state &+ 1
+    var timerTask: Task<Void, Never>?
+
+    func run(_ c: C) async {
+        let period = parent.period!
+        let startAfter = parent.dueTime
+        timerTask = Task {
+            var state: Observer.Element = 0
+            if startAfter > 0 {
+                do {
+                    try await Task.sleep(nanoseconds: startAfter.nanoseconds)
+                } catch {
+                    return
+                }
+            }
+
+            Task {
+                await self.forwardOn(.next(state), c.call())
+            }
+
+            while true {
+                do {
+                    try await Task.sleep(nanoseconds: period.nanoseconds)
+                } catch {
+                    return
+                }
+                state += 1
+                Task {
+                    await self.forwardOn(.next(state), c.call())
+                }
+            }
+        }
+    }
+
+    func dispose() async {
+        if setDisposed() {
+            timerTask?.cancel()
+            timerTask = nil
         }
     }
 }
 
 private final actor TimerOneOffSink<Observer: ObserverType>: Sink where Observer.Element: RxAbstractInteger {
-    typealias Parent = Timer<Observer.Element>
+    fileprivate typealias Parent = Timer<Observer.Element>
 
     private let parent: Parent
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer) async {
+    fileprivate init(parent: Parent, observer: Observer) {
         self.parent = parent
         baseSink = BaseSink(observer: observer)
     }
 
-    func run(_ c: C) async -> Disposable {
-        await parent.scheduler
-            .scheduleRelative(self, c.call(), dueTime: parent.dueTime) { [unowned self] c, _ -> Disposable in
-                await forwardOn(.next(0), c.call())
-                await forwardOn(.completed, c.call())
-                await dispose()
+    var timerTask: Task<Void, Never>?
 
-                return Disposables.create()
+    func run(_ c: C) async {
+        timerTask = Task { [parent] in
+            if parent.dueTime.nanoseconds > 0 {
+                do {
+                    try await Task.sleep(nanoseconds: parent.dueTime.nanoseconds)
+                } catch {
+                    return
+                }
             }
+
+            await forwardOn(.next(0), c.call())
+            await forwardOn(.completed, c.call())
+            await dispose()
+        }
+    }
+
+    func dispose() async {
+        if baseSink.setDisposed() {
+            timerTask?.cancel()
+            timerTask = nil
+        }
     }
 }
 
 private final class Timer<Element: RxAbstractInteger>: Producer<Element> {
-    fileprivate let scheduler: SchedulerType
     fileprivate let dueTime: RxTimeInterval
     fileprivate let period: RxTimeInterval?
 
-    init(dueTime: RxTimeInterval, period: RxTimeInterval?, scheduler: SchedulerType) async {
-        self.scheduler = scheduler
+    init(dueTime: RxTimeInterval, period: RxTimeInterval?) {
         self.dueTime = dueTime
         self.period = period
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(
@@ -114,12 +152,12 @@ private final class Timer<Element: RxAbstractInteger>: Producer<Element> {
     )
         async -> AsynchronousDisposable where Observer.Element == Element {
         if period != nil {
-            let sink = await TimerSink(parent: self, observer: observer)
-            let subscription = await sink.run(c.call())
+            let sink = TimerSink(parent: self, observer: observer)
+            await sink.run(c.call())
             return sink
         } else {
-            let sink = await TimerOneOffSink(parent: self, observer: observer)
-            let subscription = await sink.run(c.call())
+            let sink = TimerOneOffSink(parent: self, observer: observer)
+            await sink.run(c.call())
             return sink
         }
     }
