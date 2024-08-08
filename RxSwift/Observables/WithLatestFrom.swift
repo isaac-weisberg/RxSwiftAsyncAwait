@@ -39,43 +39,52 @@ public extension ObservableType {
     }
 }
 
-private final actor WithLatestFromSink<FirstType, SecondType, Observer: ObserverType>:
+private final actor WithLatestFromSink<FirstType: Sendable, SecondType: Sendable, Observer: ObserverType>:
     Sink,
-    ObserverType,
-    AsynchronousOnType {
+    ObserverType {
     typealias ResultType = Observer.Element
     typealias Parent = WithLatestFrom<FirstType, SecondType, ResultType>
     typealias Element = FirstType
 
     private let parent: Parent
 
-    fileprivate var latest: SecondType?
-    func setLatest(_ newValue: SecondType?) {
-        latest = newValue
-    }
+    private var latest: SecondType?
+    private var firstSubscription: Disposable?
+    private var secondSubscription: Disposable?
+
     let baseSink: BaseSink<Observer>
 
-    init(parent: Parent, observer: Observer) async {
+    init(parent: Parent, observer: Observer) {
         self.parent = parent
 
-        self.baseSink = BaseSink(observer: observer)
+        baseSink = BaseSink(observer: observer)
     }
 
-    func run(_ c: C) async -> Disposable {
-        let sndSubscription = await SingleAssignmentDisposable()
-        let sndO = WithLatestFromSecond(parent: self, disposable: sndSubscription)
+    func run(_ c: C) async {
+        secondSubscription = await parent.second.subscribe(
+            c.call(),
+            AnyAsyncObserver(eventHandler: { [weak self] event, c in
+                guard let self else { return }
 
-        await sndSubscription.setDisposable(parent.second.subscribe(c.call(), sndO))
-        let fstSubscription = await parent.first.subscribe(c.call(), self)
+                await onSecondEvent(event, c.call())
+            })
+        )
 
-        return await Disposables.create(fstSubscription, sndSubscription)
+        firstSubscription = await parent.first.subscribe(c.call(), self)
+    }
+
+    func onSecondEvent(_ event: Event<SecondType>, _ c: C) async {
+        switch event {
+        case .next(let element):
+            latest = element
+        case .error(let error):
+            await on(.error(error), c.call())
+        case .completed:
+            break // The sources usually dispose themselves...
+        }
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await AsynchronousOn(event, c.call())
-    }
-
-    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let value):
             guard let latest else { return }
@@ -95,52 +104,33 @@ private final actor WithLatestFromSink<FirstType, SecondType, Observer: Observer
             await dispose()
         }
     }
-}
 
-private final class WithLatestFromSecond<FirstType, SecondType, Observer: ObserverType>:
-    ObserverType,
-    AsynchronousOnType {
-    typealias ResultType = Observer.Element
-    typealias Parent = WithLatestFromSink<FirstType, SecondType, Observer>
-    typealias Element = SecondType
-
-    private let parent: Parent
-    private let disposable: Disposable
-
-    init(parent: Parent, disposable: Disposable) {
-        self.parent = parent
-        self.disposable = disposable
-    }
-
-    func on(_ event: Event<Element>, _ c: C) async {
-        await AsynchronousOn(event, c.call())
-    }
-
-    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
-        switch event {
-        case .next(let value):
-            await parent.setLatest(value)
-        case .completed:
-            await disposable.dispose()
-        case .error(let error):
-            await parent.forwardOn(.error(error), c.call())
-            await parent.dispose()
+    func dispose() async {
+        if setDisposed() {
+            await firstSubscription?.dispose()
+            firstSubscription = nil
+            await secondSubscription?.dispose()
+            secondSubscription = nil
         }
     }
 }
 
-private final class WithLatestFrom<FirstType, SecondType, ResultType>: Producer<ResultType> {
+private final class WithLatestFrom<
+    FirstType: Sendable,
+    SecondType: Sendable,
+    ResultType: Sendable
+>: Producer<ResultType> {
     typealias ResultSelector = (FirstType, SecondType) throws -> ResultType
 
     fileprivate let first: Observable<FirstType>
     fileprivate let second: Observable<SecondType>
     fileprivate let resultSelector: ResultSelector
 
-    init(first: Observable<FirstType>, second: Observable<SecondType>, resultSelector: @escaping ResultSelector) async {
+    init(first: Observable<FirstType>, second: Observable<SecondType>, resultSelector: @escaping ResultSelector) {
         self.first = first
         self.second = second
         self.resultSelector = resultSelector
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(
@@ -148,8 +138,8 @@ private final class WithLatestFrom<FirstType, SecondType, ResultType>: Producer<
         _ observer: Observer
     )
         async -> AsynchronousDisposable where Observer.Element == ResultType {
-        let sink = await WithLatestFromSink(parent: self, observer: observer)
-        let subscription = await sink.run(c.call())
+        let sink = WithLatestFromSink(parent: self, observer: observer)
+        await sink.run(c.call())
         return sink
     }
 }
