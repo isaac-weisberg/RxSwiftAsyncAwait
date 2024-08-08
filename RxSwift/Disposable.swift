@@ -19,6 +19,8 @@ public protocol AsynchronousDisposable: Sendable {//}, DisposableType {
     func dispose() async
 }
 
+public typealias SynchronousDisposable = AsynchronousDisposable
+
 public typealias Disposable = AsynchronousDisposable
 //
 //extension SynchronousDisposable {

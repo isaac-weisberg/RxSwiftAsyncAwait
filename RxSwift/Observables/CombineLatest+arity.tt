@@ -20,9 +20,9 @@ extension ObservableType {
     - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
     */
     public static func combineLatest<<%= (Array(1...i).map { "O\($0): ObservableType" }).joined(separator: ", ") %>>
-        (<%= (Array(1...i).map { "_ source\($0): O\($0)" }).joined(separator: ", ") %>, resultSelector: @escaping (<%= (Array(1...i).map { "O\($0).Element" }).joined(separator: ", ") %>) throws -> Element) async
+        (<%= (Array(1...i).map { "_ source\($0): O\($0)" }).joined(separator: ", ") %>, resultSelector: @Sendable @escaping (<%= (Array(1...i).map { "O\($0).Element" }).joined(separator: ", ") %>) throws -> Element)
             -> Observable<Element> {
-        return await CombineLatest<%= i %>(
+        return CombineLatest<%= i %>(
             <%= (Array(1...i).map { "source\($0): source\($0)" }).joined(separator: ", ") %>,
             resultSelector: resultSelector
         )
@@ -38,22 +38,22 @@ extension ObservableType where Element == Any {
     - returns: An observable sequence containing the result of combining elements of the sources.
     */
     public static func combineLatest<<%= (Array(1...i).map { "O\($0): ObservableType" }).joined(separator: ", ") %>>
-        (<%= (Array(1...i).map { "_ source\($0): O\($0)" }).joined(separator: ", ") %>) async
+        (<%= (Array(1...i).map { "_ source\($0): O\($0)" }).joined(separator: ", ") %>)
             -> Observable<(<%= (Array(1...i).map { "O\($0).Element" }).joined(separator: ", ") %>)> {
-        return await CombineLatest<%= i %>(
+        return CombineLatest<%= i %>(
             <%= (Array(1...i).map { "source\($0): source\($0)" }).joined(separator: ", ") %>,
             resultSelector: { (<%= (Array(0..<i).map { "$\($0)" }).joined(separator: ", ") %>) }
         )
     }
 }
 
-final class CombineLatest<%= i %><<%= (Array(1...i).map { "O\($0): ObservableType" }).joined(separator: ", ") %>, Result> : Observable<Result> {
+final class CombineLatest<%= i %><<%= (Array(1...i).map { "O\($0): ObservableType" }).joined(separator: ", ") %>, Result: Sendable> : Observable<Result> {
 <%= (Array(1...i).map {
 "    typealias E\($0) = O\($0).Element"
 }).joined(separator: "\n") %>
-    typealias ResultSelector = (<%= (Array(1...i).map { "E\($0)" }).joined(separator: ", ") %>) throws -> Result
+    typealias ResultSelector = @Sendable (<%= (Array(1...i).map { "E\($0)" }).joined(separator: ", ") %>) throws -> Result
 
-    enum ParameterElement {
+    enum ParameterElement: Sendable {
 <%= (Array(1...i).map {
 "         case e\($0)(E\($0))"
 }).joined(separator: "\n") %>
@@ -65,23 +65,23 @@ final class CombineLatest<%= i %><<%= (Array(1...i).map { "O\($0): ObservableTyp
 
     let resultSelector: ResultSelector
 
-    init(<%= (Array(1...i).map { "source\($0): O\($0)" }).joined(separator: ", ") %>, resultSelector: @escaping ResultSelector) async {
+    init(<%= (Array(1...i).map { "source\($0): O\($0)" }).joined(separator: ", ") %>, resultSelector: @escaping ResultSelector) {
 <%= (Array(1...i).map {
 "        self.source\($0) = source\($0)"
 }).joined(separator: "\n")  %>
 
         self.resultSelector = resultSelector
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
-        let sink = await CombineLatestCollectionTypeSink(
+        let sink = CombineLatestCollectionTypeSink(
             parentSources: [
 <%= Array(1...i).map {
 
 "                source\($0).map { e\($0) in ParameterElement.e\($0)(e\($0)) }"
 }.joined(separator: ",\n") %>
-            ], resultSelector: { [resultSelector] coll in
+            ], resultSelector: { @Sendable [resultSelector] coll in
                 if
 <%= Array(1...i).map {
 "                    case .e\($0)(let e\($0)) = coll[\($0 - 1)]"

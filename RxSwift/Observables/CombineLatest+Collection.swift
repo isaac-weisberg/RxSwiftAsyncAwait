@@ -70,12 +70,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
 
     func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
         if !disposed {
-            switch observer.on {
-            case .sync(let syncObserverEventHandler):
-                syncObserverEventHandler(event, c.call())
-            case .async(let asyncObserverEventHandler):
-                await asyncObserverEventHandler(event, c.call())
-            }
+            await self.observer.on(event, c.call())
         }
     }
 
@@ -152,7 +147,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         for i in parentSources {
             let index = j
             let source = i
-            let disposable = await source.subscribe(c.call(), AnyObserver(eventHandler: .async { event, c in
+            let disposable = await source.subscribe(c.call(), AnyAsyncObserver(eventHandler: { event, c in
                 await self.on(c.call(), event, atIndex: index)
             }))
 

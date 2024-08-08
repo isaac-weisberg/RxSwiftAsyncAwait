@@ -21,9 +21,9 @@ extension ObservableType {
     - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType>
-        (_ source1: O1, _ source2: O2, resultSelector: @escaping (O1.Element, O2.Element) throws -> Element) async
+        (_ source1: O1, _ source2: O2, resultSelector: @Sendable @escaping (O1.Element, O2.Element) throws -> Element)
             -> Observable<Element> {
-        return await CombineLatest2(
+        return CombineLatest2(
             source1: source1, source2: source2,
             resultSelector: resultSelector
         )
@@ -39,21 +39,21 @@ extension ObservableType where Element == Any {
     - returns: An observable sequence containing the result of combining elements of the sources.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType>
-        (_ source1: O1, _ source2: O2) async
+        (_ source1: O1, _ source2: O2)
             -> Observable<(O1.Element, O2.Element)> {
-        return await CombineLatest2(
+        return CombineLatest2(
             source1: source1, source2: source2,
             resultSelector: { ($0, $1) }
         )
     }
 }
 
-final class CombineLatest2<O1: ObservableType, O2: ObservableType, Result> : Observable<Result> {
+final class CombineLatest2<O1: ObservableType, O2: ObservableType, Result: Sendable> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
-    typealias ResultSelector = (E1, E2) throws -> Result
+    typealias ResultSelector = @Sendable (E1, E2) throws -> Result
 
-    enum ParameterElement {
+    enum ParameterElement: Sendable {
          case e1(E1)
          case e2(E2)
     }
@@ -63,20 +63,20 @@ final class CombineLatest2<O1: ObservableType, O2: ObservableType, Result> : Obs
 
     let resultSelector: ResultSelector
 
-    init(source1: O1, source2: O2, resultSelector: @escaping ResultSelector) async {
+    init(source1: O1, source2: O2, resultSelector: @escaping ResultSelector) {
         self.source1 = source1
         self.source2 = source2
 
         self.resultSelector = resultSelector
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
-        let sink = await CombineLatestCollectionTypeSink(
+        let sink = CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
                 source2.map { e2 in ParameterElement.e2(e2) }
-            ], resultSelector: { [resultSelector] coll in
+            ], resultSelector: { @Sendable [resultSelector] coll in
                 if
                     case .e1(let e1) = coll[0],
                     case .e2(let e2) = coll[1]
@@ -111,9 +111,9 @@ extension ObservableType {
     - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, resultSelector: @escaping (O1.Element, O2.Element, O3.Element) throws -> Element) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, resultSelector: @Sendable @escaping (O1.Element, O2.Element, O3.Element) throws -> Element)
             -> Observable<Element> {
-        return await CombineLatest3(
+        return CombineLatest3(
             source1: source1, source2: source2, source3: source3,
             resultSelector: resultSelector
         )
@@ -129,22 +129,22 @@ extension ObservableType where Element == Any {
     - returns: An observable sequence containing the result of combining elements of the sources.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3) async
+        (_ source1: O1, _ source2: O2, _ source3: O3)
             -> Observable<(O1.Element, O2.Element, O3.Element)> {
-        return await CombineLatest3(
+        return CombineLatest3(
             source1: source1, source2: source2, source3: source3,
             resultSelector: { ($0, $1, $2) }
         )
     }
 }
 
-final class CombineLatest3<O1: ObservableType, O2: ObservableType, O3: ObservableType, Result> : Observable<Result> {
+final class CombineLatest3<O1: ObservableType, O2: ObservableType, O3: ObservableType, Result: Sendable> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
-    typealias ResultSelector = (E1, E2, E3) throws -> Result
+    typealias ResultSelector = @Sendable (E1, E2, E3) throws -> Result
 
-    enum ParameterElement {
+    enum ParameterElement: Sendable {
          case e1(E1)
          case e2(E2)
          case e3(E3)
@@ -156,22 +156,22 @@ final class CombineLatest3<O1: ObservableType, O2: ObservableType, O3: Observabl
 
     let resultSelector: ResultSelector
 
-    init(source1: O1, source2: O2, source3: O3, resultSelector: @escaping ResultSelector) async {
+    init(source1: O1, source2: O2, source3: O3, resultSelector: @escaping ResultSelector) {
         self.source1 = source1
         self.source2 = source2
         self.source3 = source3
 
         self.resultSelector = resultSelector
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
-        let sink = await CombineLatestCollectionTypeSink(
+        let sink = CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
                 source2.map { e2 in ParameterElement.e2(e2) },
                 source3.map { e3 in ParameterElement.e3(e3) }
-            ], resultSelector: { [resultSelector] coll in
+            ], resultSelector: { @Sendable [resultSelector] coll in
                 if
                     case .e1(let e1) = coll[0],
                     case .e2(let e2) = coll[1],
@@ -208,9 +208,9 @@ extension ObservableType {
     - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, resultSelector: @escaping (O1.Element, O2.Element, O3.Element, O4.Element) throws -> Element) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, resultSelector: @Sendable @escaping (O1.Element, O2.Element, O3.Element, O4.Element) throws -> Element)
             -> Observable<Element> {
-        return await CombineLatest4(
+        return CombineLatest4(
             source1: source1, source2: source2, source3: source3, source4: source4,
             resultSelector: resultSelector
         )
@@ -226,23 +226,23 @@ extension ObservableType where Element == Any {
     - returns: An observable sequence containing the result of combining elements of the sources.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4)
             -> Observable<(O1.Element, O2.Element, O3.Element, O4.Element)> {
-        return await CombineLatest4(
+        return CombineLatest4(
             source1: source1, source2: source2, source3: source3, source4: source4,
             resultSelector: { ($0, $1, $2, $3) }
         )
     }
 }
 
-final class CombineLatest4<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, Result> : Observable<Result> {
+final class CombineLatest4<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, Result: Sendable> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
     typealias E4 = O4.Element
-    typealias ResultSelector = (E1, E2, E3, E4) throws -> Result
+    typealias ResultSelector = @Sendable (E1, E2, E3, E4) throws -> Result
 
-    enum ParameterElement {
+    enum ParameterElement: Sendable {
          case e1(E1)
          case e2(E2)
          case e3(E3)
@@ -256,24 +256,24 @@ final class CombineLatest4<O1: ObservableType, O2: ObservableType, O3: Observabl
 
     let resultSelector: ResultSelector
 
-    init(source1: O1, source2: O2, source3: O3, source4: O4, resultSelector: @escaping ResultSelector) async {
+    init(source1: O1, source2: O2, source3: O3, source4: O4, resultSelector: @escaping ResultSelector) {
         self.source1 = source1
         self.source2 = source2
         self.source3 = source3
         self.source4 = source4
 
         self.resultSelector = resultSelector
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
-        let sink = await CombineLatestCollectionTypeSink(
+        let sink = CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
                 source2.map { e2 in ParameterElement.e2(e2) },
                 source3.map { e3 in ParameterElement.e3(e3) },
                 source4.map { e4 in ParameterElement.e4(e4) }
-            ], resultSelector: { [resultSelector] coll in
+            ], resultSelector: { @Sendable [resultSelector] coll in
                 if
                     case .e1(let e1) = coll[0],
                     case .e2(let e2) = coll[1],
@@ -312,9 +312,9 @@ extension ObservableType {
     - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, resultSelector: @escaping (O1.Element, O2.Element, O3.Element, O4.Element, O5.Element) throws -> Element) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, resultSelector: @Sendable @escaping (O1.Element, O2.Element, O3.Element, O4.Element, O5.Element) throws -> Element)
             -> Observable<Element> {
-        return await CombineLatest5(
+        return CombineLatest5(
             source1: source1, source2: source2, source3: source3, source4: source4, source5: source5,
             resultSelector: resultSelector
         )
@@ -330,24 +330,24 @@ extension ObservableType where Element == Any {
     - returns: An observable sequence containing the result of combining elements of the sources.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5)
             -> Observable<(O1.Element, O2.Element, O3.Element, O4.Element, O5.Element)> {
-        return await CombineLatest5(
+        return CombineLatest5(
             source1: source1, source2: source2, source3: source3, source4: source4, source5: source5,
             resultSelector: { ($0, $1, $2, $3, $4) }
         )
     }
 }
 
-final class CombineLatest5<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, Result> : Observable<Result> {
+final class CombineLatest5<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, Result: Sendable> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
     typealias E4 = O4.Element
     typealias E5 = O5.Element
-    typealias ResultSelector = (E1, E2, E3, E4, E5) throws -> Result
+    typealias ResultSelector = @Sendable (E1, E2, E3, E4, E5) throws -> Result
 
-    enum ParameterElement {
+    enum ParameterElement: Sendable {
          case e1(E1)
          case e2(E2)
          case e3(E3)
@@ -363,7 +363,7 @@ final class CombineLatest5<O1: ObservableType, O2: ObservableType, O3: Observabl
 
     let resultSelector: ResultSelector
 
-    init(source1: O1, source2: O2, source3: O3, source4: O4, source5: O5, resultSelector: @escaping ResultSelector) async {
+    init(source1: O1, source2: O2, source3: O3, source4: O4, source5: O5, resultSelector: @escaping ResultSelector) {
         self.source1 = source1
         self.source2 = source2
         self.source3 = source3
@@ -371,18 +371,18 @@ final class CombineLatest5<O1: ObservableType, O2: ObservableType, O3: Observabl
         self.source5 = source5
 
         self.resultSelector = resultSelector
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
-        let sink = await CombineLatestCollectionTypeSink(
+        let sink = CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
                 source2.map { e2 in ParameterElement.e2(e2) },
                 source3.map { e3 in ParameterElement.e3(e3) },
                 source4.map { e4 in ParameterElement.e4(e4) },
                 source5.map { e5 in ParameterElement.e5(e5) }
-            ], resultSelector: { [resultSelector] coll in
+            ], resultSelector: { @Sendable [resultSelector] coll in
                 if
                     case .e1(let e1) = coll[0],
                     case .e2(let e2) = coll[1],
@@ -423,9 +423,9 @@ extension ObservableType {
     - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6, resultSelector: @escaping (O1.Element, O2.Element, O3.Element, O4.Element, O5.Element, O6.Element) throws -> Element) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6, resultSelector: @Sendable @escaping (O1.Element, O2.Element, O3.Element, O4.Element, O5.Element, O6.Element) throws -> Element)
             -> Observable<Element> {
-        return await CombineLatest6(
+        return CombineLatest6(
             source1: source1, source2: source2, source3: source3, source4: source4, source5: source5, source6: source6,
             resultSelector: resultSelector
         )
@@ -441,25 +441,25 @@ extension ObservableType where Element == Any {
     - returns: An observable sequence containing the result of combining elements of the sources.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6)
             -> Observable<(O1.Element, O2.Element, O3.Element, O4.Element, O5.Element, O6.Element)> {
-        return await CombineLatest6(
+        return CombineLatest6(
             source1: source1, source2: source2, source3: source3, source4: source4, source5: source5, source6: source6,
             resultSelector: { ($0, $1, $2, $3, $4, $5) }
         )
     }
 }
 
-final class CombineLatest6<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, Result> : Observable<Result> {
+final class CombineLatest6<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, Result: Sendable> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
     typealias E4 = O4.Element
     typealias E5 = O5.Element
     typealias E6 = O6.Element
-    typealias ResultSelector = (E1, E2, E3, E4, E5, E6) throws -> Result
+    typealias ResultSelector = @Sendable (E1, E2, E3, E4, E5, E6) throws -> Result
 
-    enum ParameterElement {
+    enum ParameterElement: Sendable {
          case e1(E1)
          case e2(E2)
          case e3(E3)
@@ -477,7 +477,7 @@ final class CombineLatest6<O1: ObservableType, O2: ObservableType, O3: Observabl
 
     let resultSelector: ResultSelector
 
-    init(source1: O1, source2: O2, source3: O3, source4: O4, source5: O5, source6: O6, resultSelector: @escaping ResultSelector) async {
+    init(source1: O1, source2: O2, source3: O3, source4: O4, source5: O5, source6: O6, resultSelector: @escaping ResultSelector) {
         self.source1 = source1
         self.source2 = source2
         self.source3 = source3
@@ -486,11 +486,11 @@ final class CombineLatest6<O1: ObservableType, O2: ObservableType, O3: Observabl
         self.source6 = source6
 
         self.resultSelector = resultSelector
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
-        let sink = await CombineLatestCollectionTypeSink(
+        let sink = CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
                 source2.map { e2 in ParameterElement.e2(e2) },
@@ -498,7 +498,7 @@ final class CombineLatest6<O1: ObservableType, O2: ObservableType, O3: Observabl
                 source4.map { e4 in ParameterElement.e4(e4) },
                 source5.map { e5 in ParameterElement.e5(e5) },
                 source6.map { e6 in ParameterElement.e6(e6) }
-            ], resultSelector: { [resultSelector] coll in
+            ], resultSelector: { @Sendable [resultSelector] coll in
                 if
                     case .e1(let e1) = coll[0],
                     case .e2(let e2) = coll[1],
@@ -541,9 +541,9 @@ extension ObservableType {
     - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6, _ source7: O7, resultSelector: @escaping (O1.Element, O2.Element, O3.Element, O4.Element, O5.Element, O6.Element, O7.Element) throws -> Element) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6, _ source7: O7, resultSelector: @Sendable @escaping (O1.Element, O2.Element, O3.Element, O4.Element, O5.Element, O6.Element, O7.Element) throws -> Element)
             -> Observable<Element> {
-        return await CombineLatest7(
+        return CombineLatest7(
             source1: source1, source2: source2, source3: source3, source4: source4, source5: source5, source6: source6, source7: source7,
             resultSelector: resultSelector
         )
@@ -559,16 +559,16 @@ extension ObservableType where Element == Any {
     - returns: An observable sequence containing the result of combining elements of the sources.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6, _ source7: O7) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6, _ source7: O7)
             -> Observable<(O1.Element, O2.Element, O3.Element, O4.Element, O5.Element, O6.Element, O7.Element)> {
-        return await CombineLatest7(
+        return CombineLatest7(
             source1: source1, source2: source2, source3: source3, source4: source4, source5: source5, source6: source6, source7: source7,
             resultSelector: { ($0, $1, $2, $3, $4, $5, $6) }
         )
     }
 }
 
-final class CombineLatest7<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType, Result> : Observable<Result> {
+final class CombineLatest7<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType, Result: Sendable> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
@@ -576,9 +576,9 @@ final class CombineLatest7<O1: ObservableType, O2: ObservableType, O3: Observabl
     typealias E5 = O5.Element
     typealias E6 = O6.Element
     typealias E7 = O7.Element
-    typealias ResultSelector = (E1, E2, E3, E4, E5, E6, E7) throws -> Result
+    typealias ResultSelector = @Sendable (E1, E2, E3, E4, E5, E6, E7) throws -> Result
 
-    enum ParameterElement {
+    enum ParameterElement: Sendable {
          case e1(E1)
          case e2(E2)
          case e3(E3)
@@ -598,7 +598,7 @@ final class CombineLatest7<O1: ObservableType, O2: ObservableType, O3: Observabl
 
     let resultSelector: ResultSelector
 
-    init(source1: O1, source2: O2, source3: O3, source4: O4, source5: O5, source6: O6, source7: O7, resultSelector: @escaping ResultSelector) async {
+    init(source1: O1, source2: O2, source3: O3, source4: O4, source5: O5, source6: O6, source7: O7, resultSelector: @escaping ResultSelector) {
         self.source1 = source1
         self.source2 = source2
         self.source3 = source3
@@ -608,11 +608,11 @@ final class CombineLatest7<O1: ObservableType, O2: ObservableType, O3: Observabl
         self.source7 = source7
 
         self.resultSelector = resultSelector
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
-        let sink = await CombineLatestCollectionTypeSink(
+        let sink = CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
                 source2.map { e2 in ParameterElement.e2(e2) },
@@ -621,7 +621,7 @@ final class CombineLatest7<O1: ObservableType, O2: ObservableType, O3: Observabl
                 source5.map { e5 in ParameterElement.e5(e5) },
                 source6.map { e6 in ParameterElement.e6(e6) },
                 source7.map { e7 in ParameterElement.e7(e7) }
-            ], resultSelector: { [resultSelector] coll in
+            ], resultSelector: { @Sendable [resultSelector] coll in
                 if
                     case .e1(let e1) = coll[0],
                     case .e2(let e2) = coll[1],
@@ -666,9 +666,9 @@ extension ObservableType {
     - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType, O8: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6, _ source7: O7, _ source8: O8, resultSelector: @escaping (O1.Element, O2.Element, O3.Element, O4.Element, O5.Element, O6.Element, O7.Element, O8.Element) throws -> Element) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6, _ source7: O7, _ source8: O8, resultSelector: @Sendable @escaping (O1.Element, O2.Element, O3.Element, O4.Element, O5.Element, O6.Element, O7.Element, O8.Element) throws -> Element)
             -> Observable<Element> {
-        return await CombineLatest8(
+        return CombineLatest8(
             source1: source1, source2: source2, source3: source3, source4: source4, source5: source5, source6: source6, source7: source7, source8: source8,
             resultSelector: resultSelector
         )
@@ -684,16 +684,16 @@ extension ObservableType where Element == Any {
     - returns: An observable sequence containing the result of combining elements of the sources.
     */
     public static func combineLatest<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType, O8: ObservableType>
-        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6, _ source7: O7, _ source8: O8) async
+        (_ source1: O1, _ source2: O2, _ source3: O3, _ source4: O4, _ source5: O5, _ source6: O6, _ source7: O7, _ source8: O8)
             -> Observable<(O1.Element, O2.Element, O3.Element, O4.Element, O5.Element, O6.Element, O7.Element, O8.Element)> {
-        return await CombineLatest8(
+        return CombineLatest8(
             source1: source1, source2: source2, source3: source3, source4: source4, source5: source5, source6: source6, source7: source7, source8: source8,
             resultSelector: { ($0, $1, $2, $3, $4, $5, $6, $7) }
         )
     }
 }
 
-final class CombineLatest8<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType, O8: ObservableType, Result> : Observable<Result> {
+final class CombineLatest8<O1: ObservableType, O2: ObservableType, O3: ObservableType, O4: ObservableType, O5: ObservableType, O6: ObservableType, O7: ObservableType, O8: ObservableType, Result: Sendable> : Observable<Result> {
     typealias E1 = O1.Element
     typealias E2 = O2.Element
     typealias E3 = O3.Element
@@ -702,9 +702,9 @@ final class CombineLatest8<O1: ObservableType, O2: ObservableType, O3: Observabl
     typealias E6 = O6.Element
     typealias E7 = O7.Element
     typealias E8 = O8.Element
-    typealias ResultSelector = (E1, E2, E3, E4, E5, E6, E7, E8) throws -> Result
+    typealias ResultSelector = @Sendable (E1, E2, E3, E4, E5, E6, E7, E8) throws -> Result
 
-    enum ParameterElement {
+    enum ParameterElement: Sendable {
          case e1(E1)
          case e2(E2)
          case e3(E3)
@@ -726,7 +726,7 @@ final class CombineLatest8<O1: ObservableType, O2: ObservableType, O3: Observabl
 
     let resultSelector: ResultSelector
 
-    init(source1: O1, source2: O2, source3: O3, source4: O4, source5: O5, source6: O6, source7: O7, source8: O8, resultSelector: @escaping ResultSelector) async {
+    init(source1: O1, source2: O2, source3: O3, source4: O4, source5: O5, source6: O6, source7: O7, source8: O8, resultSelector: @escaping ResultSelector) {
         self.source1 = source1
         self.source2 = source2
         self.source3 = source3
@@ -737,11 +737,11 @@ final class CombineLatest8<O1: ObservableType, O2: ObservableType, O3: Observabl
         self.source8 = source8
 
         self.resultSelector = resultSelector
-        await super.init()
+        super.init()
     }
 
     override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Result {
-        let sink = await CombineLatestCollectionTypeSink(
+        let sink = CombineLatestCollectionTypeSink(
             parentSources: [
                 source1.map { e1 in ParameterElement.e1(e1) },
                 source2.map { e2 in ParameterElement.e2(e2) },
@@ -751,7 +751,7 @@ final class CombineLatest8<O1: ObservableType, O2: ObservableType, O3: Observabl
                 source6.map { e6 in ParameterElement.e6(e6) },
                 source7.map { e7 in ParameterElement.e7(e7) },
                 source8.map { e8 in ParameterElement.e8(e8) }
-            ], resultSelector: { [resultSelector] coll in
+            ], resultSelector: { @Sendable [resultSelector] coll in
                 if
                     case .e1(let e1) = coll[0],
                     case .e2(let e2) = coll[1],

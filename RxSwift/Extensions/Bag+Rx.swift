@@ -29,8 +29,8 @@ func dispatch<Element>(_ bag: Bag<(Event<Element>, _ c: C) async -> Void>, _ eve
 }
 
 /// Dispatches `dispose` to all disposables contained inside bag.
-func disposeAll(in bag: Bag<SynchronousDisposable>) {
-    bag._value0?.dispose()
+func disposeAll(in bag: Bag<SynchronousDisposable>) async {
+    await bag._value0?.dispose()
 
     if bag._onlyFastPath {
         return
@@ -38,12 +38,12 @@ func disposeAll(in bag: Bag<SynchronousDisposable>) {
 
     let pairs = bag._pairs
     for i in 0 ..< pairs.count {
-        pairs[i].value.dispose()
+        await pairs[i].value.dispose()
     }
 
     if let dictionary = bag._dictionary {
         for element in dictionary.values {
-            element.dispose()
+            await element.dispose()
         }
     }
 }
