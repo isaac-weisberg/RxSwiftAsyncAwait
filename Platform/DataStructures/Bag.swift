@@ -29,7 +29,7 @@ struct BagKey {
 
  It is suitable for storing small number of elements.
  */
-struct Bag<T>: CustomDebugStringConvertible {
+struct Bag<T>: CustomDebugStringConvertible, Sendable {
     /// Type of identifier for inserted elements.
     typealias KeyType = BagKey
 

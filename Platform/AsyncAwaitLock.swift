@@ -71,8 +71,8 @@ public final actor ActualNonRecursiveLock {
             }
         }
     #else
-        public func performLocked<R>(
-            _ work: @escaping () async -> R
+        public func performLocked<R: Sendable>(
+            _ work: @Sendable @escaping () async -> R
         )
             async -> R {
             await performLocked(C()) { _ in
@@ -81,7 +81,7 @@ public final actor ActualNonRecursiveLock {
         }
     #endif
 
-    public func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R {
+    public func performLocked<R: Sendable>(_ c: C, _ work: @Sendable @escaping (C) async -> R) async -> R {
         scheduledTasks += 1
 
         let theActualTask: Task<R, Never>

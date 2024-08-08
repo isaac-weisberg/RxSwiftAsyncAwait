@@ -84,10 +84,10 @@ public extension ObservableType {
             _ file: StaticString = #file,
             _ function: StaticString = #function,
             _ line: UInt = #line,
-            onNext: ((Element) async -> Void)? = nil,
-            onError: ((Swift.Error) async -> Void)? = nil,
-            onCompleted: (() async -> Void)? = nil,
-            onDisposed: (() async -> Void)? = nil
+            onNext: (@Sendable (Element) async -> Void)? = nil,
+            onError: (@Sendable (Swift.Error) async -> Void)? = nil,
+            onCompleted: (@Sendable () async -> Void)? = nil,
+            onDisposed: (@Sendable () async -> Void)? = nil
         )
             async -> AsynchronousDisposable {
             let c = C(file, function, line)
@@ -101,10 +101,10 @@ public extension ObservableType {
         }
     #else
         func subscribe(
-            onNext: ((Element) async -> Void)? = nil,
-            onError: ((Swift.Error) async -> Void)? = nil,
-            onCompleted: (() async -> Void)? = nil,
-            onDisposed: (() async -> Void)? = nil
+            onNext: (@Sendable (Element) async -> Void)? = nil,
+            onError: (@Sendable (Swift.Error) async -> Void)? = nil,
+            onCompleted: (@Sendable () async -> Void)? = nil,
+            onDisposed: (@Sendable () async -> Void)? = nil
         )
             async -> AsynchronousDisposable {
             await subscribe(C(), onNext: onNext, onError: onError, onCompleted: onCompleted, onDisposed: onDisposed)
@@ -113,18 +113,18 @@ public extension ObservableType {
 
     func subscribe(
         _ c: C,
-        onNext: ((Element) async -> Void)? = nil,
-        onError: ((Swift.Error) async -> Void)? = nil,
-        onCompleted: (() async -> Void)? = nil,
-        onDisposed: (() async -> Void)? = nil
+        onNext: (@Sendable (Element) async -> Void)? = nil,
+        onError: (@Sendable (Swift.Error) async -> Void)? = nil,
+        onCompleted: (@Sendable () async -> Void)? = nil,
+        onDisposed: (@Sendable () async -> Void)? = nil
     )
         async -> AsynchronousDisposable {
         let disposable: AsynchronousDisposable
 
         if let disposed = onDisposed {
-            disposable = Disposables.createSync(with: disposed)
+            disposable = Disposables.create(with: disposed)
         } else {
-            disposable = Disposables.createSync(with: )
+            disposable = Disposables.create()
         }
 
         #if DEBUG
@@ -133,24 +133,24 @@ public extension ObservableType {
 
         let callStack = Hooks.recordCallStackOnError ? await Hooks.getCustomCaptureSubscriptionCallstack()() : []
 
-        let observer = await AnonymousObserver<Element>(c.call()) { _, event in
+        let observer = await AnonymousObserver<Element>() { _, event in
             #if DEBUG
                 await synchronizationTracker.register(synchronizationErrorMessage: .default)
             #endif
             await scope {
                 switch event {
                 case .next(let value):
-                    onNext?(value)
+                    await onNext?(value)
                 case .error(let error):
                     if let onError {
-                        onError(error)
+                        await onError(error)
                     } else {
                         await Hooks.getDefaultErrorHandler()(callStack, error)
                     }
-                    disposable.dispose()
+                    await disposable.dispose()
                 case .completed:
-                    onCompleted?()
-                    disposable.dispose()
+                    await onCompleted?()
+                    await disposable.dispose()
                 }
             }
             #if DEBUG
@@ -159,9 +159,9 @@ public extension ObservableType {
         }
             
         let disposableFromSub = await asObservable().subscribe(c.call(), observer)
-        return Disposables.createSync {
+        return Disposables.create {
             await disposableFromSub.dispose()
-            disposable.dispose()
+            await disposable.dispose()
         }
     }
 }

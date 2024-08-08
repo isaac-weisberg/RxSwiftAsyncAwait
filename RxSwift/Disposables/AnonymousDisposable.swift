@@ -9,7 +9,7 @@
 /// Represents an Action-based disposable.
 ///
 /// When dispose method is called, disposal action will be dereferenced.
-//private final class AnonymousDisposable: SynchronousDisposeBase, SynchronousCancelable {
+// private final class AnonymousDisposable: SynchronousDisposeBase, SynchronousCancelable {
 //    public typealias DisposeAction = () -> Void
 //
 //    private let disposed: NonAtomicInt
@@ -47,19 +47,19 @@
 //            }
 //        }
 //    }
-//}
+// }
 //
-//public extension Disposables {
+// public extension Disposables {
 //    /// Constructs a new disposable with the given action used for disposal.
 //    ///
 //    /// - parameter dispose: Disposal action which will be run upon calling `dispose`.
 //    static func create(with dispose: @escaping () -> Void) -> SynchronousCancelable {
 //        AnonymousDisposable(disposeAction: dispose)
 //    }
-//}
+// }
 
 extension Disposables {
-    static func createSync(with dispose: @Sendable @escaping () async -> Void) -> AsynchronousCancelable {
+    static func create(with dispose: @Sendable @escaping () async -> Void) -> AsynchronousCancelable {
         AnonymousAsynchronousDisposable(disposeAction: dispose)
     }
 }
@@ -79,6 +79,7 @@ private final actor AnonymousAsynchronousDisposable: AsynchronousCancelable, Asy
     fileprivate init(disposeAction: @escaping DisposeAction) {
         self.disposeAction = disposeAction
         disposed = NonAtomicInt()
+        SynchronousDisposeBaseInit()
     }
 
     /// Calls the disposal action if and only if the current instance hasn't been disposed yet.
@@ -91,5 +92,9 @@ private final actor AnonymousAsynchronousDisposable: AsynchronousCancelable, Asy
                 await action()
             }
         }
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
     }
 }

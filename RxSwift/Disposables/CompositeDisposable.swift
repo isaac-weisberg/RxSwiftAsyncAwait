@@ -112,9 +112,9 @@ public final actor CompositeDisposable: AsynchronousCancelable {
     }
 
     /// Disposes all disposables in the group and removes them from the group.
-    public func dispose() {
+    public func dispose() async {
         if let disposables = _dispose() {
-            disposeAll(in: disposables)
+            await disposeAll(in: disposables)
         }
     }
 

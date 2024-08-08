@@ -10,10 +10,8 @@ final class AnonymousObserver<Element>: ObserverBase<Element> {
     typealias EventHandler = (_ c: C, Event<Element>) async -> Void
 
     private let eventHandler: EventHandler
-    let thisC: C
 
-    init(_ c: C, _ eventHandler: @escaping EventHandler) async {
-        self.thisC = c
+    init(_ eventHandler: @escaping EventHandler) async {
         #if TRACE_RESOURCES
             _ = await Resources.incrementTotal()
         #endif

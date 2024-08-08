@@ -8,7 +8,7 @@
 
 import Foundation
 
-typealias RecursiveLock = AsyncAwaitLock
+// typealias RecursiveLock = AsyncAwaitLock
 
 #if TRACE_RESOURCES
 
