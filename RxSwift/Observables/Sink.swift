@@ -15,39 +15,36 @@ protocol Sink: AsynchronousDisposable, AnyObject {
     func forwardOn(_ event: Event<Observer.Element>, _ c: C) async
 }
 
-protocol BaseSinkProtocol {
+protocol BaseSinkProtocol: AnyObject, Sendable {
     associatedtype Observer: ObserverType
 
     var observer: Observer { get }
+
+    var disposed: Bool { get set }
+    
+    func setDisposed() -> Bool
 }
 
 extension Sink {
-//    func forwarder() -> SinkForward<Self> {
-//        SinkForward(forward: self)
-//    }
-
-//    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
-//        baseSink.beforeForwardOn()
-//        if !baseSink.isDisposed() {
-//            await baseSink.forwardOn(event, c.call())
-//        }
-//        baseSink.afterForwardOn()
-//    }
-//
-//    func dispose() async {
-//        baseSink.setDisposedSync()
-//        await baseSink.dispose()
-//    }
+    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
+        if !baseSink.disposed {
+            await baseSink.observer.on(event, c.call())
+        }
+    }
+    
+    func setDisposed() -> Bool {
+        baseSink.setDisposed()
+    }
 }
 
-final class BaseSink<Observer: ObserverType>: BaseSinkProtocol {
+final class BaseSink<Observer: ObserverType>: BaseSinkProtocol, @unchecked Sendable {
     let observer: Observer
 
     init(observer: Observer) {
         #if TRACE_RESOURCES
-        Task {
-            _ = await Resources.incrementTotal()
-        }
+            Task {
+                _ = await Resources.incrementTotal()
+            }
         #endif
         self.observer = observer
     }
@@ -58,6 +55,16 @@ final class BaseSink<Observer: ObserverType>: BaseSinkProtocol {
                 _ = await Resources.decrementTotal()
             }
         #endif
+    }
+    
+    var disposed: Bool = false
+    
+    func setDisposed() -> Bool {
+        if !disposed {
+            disposed = true
+            return true
+        }
+        return false
     }
 }
 

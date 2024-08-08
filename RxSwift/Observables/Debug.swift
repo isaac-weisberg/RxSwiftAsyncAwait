@@ -18,10 +18,10 @@ public extension ObservableType {
      - parameter trimOutput: Should output be trimmed to max 40 characters.
      - returns: An observable sequence whose events are printed to standard output.
      */
-    func debug(_ identifier: String? = nil, trimOutput: Bool = false, file: String = #file, line: UInt = #line, function: String = #function) async
+    func debug(_ identifier: String? = nil, trimOutput: Bool = false, file: String = #file, line: UInt = #line, function: String = #function)
         -> Observable<Element>
     {
-        return await Debug(source: self, identifier: identifier, trimOutput: trimOutput, file: file, line: line, function: function)
+        return Debug(source: self, identifier: identifier, trimOutput: trimOutput, file: file, line: line, function: function)
     }
 }
 
@@ -63,14 +63,11 @@ private final actor DebugSink<Source: ObservableType, Observer: ObserverType>: S
             await self.dispose()
         }
     }
-
-    
     
     func dispose() async {
-        if !baseSink.isDisposed() {
+        if baseSink.setDisposed() {
             logEvent(self.parent.identifier, dateFormat: self.timestampFormatter, content: "isDisposed")
         }
-        await baseSink.dispose()
     }
 }
 
@@ -79,7 +76,7 @@ private final class Debug<Source: ObservableType>: Producer<Source.Element> {
     fileprivate let trimOutput: Bool
     private let source: Source
 
-    init(source: Source, identifier: String?, trimOutput: Bool, file: String, line: UInt, function: String) async {
+    init(source: Source, identifier: String?, trimOutput: Bool, file: String, line: UInt, function: String) {
         self.trimOutput = trimOutput
         if let identifier = identifier {
             self.identifier = identifier
@@ -95,7 +92,7 @@ private final class Debug<Source: ObservableType>: Producer<Source.Element> {
             self.identifier = "\(trimmedFile):\(line) (\(function))"
         }
         self.source = source
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Source.Element {

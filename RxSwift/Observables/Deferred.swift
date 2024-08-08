@@ -15,10 +15,10 @@ public extension ObservableType {
      - parameter observableFactory: Observable factory function to invoke for each observer that subscribes to the resulting sequence.
      - returns: An observable sequence whose observers trigger an invocation of the given observable factory function.
      */
-    static func deferred(_ observableFactory: @escaping () async throws -> Observable<Element>) async
+    static func deferred(_ observableFactory: @escaping () async throws -> Observable<Element>)
         -> Observable<Element>
     {
-        await Deferred(observableFactory: observableFactory)
+        Deferred(observableFactory: observableFactory)
     }
 }
 
@@ -26,20 +26,20 @@ private final actor DeferredSink<Source: ObservableType, Observer: ObserverType>
     typealias Element = Observer.Element
     typealias Parent = Deferred<Source>
     let baseSink: BaseSink<Observer>
+    var innerDisposable: Disposable?
     
     init(observer: Observer) async {
         baseSink = BaseSink(observer: observer)
     }
 
-    func run(_ c: C, _ parent: Parent) async -> Disposable {
+    func run(_ c: C, _ parent: Parent) async {
         do {
             let result = try await parent.observableFactory()
-            return await result.subscribe(c.call(), self)
+            self.innerDisposable = await result.subscribe(c.call(), self)
         }
         catch let e {
             await self.forwardOn(.error(e), c.call())
             await self.dispose()
-            return Disposables.create()
         }
     }
 
@@ -55,6 +55,12 @@ private final actor DeferredSink<Source: ObservableType, Observer: ObserverType>
             await self.dispose()
         }
     }
+    
+    func dispose() async {
+        if baseSink.setDisposed() {
+            await innerDisposable?.dispose()
+        }
+    }
 }
 
 private final class Deferred<Source: ObservableType>: Producer<Source.Element> {
@@ -62,16 +68,16 @@ private final class Deferred<Source: ObservableType>: Producer<Source.Element> {
 
     let observableFactory: Factory
 
-    init(observableFactory: @escaping Factory) async {
+    init(observableFactory: @escaping Factory) {
         self.observableFactory = observableFactory
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Source.Element
     {
         let sink = await DeferredSink<Source, Observer>(observer: observer)
-        let subscription = await sink.run(c.call(), self)
+        await sink.run(c.call(), self)
         return sink
     }
 }
