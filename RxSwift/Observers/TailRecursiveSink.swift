@@ -12,11 +12,11 @@ enum TailRecursiveSinkCommand {
 }
 
 #if DEBUG || TRACE_RESOURCES
-    public var maxTailRecursiveSinkStackSize = 0
+    public let maxTailRecursiveSinkStackSize = ActualAtomicInt<Int>(0)
 #endif
 
 /// This class is usually used with `Generator` version of the operators.
-final class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
+final actor TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
     Sink,
     InvocableWithValueType where Sequence.Element: ObservableConvertibleType,
     Sequence.Element.Element == Observer.Element {
@@ -29,21 +29,19 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
     var disposed = false
     var subscription: SerialDisposable
 
-    // this is thread safe object
     let gate: AsyncLock<InvocableScheduledItem<TailRecursiveSink<Sequence, Observer>>>
 
-    init(observer: Observer) async {
-        gate = await AsyncLock<InvocableScheduledItem<TailRecursiveSink<Sequence, Observer>>>()
-        subscription = await SerialDisposable()
+    init(observer: Observer) {
+//        self.user = user
+        gate = AsyncLock<InvocableScheduledItem<TailRecursiveSink<Sequence, Observer>>>()
+        subscription = SerialDisposable()
         baseSink = BaseSink(observer: observer)
     }
 
-    func run(_ c: C, _ sources: SequenceGenerator) async -> Disposable {
+    func run(_ c: C, _ sources: SequenceGenerator) async {
         generators.append(sources)
 
         await schedule(c.call(), .moveNext)
-
-        return subscription
     }
 
     func invoke(_ c: C, _ command: TailRecursiveSinkCommand) async {
@@ -65,10 +63,14 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
         await dispose()
     }
 
-    func extract(_ c: C, _ observable: Observable<Element>) -> SequenceGenerator? {
+    func extract(_ c: C, _ observable: Observable<Element>) -> (generator: Sequence.Iterator, remaining: IntMax?)? {
         rxAbstractMethod()
     }
 
+    func subscribeToNext(_ c: C, _ source: Observable<Element>) async -> Disposable {
+        rxAbstractMethod()
+    }
+    
     // should be done on gate locked
 
     private func moveNextCommand(_ c: C) async {
@@ -87,7 +89,7 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
 
             var e = g
 
-            guard let nextCandidate = await e.next()?.asObservable() else {
+            guard let nextCandidate = e.next()?.asObservable() else {
                 continue
             }
 
@@ -113,8 +115,11 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
             if let nextGenerator {
                 generators.append(nextGenerator)
                 #if DEBUG || TRACE_RESOURCES
-                    if maxTailRecursiveSinkStackSize < generators.count {
-                        maxTailRecursiveSinkStackSize = generators.count
+                    let generatorsCount = generators.count
+                    await maxTailRecursiveSinkStackSize.perform(c.call()) { _, maxTailRecursiveSinkStackSize in
+                        if maxTailRecursiveSinkStackSize < generatorsCount {
+                            maxTailRecursiveSinkStackSize = generatorsCount
+                        }
                     }
                 #endif
             } else {
@@ -127,13 +132,10 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
             return
         }
 
-        let disposable = await SingleAssignmentDisposable()
+        let disposable = SingleAssignmentDisposable()
         await subscription.setDisposable(disposable)
-        await disposable.setDisposable(subscribeToNext(c.call(), existingNext))
-    }
-
-    func subscribeToNext(_ c: C, _ source: Observable<Element>) async -> Disposable {
-        rxAbstractMethod()
+        let innerDisposable = await subscribeToNext(c.call(), existingNext)
+        await disposable.setDisposable(innerDisposable)
     }
 
     func disposeCommand() {
@@ -142,16 +144,16 @@ final class TailRecursiveSink<Sequence: Swift.Sequence, Observer: ObserverType>:
     }
 
     func isDisposed() -> Bool {
-        baseSink.isDisposed()
+        baseSink.disposed
     }
 
     func dispose() async {
-        baseSink.setDisposedSync()
-        await baseSink.dispose()
+        if baseSink.setDisposed() {
 
-        await subscription.dispose()
-        await gate.dispose()
+            await subscription.dispose()
+            await gate.dispose()
 
-        await schedule(C(), .dispose)
+            await schedule(C(), .dispose)
+        }
     }
 }

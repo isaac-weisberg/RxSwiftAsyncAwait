@@ -9,7 +9,12 @@
 // MARK: forEach
 
 @inline(__always)
-func dispatch<Element>(_ bag: Bag<(Event<Element>, _ c: C) async -> Void>, _ event: Event<Element>, _ c: C) async {
+func dispatch<Element>(
+    _ bag: Bag<@Sendable (Event<Element>, _ c: C) async -> Void>,
+    _ event: Event<Element>,
+    _ c: C
+)
+    async {
     await bag._value0?(event, c.call())
 
     if bag._onlyFastPath {

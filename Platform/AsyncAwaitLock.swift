@@ -44,9 +44,11 @@ public final actor ActualNonRecursiveLock {
     private var latestTask: Task<Void, Never>?
     private var scheduledTasks = 0
 
-    public init() async {
+    public init() {
         #if TRACE_RESOURCES
+        Task {
             _ = await Resources.incrementTotal()
+        }
         #endif
     }
 

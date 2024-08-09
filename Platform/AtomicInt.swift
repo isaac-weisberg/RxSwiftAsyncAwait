@@ -73,13 +73,19 @@ func isFlagSet(_ this: AtomicInt, _ mask: Int32) async -> Bool {
     await (load(this) & mask) != 0
 }
 
-final class ActualAtomicInt: @unchecked Sendable {
+public final class ActualAtomicInt<Value: FixedWidthInteger>: @unchecked Sendable {
     fileprivate let lock: ActualNonRecursiveLock
-    fileprivate var value: Int32
+    fileprivate var value: Value
 
-    public init(_ value: Int32 = 0) async {
-        lock = await ActualNonRecursiveLock()
+    public init(_ value: Value = 0) {
+        lock = ActualNonRecursiveLock()
         self.value = value
+    }
+
+    func perform<R: Sendable>(_ c: C, _ work: @Sendable @escaping (C, inout Value) -> R) async -> R {
+        await lock.performLocked(c) { c in
+            work(c, value)
+        }
     }
 }
 
