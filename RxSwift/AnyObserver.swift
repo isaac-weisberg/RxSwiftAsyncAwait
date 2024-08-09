@@ -60,6 +60,16 @@ public struct AnyAsyncObserver<Element: Sendable>: AsyncObserverType, Sendable {
     }
 }
 
+public typealias AnyObserver = AnyAsyncObserver
+
+extension ObserverType {
+    /// Erases type of observer and returns canonical observer.
+    ///
+    /// - returns: type erased observer.
+    public func asObserver() -> AnyObserver<Element> {
+        AnyObserver(self)
+    }
+}
 //
 //    public func asAnyObserver() -> AnyObserver<Element> {
 //        .async(self)
