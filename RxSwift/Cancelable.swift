@@ -15,3 +15,5 @@ public protocol AsynchronousCancelable: AsynchronousDisposable {
     /// Was resource disposed.
     func isDisposed() async -> Bool
 }
+
+typealias Cancelable = AsynchronousCancelable

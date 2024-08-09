@@ -35,32 +35,32 @@ public protocol ObservableType: ObservableConvertibleType, Sendable {
         where Observer.Element == Element
 }
 
-public protocol AsyncObservableToAsyncObserverType: AsyncObservableToAsyncObserverConvertibleType, Sendable {
-    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AnyDisposable
-        where Observer.Element == Element
-}
-
-public protocol AsyncObservableToSyncObserverType: AsyncObservableToSyncObserverConvertibleType, Sendable {
-    func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) async -> AnyDisposable
-        where Observer.Element == Element
-}
-
-//public extension ObservableType {
+//public protocol AsyncObservableToAsyncObserverType: AsyncObservableToAsyncObserverConvertibleType, Sendable {
+//    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AnyDisposable
+//        where Observer.Element == Element
+//}
 //
-//    /// Default implementation of converting `ObservableType` to `Observable`.
-//    func asObservable() async -> Observable<Element> {
-//        // temporary workaround
-//        // return Observable.create(subscribe: self.subscribe)
-//        await Observable<Element>.create { c, o in await self.subscribe(c.call(), AnyObserver(eventHandler: .async(o.on))) }
-//    }
+//public protocol AsyncObservableToSyncObserverType: AsyncObservableToSyncObserverConvertibleType, Sendable {
+//    func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) async -> AnyDisposable
+//        where Observer.Element == Element
 //}
 
-public protocol SyncObservableToAsyncObserverType: SyncObservableToAsyncObserverConvertibleType, Sendable {
-    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) -> SynchronousDisposable
-        where Observer.Element == Element
-}
+public extension ObservableType {
 
-public protocol SyncObservableToSyncObserverType: SyncObservableToSyncObserverConvertibleType, Sendable {
-    func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) -> SynchronousDisposable
-        where Observer.Element == Element
+    /// Default implementation of converting `ObservableType` to `Observable`.
+    func asObservable() -> Observable<Element> {
+        // temporary workaround
+        // return Observable.create(subscribe: self.subscribe)
+        Observable<Element>.create { c, o in await self.subscribe(c.call(), o) }
+    }
 }
+//
+//public protocol SyncObservableToAsyncObserverType: SyncObservableToAsyncObserverConvertibleType, Sendable {
+//    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) -> SynchronousDisposable
+//        where Observer.Element == Element
+//}
+//
+//public protocol SyncObservableToSyncObserverType: SyncObservableToSyncObserverConvertibleType, Sendable {
+//    func subscribe<Observer: SyncObserverType>(_ c: C, _ observer: Observer) -> SynchronousDisposable
+//        where Observer.Element == Element
+//}

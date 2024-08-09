@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-//public struct AnySyncObserver<Element: Sendable>: /* SyncObserverType, */ Sendable {
+// public struct AnySyncObserver<Element: Sendable>: /* SyncObserverType, */ Sendable {
 //    /// Anonymous event handler type.
 //    public typealias EventHandler = SyncObserverEventHandler<Element>
 //
@@ -33,7 +33,7 @@
 //    public func asAnyObserver() -> AnyObserver<Element> {
 //        .sync(self)
 //    }
-//}
+// }
 
 public struct AnyAsyncObserver<Element: Sendable>: AsyncObserverType, Sendable {
     /// Anonymous event handler type.
@@ -58,16 +58,17 @@ public struct AnyAsyncObserver<Element: Sendable>: AsyncObserverType, Sendable {
     public init<Observer: SyncObserverType>(_ observer: Observer) where Observer.Element == Element {
         on = observer.on(_:_:)
     }
+}
+
 //
 //    public func asAnyObserver() -> AnyObserver<Element> {
 //        .async(self)
 //    }
-}
 //
-//public enum AnyObserver<Element> {
+// public enum AnyObserver<Element> {
 //    case async(AnyAsyncObserver<Element>)
 //    case sync(AnySyncObserver<Element>)
-//}
+// }
 
 ///// A type-erased `ObserverType`.
 /////
@@ -109,11 +110,14 @@ public struct AnyAsyncObserver<Element: Sendable>: AsyncObserverType, Sendable {
 //        self
 //    }
 // }
-//
-// extension AnyObserver {
-//    /// Collection of `AnyObserver`s
-//    typealias s = Bag<EventHandler>
-// }
+
+public typealias AnyObserver = AnyAsyncObserver
+
+extension AnyObserver {
+    /// Collection of `AnyObserver`s
+    typealias s = Bag<EventHandler>
+}
+
 //
 // public extension ObserverType {
 //    /// Erases type of observer and returns canonical observer.

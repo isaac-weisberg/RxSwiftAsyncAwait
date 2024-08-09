@@ -9,7 +9,7 @@
 /// Represents a value that changes over time.
 ///
 /// Observers can subscribe to the subject to receive the last (or initial) value and all subsequent notifications.
-public final actor BehaviorSubject<Element>:
+public final actor BehaviorSubject<Element: Sendable>:
     ObservableType,
     SubjectType,
     ObserverType,
@@ -31,9 +31,6 @@ public final actor BehaviorSubject<Element>:
     private var observers = Observers()
     private var stoppedEvent: Event<Element>?
 
-    #if DEBUG
-        private let synchronizationTracker: SynchronizationTracker
-    #endif
 
     /// Indicates whether the subject has been disposed.
     public func isDisposed() -> Bool {
@@ -43,17 +40,9 @@ public final actor BehaviorSubject<Element>:
     /// Initializes a new instance of the subject that caches its last value and starts with the specified value.
     ///
     /// - parameter value: Initial value sent to observers when no other value has been received by the subject yet.
-    public init(value: Element) async {
-        await ObservableInit()
+    public init(value: Element) {
+        ObservableInit()
         element = value
-
-        #if TRACE_RESOURCES
-            _ = await Resources.incrementTotal()
-        #endif
-
-        #if DEBUG
-            synchronizationTracker = await SynchronizationTracker()
-        #endif
     }
 
     /// Gets the current value or throws an error.
@@ -78,18 +67,11 @@ public final actor BehaviorSubject<Element>:
     ///
     /// - parameter event: Event to send to the observers.
     public func on(_ event: Event<Element>, _ c: C) async {
-        #if DEBUG
-            await synchronizationTracker.register(synchronizationErrorMessage: .default)
-        #endif
         let observers = Asynchronous_on(event, c.call())
 
         for observer in observers {
             await observer(event, c.call())
         }
-
-        #if DEBUG
-            await synchronizationTracker.unregister()
-        #endif
     }
 
     func Asynchronous_on(_ event: Event<Element>, _ c: C) -> Observers {
@@ -164,10 +146,5 @@ public final actor BehaviorSubject<Element>:
 
     deinit {
         ObservableDeinit()
-        #if TRACE_RESOURCES
-            Task {
-                _ = await Resources.decrementTotal()
-            }
-        #endif
     }
 }
