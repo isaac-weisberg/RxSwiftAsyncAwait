@@ -7,7 +7,7 @@
 //
 
 /// Represents a group of disposable resources that are disposed together.
-public final actor CompositeDisposable: AsynchronousCancelable {
+public final class UnsynchronizedCompositeDisposable: @unchecked Sendable {
     /// Key used to remove disposable from composite disposable
     public struct DisposeKey: Sendable {
         fileprivate let key: BagKey
@@ -129,6 +129,24 @@ public final actor CompositeDisposable: AsynchronousCancelable {
     }
 }
 
+public typealias CompositeDisposable = UnsynchronizedCompositeDisposable
+
+public actor ActorCompositeDisposable: AsynchronousCancelable {
+    let disposable: CompositeDisposable
+
+    init(_ disposable: CompositeDisposable) {
+        self.disposable = disposable
+    }
+
+    public func isDisposed() async -> Bool {
+        disposable.isDisposed()
+    }
+
+    public func dispose() async {
+        await disposable.dispose()
+    }
+}
+
 public extension Disposables {
     /// Creates a disposable with the given disposables.
     static func create(
@@ -137,7 +155,7 @@ public extension Disposables {
         _ disposable3: AsynchronousDisposable
     )
         -> AsynchronousCancelable {
-        CompositeDisposable(disposable1, disposable2, disposable3)
+        ActorCompositeDisposable(CompositeDisposable(disposable1, disposable2, disposable3))
     }
 
     /// Creates a disposable with the given disposables.
@@ -152,7 +170,7 @@ public extension Disposables {
         disposables.append(disposable1)
         disposables.append(disposable2)
         disposables.append(disposable3)
-        return CompositeDisposable(disposables: disposables)
+        return ActorCompositeDisposable(CompositeDisposable(disposables: disposables))
     }
 
     /// Creates a disposable with the given disposables.
@@ -161,7 +179,7 @@ public extension Disposables {
         case 2:
             return Disposables.create(disposables[0], disposables[1])
         default:
-            return CompositeDisposable(disposables: disposables)
+            return ActorCompositeDisposable(CompositeDisposable(disposables: disposables))
         }
     }
 }

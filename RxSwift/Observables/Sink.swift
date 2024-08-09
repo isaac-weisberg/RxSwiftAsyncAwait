@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-protocol Sink: AsynchronousDisposable, AnyObject {
+protocol Sink: AsynchronousDisposable, AnyObject, Actor {
     associatedtype TheBaseSink: BaseSinkProtocol
     typealias Observer = TheBaseSink.Observer
 
@@ -20,7 +20,7 @@ protocol BaseSinkProtocol: AnyObject, Sendable {
 
     var observer: Observer { get }
 
-    var disposed: Bool { get set }
+    var disposed: Bool { get }
     
     func setDisposed() -> Bool
 }
