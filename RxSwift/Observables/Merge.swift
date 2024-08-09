@@ -366,7 +366,7 @@
 
 // MergeSink<SourceElement, SourceSequence, Observer>
 private final actor FlatMapSink<
-    SourceElement,
+    SourceElement: Sendable,
     SourceSequence: ObservableConvertibleType,
     Observer: ObserverType
 >: MergeSink, ObserverType where SourceSequence.Element == Observer.Element {
@@ -378,9 +378,9 @@ private final actor FlatMapSink<
     private let selector: Selector
     let baseSink: MergeSinkBase<SourceElement, SourceSequence, Observer>
 
-    init(selector: @escaping Selector, observer: Observer) async {
+    init(selector: @escaping Selector, observer: Observer) {
         self.selector = selector
-        baseSink = await MergeSinkBase(observer: observer)
+        baseSink = MergeSinkBase(observer: observer)
     }
 
     func on(_ event: Event<SourceElement>, _ c: C) async {
@@ -415,9 +415,9 @@ private final actor FlatMapSink<
             return nil
         }
     }
-    
+
     func subscribeInner(_ source: Observable<Observer.Element>, _ c: C) async {
-        let iterDisposable = await SingleAssignmentDisposable()
+        let iterDisposable = SingleAssignmentDisposable()
         if let disposeKey = await baseSink.group.insert(iterDisposable) {
             let iter = MergeSinkIter(parent: self, disposeKey: disposeKey)
             let subscription = await source.subscribe(c.call(), iter)
@@ -432,6 +432,8 @@ private final actor FlatMapSink<
     func performMap(_ element: SourceElement) async throws -> SourceSequence {
         try await selector(element)
     }
+
+    func dispose() async {}
 }
 
 //// MARK: FlatMapFirst
@@ -505,38 +507,14 @@ final class MergeSinkBase<
     // Base Sink Protocol
     let baseSink: BaseSink<Observer>
 
-    init(observer: Observer) async {
-        group = await CompositeDisposable()
-        sourceSubscription = await SingleAssignmentDisposable()
+    init(observer: Observer) {
+        group = CompositeDisposable(disposables: [])
+        sourceSubscription = SingleAssignmentDisposable()
         baseSink = BaseSink(observer: observer)
     }
 
-    func beforeForwardOn() {
-        baseSink.beforeForwardOn()
-    }
-
-    func afterForwardOn() {
-        baseSink.afterForwardOn()
-    }
-
-    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
-        await baseSink.forwardOn(event, c.call())
-    }
-
-    func isDisposed() -> Bool {
-        baseSink.isDisposed()
-    }
-
-    func setDisposedSync() {
-        baseSink.setDisposedSync()
-    }
-
-    func dispose() async {
-        await baseSink.dispose()
-    }
-
-    var cancel: any Cancelable {
-        baseSink.cancel
+    func setDisposed() -> Bool {
+        baseSink.setDisposed()
     }
 
     var observer: Observer {
@@ -571,10 +549,16 @@ final class MergeSinkBase<
         return group
     }
 
+    var disposed: Bool {
+        baseSink.disposed
+    }
+
     func checkCompleted(_ c: C) async {
-        if stopped, activeCount == 0 {
-            await forwardOn(.completed, c.call())
-            await dispose()
+        if stopped, activeCount == 0, !baseSink.disposed {
+            await observer.on(.completed, c.call())
+            if baseSink.setDisposed() {
+                fatalError("disposed?")
+            }
         }
     }
 }

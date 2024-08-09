@@ -73,7 +73,7 @@ func isFlagSet(_ this: AtomicInt, _ mask: Int32) async -> Bool {
     await (load(this) & mask) != 0
 }
 
-public final class ActualAtomicInt<Value: FixedWidthInteger>: @unchecked Sendable {
+public final class TheActualAtomicInt<Value: FixedWidthInteger>: @unchecked Sendable {
     fileprivate let lock: ActualNonRecursiveLock
     fileprivate var value: Value
 
@@ -88,6 +88,8 @@ public final class ActualAtomicInt<Value: FixedWidthInteger>: @unchecked Sendabl
         }
     }
 }
+
+public typealias ActualAtomicInt = TheActualAtomicInt<Int32>
 
 @discardableResult
 @inline(__always)

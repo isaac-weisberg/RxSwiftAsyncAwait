@@ -9,7 +9,7 @@
 /// Represents a group of disposable resources that are disposed together.
 public final actor CompositeDisposable: AsynchronousCancelable {
     /// Key used to remove disposable from composite disposable
-    public struct DisposeKey {
+    public struct DisposeKey: Sendable {
         fileprivate let key: BagKey
         fileprivate init(key: BagKey) {
             self.key = key

@@ -7,16 +7,10 @@
 //
 
 #if TRACE_RESOURCES
-    private var resourceCount: ActualAtomicInt!
+    private let resourceCount = ActualAtomicInt(0)
 
     /// Resource utilization information
     public enum Resources {
-        // call me manually plz
-        public static func initialize() async {
-            resourceCount = await ActualAtomicInt(0)
-//            numberOfSerialDispatchObservables = await ActualAtomicInt(0)
-        }
-
         /// Counts internal Rx resource allocations (Observables, Observers, Disposables, etc.). This provides a simple
         /// way to detect leaks during development.
         public static func total() async -> Int32 {
