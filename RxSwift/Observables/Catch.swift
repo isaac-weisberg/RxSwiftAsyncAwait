@@ -15,10 +15,9 @@ public extension ObservableType {
      - parameter handler: Error handler function, producing another observable sequence.
      - returns: An observable sequence containing the source sequence's elements, followed by the elements produced by the handler's resulting observable sequence in case an error occurred.
      */
-    func `catch`(_ handler: @escaping (Swift.Error) async throws -> Observable<Element>) async
-        -> Observable<Element>
-    {
-        await Catch(source: self.asObservable(), handler: handler)
+    func `catch`(_ handler: @escaping (Swift.Error) async throws -> Observable<Element>)
+        -> Observable<Element> {
+        Catch(source: asObservable(), handler: handler)
     }
 
     /**
@@ -30,10 +29,9 @@ public extension ObservableType {
      - returns: An observable sequence containing the source sequence's elements, followed by the elements produced by the handler's resulting observable sequence in case an error occurred.
      */
     @available(*, deprecated, renamed: "catch(_:)")
-    func catchError(_ handler: @escaping (Swift.Error) throws -> Observable<Element>) async
-        -> Observable<Element>
-    {
-        await self.catch(handler)
+    func catchError(_ handler: @escaping (Swift.Error) throws -> Observable<Element>)
+        -> Observable<Element> {
+        self.catch(handler)
     }
 
     /**
@@ -44,10 +42,9 @@ public extension ObservableType {
      - parameter element: Last element in an observable sequence in case error occurs.
      - returns: An observable sequence containing the source sequence's elements, followed by the `element` in case an error occurred.
      */
-    func catchAndReturn(_ element: Element) async
-        -> Observable<Element>
-    {
-        await Catch(source: self.asObservable(), handler: { _ in await Observable.just(element) })
+    func catchAndReturn(_ element: Element)
+        -> Observable<Element> {
+        Catch(source: asObservable(), handler: { _ in Observable.just(element) })
     }
 
     /**
@@ -59,20 +56,20 @@ public extension ObservableType {
      - returns: An observable sequence containing the source sequence's elements, followed by the `element` in case an error occurred.
      */
     @available(*, deprecated, renamed: "catchAndReturn(_:)")
-    func catchErrorJustReturn(_ element: Element) async
-        -> Observable<Element>
-    {
-        await self.catchAndReturn(element)
+    func catchErrorJustReturn(_ element: Element)
+        -> Observable<Element> {
+        catchAndReturn(element)
     }
 }
 
-//public extension ObservableType {
+// public extension ObservableType {
 //    /**
 //     Continues an observable sequence that is terminated by an error with the next observable sequence.
 //
 //     - seealso: [catch operator on reactivex.io](http://reactivex.io/documentation/operators/catch.html)
 //
-//     - returns: An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.
+//     - returns: An observable sequence containing elements from consecutive source sequences until a source sequence
+//     terminates successfully.
 //     */
 //    @available(*, deprecated, renamed: "catch(onSuccess:onFailure:onDisposed:)")
 //    static func catchError<Sequence: Swift.Sequence>(_ sequence: Sequence) async -> Observable<Element>
@@ -86,16 +83,17 @@ public extension ObservableType {
 //
 //     - seealso: [catch operator on reactivex.io](http://reactivex.io/documentation/operators/catch.html)
 //
-//     - returns: An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.
+//     - returns: An observable sequence containing elements from consecutive source sequences until a source sequence
+//     terminates successfully.
 //     */
 //    static func `catch`<Sequence: Swift.Sequence>(sequence: Sequence) async -> Observable<Element>
 //        where Sequence.Element == Observable<Element>
 //    {
 //        await CatchSequence(sources: sequence)
 //    }
-//}
+// }
 //
-//public extension ObservableType {
+// public extension ObservableType {
 //    /**
 //     Repeats the source observable sequence until it successfully terminates.
 //
@@ -110,21 +108,23 @@ public extension ObservableType {
 //    }
 //
 //    /**
-//     Repeats the source observable sequence the specified number of times in case of an error or until it successfully terminates.
+//     Repeats the source observable sequence the specified number of times in case of an error or until it successfully
+//     terminates.
 //
 //     If you encounter an error and want it to retry once, then you must use `retry(2)`
 //
 //     - seealso: [retry operator on reactivex.io](http://reactivex.io/documentation/operators/retry.html)
 //
 //     - parameter maxAttemptCount: Maximum number of times to repeat the sequence.
-//     - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates successfully.
+//     - returns: An observable sequence producing the elements of the given sequence repeatedly until it terminates
+//     successfully.
 //     */
 //    func retry(_ maxAttemptCount: Int) async
 //        -> Observable<Element>
 //    {
 //        await CatchSequence(sources: Swift.repeatElement(self.asObservable(), count: maxAttemptCount))
 //    }
-//}
+// }
 
 // catch with callback
 
@@ -139,13 +139,13 @@ private final class CatchSinkProxy<Observer: ObserverType>: ObserverType {
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.parent.forwardOn(event, c.call())
+        await parent.forwardOn(event, c.call())
 
         switch event {
         case .next:
             break
         case .error, .completed:
-            await self.parent.dispose()
+            await parent.dispose()
         }
     }
 }
@@ -158,36 +158,42 @@ private final actor CatchSink<Observer: ObserverType>: Sink, ObserverType {
     private let parent: Parent
     private let subscription: SerialDisposable
 
-    init(parent: Parent, observer: Observer) async {
+    init(parent: Parent, observer: Observer) {
         self.parent = parent
-        self.subscription = await SerialDisposable()
+        subscription = SerialDisposable()
         baseSink = BaseSink(observer: observer)
     }
 
-    func run(_ c: C) async -> Disposable {
-        let d1 = await SingleAssignmentDisposable()
-        await self.subscription.setDisposable(d1)
-        await d1.setDisposable(self.parent.source.subscribe(c.call(), self))
+    func run(_ c: C) async {
+        let d1 = SingleAssignmentDisposable()
+        await subscription.setDisposable(d1)
+        await d1.setDisposable(parent.source.subscribe(c.call(), self))
+    }
 
-        return self.subscription
+    func dispose() async {
+        if setDisposed() {
+            await subscription.dispose()
+        }
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
+        if baseSink.disposed {
+            return
+        }
         switch event {
         case .next:
-            await self.forwardOn(event, c.call())
+            await forwardOn(event, c.call())
         case .completed:
-            await self.forwardOn(event, c.call())
-            await self.dispose()
+            await forwardOn(event, c.call())
+            await dispose()
         case .error(let error):
             do {
-                let catchSequence = try await self.parent.handler(error)
+                let catchSequence = try await parent.handler(error)
 
                 let observer = CatchSinkProxy(parent: self)
 
-                await self.subscription.setDisposable(catchSequence.subscribe(c.call(), observer))
-            }
-            catch let e {
+                await subscription.setDisposable(catchSequence.subscribe(c.call(), observer))
+            } catch let e {
                 await self.forwardOn(.error(e), c.call())
                 await self.dispose()
             }
@@ -195,31 +201,32 @@ private final actor CatchSink<Observer: ObserverType>: Sink, ObserverType {
     }
 }
 
-private final class Catch<Element>: Producer<Element> {
+private final class Catch<Element: Sendable>: Producer<Element> {
     typealias Handler = (Swift.Error) async throws -> Observable<Element>
 
     fileprivate let source: Observable<Element>
     fileprivate let handler: Handler
 
-    init(source: Observable<Element>, handler: @escaping Handler) async {
+    init(source: Observable<Element>, handler: @escaping Handler) {
         self.source = source
         self.handler = handler
-        await super.init()
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
-        let sink = await CatchSink(parent: self, observer: observer)
-        let subscription = await sink.run(c.call())
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element {
+        let sink = CatchSink(parent: self, observer: observer)
+        await sink.run(c.call())
         return sink
     }
 }
 
 // catch enumerable
 //
-//private final actor CatchSequenceSink<Sequence: Swift.Sequence, Observer: ObserverType>:
+// private final actor CatchSequenceSink<Sequence: Swift.Sequence, Observer: ObserverType>:
 //    TailRecursiveSink<Sequence, Observer>,
 //    ObserverType where Sequence.Element: ObservableConvertibleType, Sequence.Element.Element == Observer.Element
-//{
+// {
 //    typealias Element = Observer.Element
 //    typealias Parent = CatchSequence<Sequence>
 //
@@ -265,9 +272,10 @@ private final class Catch<Element>: Producer<Element> {
 //            return nil
 //        }
 //    }
-//}
+// }
 //
-//private final class CatchSequence<Sequence: Swift.Sequence>: Producer<Sequence.Element.Element> where Sequence.Element: ObservableConvertibleType {
+// private final class CatchSequence<Sequence: Swift.Sequence>: Producer<Sequence.Element.Element> where
+// Sequence.Element: ObservableConvertibleType {
 //    typealias Element = Sequence.Element.Element
 //
 //    let sources: Sequence
@@ -277,9 +285,10 @@ private final class Catch<Element>: Producer<Element> {
 //        await super.init()
 //    }
 //
-//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
+//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where
+//    Observer.Element == Element {
 //        let sink = await CatchSequenceSink<Sequence, Observer>(observer: observer)
 //        let subscription = await sink.run(c.call(), (self.sources.makeIterator(), nil))
 //        return sink
 //    }
-//}
+// }
