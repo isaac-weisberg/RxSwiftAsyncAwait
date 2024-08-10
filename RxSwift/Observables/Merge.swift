@@ -1,27 +1,27 @@
-////
-////  Merge.swift
-////  RxSwift
-////
-////  Created by Krunoslav Zaher on 3/28/15.
-////  Copyright © 2015 Krunoslav Zaher. All rights reserved.
-////
 //
-// public extension ObservableType {
-//    /**
-//     Projects each element of an observable sequence to an observable sequence and merges the resulting observable
-//     sequences into one observable sequence.
+//  Merge.swift
+//  RxSwift
 //
-//     - seealso: [flatMap operator on reactivex.io](http://reactivex.io/documentation/operators/flatmap.html)
+//  Created by Krunoslav Zaher on 3/28/15.
+//  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
-//     - parameter selector: A transform function to apply to each element.
-//     - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on
-//     each element of the input sequence.
-//     */
-//    func flatMap<Source: ObservableConvertibleType>(_ selector: @escaping (Element) async throws -> Source) async
-//        -> Observable<Source.Element> {
-//        await FlatMap(source: asObservable(), selector: selector)
-//    }
-// }
+
+ public extension ObservableType {
+    /**
+     Projects each element of an observable sequence to an observable sequence and merges the resulting observable
+     sequences into one observable sequence.
+
+     - seealso: [flatMap operator on reactivex.io](http://reactivex.io/documentation/operators/flatmap.html)
+
+     - parameter selector: A transform function to apply to each element.
+     - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on
+     each element of the input sequence.
+     */
+    func flatMap<Source: ObservableConvertibleType>(_ selector: @Sendable @escaping (Element) throws -> Source)
+        -> Observable<Source.Element> {
+        FlatMap(source: asObservable(), selector: selector)
+    }
+ }
 //
 // public extension ObservableType {
 //    /**
@@ -178,7 +178,7 @@
 //            } else {
 //                await parent.setActiveCount(await parent.activeCount - 1)
 //
-//                if await parent.stopped, await parent.activeCount == 0 {
+//                if await parent.sourceHasStopped, await parent.activeCount == 0 {
 //                    await parent.forwardOn(.completed, c.call())
 //                    await parent.dispose()
 //                }
@@ -225,7 +225,7 @@
 //    let maxConcurrent: Int
 //
 //    // state
-//    var stopped = false
+//    var sourceHasStopped = false
 //    var activeCount = 0
 //    func setActiveCount(_ activeCount: Int) {
 //        self.activeCount = activeCount
@@ -317,7 +317,7 @@
 //                await sourceSubscription.dispose()
 //            }
 //
-//            stopped = true
+//            sourceHasStopped = true
 //        }
 //    }
 // }
@@ -366,14 +366,14 @@
 
 // MergeSink<SourceElement, DerivedSequence, Observer>
 private final actor FlatMapSink<
-    SourceElement: Sendable,
+    Source: ObservableConvertibleType,
     DerivedSequence: ObservableConvertibleType,
     Observer: ObserverType
 >: MergeSink, ObserverType where DerivedSequence.Element == Observer.Element {
 
-    typealias Element = SourceElement
+    typealias Element = Source.Element
 
-    typealias Selector = (Element) async throws -> DerivedSequence
+    typealias Selector = (Element) throws -> DerivedSequence
 
     private let selector: Selector
     let baseSink: MergeSinkBase<SourceElement, DerivedSequence, Observer>
@@ -393,7 +393,7 @@ private final actor FlatMapSink<
             await forwardOn(.error(error), c.call())
             await dispose()
         case .completed:
-            baseSink.stopped = true
+            baseSink.sourceHasStopped = true
             await baseSink.sourceSubscription.dispose()
             await checkCompleted(c.call())
         }
@@ -401,12 +401,8 @@ private final actor FlatMapSink<
 
     @inline(__always)
     private final func nextElementArrived(element: SourceElement, _ c: C) async -> DerivedSequence? {
-        if !baseSink.subscribeNext {
-            return nil
-        }
-
         do {
-            let value = try await performMap(element)
+            let value = try performMap(element)
             baseSink.activeCount += 1
             return value
         } catch let e {
@@ -439,16 +435,16 @@ private final actor FlatMapSink<
         }
     }
 
-    func run(_ source: Observable<SourceElement>, _ c: C) async {
+    func run(_ source: Source, _ c: C) async {
         await baseSink.run(self, source, c.call())
     }
 
-    func performMap(_ element: SourceElement) async throws -> DerivedSequence {
-        try await selector(element)
+    func performMap(_ element: SourceElement) throws -> DerivedSequence {
+        try selector(element)
     }
     
     func checkCompleted(_ c: C) async {
-        if baseSink.stopped, baseSink.activeCount == 0 {
+        if baseSink.sourceHasStopped, baseSink.activeCount == 0, !baseSink.disposed {
             await baseSink.observer.on(.completed, c.call())
             if baseSink.setDisposed() {
                 fatalError("disposed?")
@@ -545,8 +541,7 @@ final class MergeSinkBase<
     let sourceSubscription: SingleAssignmentDisposable
 
     var activeCount = 0
-    var stopped = false
-    var subscribeNext = true
+    var sourceHasStopped = false
 
     func run<SourceObserver: ObserverType>(
         _ observer: SourceObserver,
@@ -583,7 +578,7 @@ final class MergeSinkBase<
 //    let sourceSubscription: SingleAssignmentDisposable
 //
 //    var activeCount = 0
-//    var stopped = false
+//    var sourceHasStopped = false
 //
 //    override init(observer: Observer) async {
 //        lock = await RecursiveLock()
@@ -628,7 +623,7 @@ final class MergeSinkBase<
 //            }
 //        case .completed:
 //            await lock.performLocked {
-//                self.stopped = true
+//                self.sourceHasStopped = true
 //                await self.sourceSubscription.dispose()
 //                await self.checkCompleted(c.call())
 //            }
@@ -651,7 +646,7 @@ final class MergeSinkBase<
 //            await subscribeInner(source, c.call())
 //        }
 //
-//        stopped = true
+//        sourceHasStopped = true
 //
 //        await checkCompleted(c.call())
 //
@@ -660,7 +655,7 @@ final class MergeSinkBase<
 //
 //    @inline(__always)
 //    func checkCompleted(_ c: C) async {
-//        if stopped, activeCount == 0 {
+//        if sourceHasStopped, activeCount == 0 {
 //            await forwardOn(.completed, c.call())
 //            await dispose()
 //        }
@@ -679,16 +674,16 @@ final class MergeSinkBase<
 //// MARK: Producers
 //
 private final class FlatMap<
-    SourceElement: Sendable,
+    Source: ObservableType,
     DerivedSequence: ObservableConvertibleType
 >: Producer<DerivedSequence.Element> {
-    typealias Selector = @Sendable (SourceElement) async throws -> DerivedSequence
+    typealias Selector = @Sendable (Source.Element) throws -> DerivedSequence
 
-    private let source: Observable<SourceElement>
+    private let source: Source
 
     private let selector: Selector
 
-    init(source: Observable<SourceElement>, selector: @escaping Selector) {
+    init(source: Source, selector: @escaping Selector) {
         self.source = source
         self.selector = selector
         super.init()
