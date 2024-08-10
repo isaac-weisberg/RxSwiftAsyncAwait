@@ -121,8 +121,6 @@ extension ObserverType {
 //    }
 // }
 
-public typealias AnyObserver = AnyAsyncObserver
-
 extension AnyObserver {
     /// Collection of `AnyObserver`s
     typealias s = Bag<EventHandler>

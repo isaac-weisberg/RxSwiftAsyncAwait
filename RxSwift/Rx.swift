@@ -44,6 +44,10 @@ func rxFatalError(_ lastMessage: @autoclosure () -> String, file: StaticString =
     fatalError(lastMessage(), file: file, line: line)
 }
 
+func rxAssertExpectedNoEventsAfterDisposal(file: StaticString = #file, line: UInt = #line) {
+    assertionFailure("Expected no events since we're already disposed", file: file, line: line)
+}
+
 func rxFatalErrorInDebug(_ lastMessage: @autoclosure () -> String, file: StaticString = #file, line: UInt = #line) {
     #if DEBUG
         fatalError(lastMessage(), file: file, line: line)
@@ -74,9 +78,14 @@ func decrementChecked(_ i: inout Int) throws -> Int {
 //    final class SynchronizationTrackerSync {
 //        public enum SynchronizationErrorMessages: String {
 //            case variable =
-//                "Two different threads are trying to assign the same `Variable.value` Synchronous.\n    This is undefined behavior because the end result (variable value) is nondeterministic and depends on the \n    operating system thread scheduler. This will cause random behavior of your program.\n"
+//                "Two different threads are trying to assign the same `Variable.value` Synchronous.\n    This is
+//                undefined behavior because the end result (variable value) is nondeterministic and depends on the \n
+//                 operating system thread scheduler. This will cause random behavior of your program.\n"
 //            case `default` =
-//                "Two different Synchronous threads are trying to send some event simultaneously.\n    This is undefined behavior because the ordering of the effects caused by these events is nondeterministic and depends on the \n    operating system thread scheduler. This will result in a random behavior of your program.\n"
+//                "Two different Synchronous threads are trying to send some event simultaneously.\n    This is
+//                undefined behavior because the ordering of the effects caused by these events is nondeterministic and
+//                depends on the \n    operating system thread scheduler. This will result in a random behavior of your
+//                program.\n"
 //        }
 //
 //        private var entrances = 0
@@ -97,13 +106,19 @@ func decrementChecked(_ i: inout Int) throws -> Int {
 //            if count > 1 {
 //                synchronizationError(
 //                    "⚠️ Reentrancy anomaly was detected.\n" +
-//                        "  > Debugging: To debug this issue you can set a breakpoint in \(#file):\(#line) and observe the call stack.\n" +
-//                        "  > Problem: This behavior is breaking the observable sequence grammar. `next (error | completed)?`\n" +
-//                        "    This behavior breaks the grammar because there is overlapping between sequence events.\n" +
-//                        "    Observable sequence is trying to send an event before sending of previous event has finished.\n" +
-//                        "  > Interpretation: This could mean that there is some kind of unexpected cyclic dependency in your code,\n" +
+//                        "  > Debugging: To debug this issue you can set a breakpoint in \(#file):\(#line) and observe
+//                        the call stack.\n" +
+//                        "  > Problem: This behavior is breaking the observable sequence grammar. `next (error |
+//                        completed)?`\n" +
+//                        "    This behavior breaks the grammar because there is overlapping between sequence events.\n"
+//                        +
+//                        "    Observable sequence is trying to send an event before sending of previous event has
+//                        finished.\n" +
+//                        "  > Interpretation: This could mean that there is some kind of unexpected cyclic dependency
+//                        in your code,\n" +
 //                        "    or that the system is not behaving in the expected way.\n" +
-//                        "  > Remedy: If this is the expected behavior this message can be suppressed by adding `.observe(on:MainScheduler.asyncInstance)`\n" +
+//                        "  > Remedy: If this is the expected behavior this message can be suppressed by adding
+//                        `.observe(on:MainScheduler.asyncInstance)`\n" +
 //                        "    or by enqueuing sequence events in some other way.\n"
 //                )
 //            }

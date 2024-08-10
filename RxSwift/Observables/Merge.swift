@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
- public extension ObservableType {
+public extension ObservableConvertibleType {
     /**
      Projects each element of an observable sequence to an observable sequence and merges the resulting observable
      sequences into one observable sequence.
@@ -21,7 +21,8 @@
         -> Observable<Source.Element> {
         FlatMap(source: asObservable(), selector: selector)
     }
- }
+}
+
 //
 // public extension ObservableType {
 //    /**
@@ -366,12 +367,12 @@
 
 // MergeSink<SourceElement, DerivedSequence, Observer>
 private final actor FlatMapSink<
-    Source: ObservableConvertibleType,
+    SourceElement: Sendable,
     DerivedSequence: ObservableConvertibleType,
     Observer: ObserverType
 >: MergeSink, ObserverType where DerivedSequence.Element == Observer.Element {
 
-    typealias Element = Source.Element
+    typealias Element = SourceElement
 
     typealias Selector = (Element) throws -> DerivedSequence
 
@@ -384,31 +385,31 @@ private final actor FlatMapSink<
     }
 
     func on(_ event: Event<SourceElement>, _ c: C) async {
+        if baseSink.disposed {
+            rxAssertExpectedNoEventsAfterDisposal()
+            return
+        }
         switch event {
         case .next(let element):
-            if let value = await nextElementArrived(element: element, c.call()) {
-                await subscribeInner(value.asObservable(), c.call())
+            let derivedSequence: DerivedSequence
+            do {
+                let value = try selector(element)
+                baseSink.activeCount += 1
+                derivedSequence = value
+            } catch let e {
+                await self.baseSink.observer.on(.error(e), c.call())
+                await self.dispose()
+                return
             }
+
+            await subscribeInner(derivedSequence.asObservable(), c.call())
         case .error(let error):
-            await forwardOn(.error(error), c.call())
+            await self.baseSink.observer.on(.error(error), c.call())
             await dispose()
         case .completed:
             baseSink.sourceHasStopped = true
             await baseSink.sourceSubscription.dispose()
             await checkCompleted(c.call())
-        }
-    }
-
-    @inline(__always)
-    private final func nextElementArrived(element: SourceElement, _ c: C) async -> DerivedSequence? {
-        do {
-            let value = try performMap(element)
-            baseSink.activeCount += 1
-            return value
-        } catch let e {
-            await self.forwardOn(.error(e), c.call())
-            await self.dispose()
-            return nil
         }
     }
 
@@ -420,13 +421,22 @@ private final actor FlatMapSink<
             await iterDisposable.setDisposable(subscription)
         }
     }
-    
-    func derivedEventArrived(_ disposeKey: CompositeDisposable.DisposeKey, _ event: Event<Observer.Element>, _ c: C) async {
+
+    func derivedEventArrived(
+        _ disposeKey: CompositeDisposable.DisposeKey,
+        _ event: Event<Observer.Element>,
+        _ c: C
+    ) async {
+        if baseSink.disposed {
+            rxAssertExpectedNoEventsAfterDisposal()
+            return
+        }
+        
         switch event {
         case .next(let value):
-            await forwardOn(.next(value), c.call())
+            await baseSink.observer.on(.next(value), c.call())
         case .error(let error):
-            await forwardOn(.error(error), c.call())
+            await baseSink.observer.on(.error(error), c.call())
             await dispose()
         case .completed:
             await baseSink.group.remove(for: disposeKey)
@@ -435,24 +445,22 @@ private final actor FlatMapSink<
         }
     }
 
-    func run(_ source: Source, _ c: C) async {
+    func run(_ source: Observable<Element>, _ c: C) async {
         await baseSink.run(self, source, c.call())
     }
 
-    func performMap(_ element: SourceElement) throws -> DerivedSequence {
-        try selector(element)
-    }
-    
     func checkCompleted(_ c: C) async {
         if baseSink.sourceHasStopped, baseSink.activeCount == 0, !baseSink.disposed {
             await baseSink.observer.on(.completed, c.call())
-            if baseSink.setDisposed() {
-                fatalError("disposed?")
-            }
+            await dispose()
         }
     }
 
-    func dispose() async {}
+    func dispose() async {
+        if setDisposed() {
+            await baseSink.disposeAfterSettingDisposed()
+        }
+    }
 }
 
 //// MARK: FlatMapFirst
@@ -506,7 +514,11 @@ protocol MergeSink: Sink, Actor {
 
     var baseSink: MergeSinkBase<SourceElement, DerivedSequence, Observer> { get }
 
-    func derivedEventArrived(_ disposeKey: CompositeDisposable.DisposeKey, _ event: Event<Observer.Element>, _ c: C) async
+    func derivedEventArrived(
+        _ disposeKey: CompositeDisposable.DisposeKey,
+        _ event: Event<Observer.Element>,
+        _ c: C
+    ) async
 }
 
 final class MergeSinkBase<
@@ -557,6 +569,12 @@ final class MergeSinkBase<
 
     var disposed: Bool {
         baseSink.disposed
+    }
+
+    func disposeAfterSettingDisposed() async {
+        assert(baseSink.disposed)
+        await group.dispose()
+        await sourceSubscription.dispose()
     }
 }
 
@@ -674,7 +692,7 @@ final class MergeSinkBase<
 //// MARK: Producers
 //
 private final class FlatMap<
-    Source: ObservableType,
+    Source: ObservableConvertibleType,
     DerivedSequence: ObservableConvertibleType
 >: Producer<DerivedSequence.Element> {
     typealias Selector = @Sendable (Source.Element) throws -> DerivedSequence

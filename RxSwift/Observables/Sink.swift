@@ -11,8 +11,6 @@ protocol Sink: AsynchronousDisposable, AnyObject, Actor {
     typealias Observer = TheBaseSink.Observer
 
     var baseSink: TheBaseSink { get }
-
-    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async
 }
 
 protocol BaseSinkProtocol: AnyObject, Sendable {
@@ -26,12 +24,6 @@ protocol BaseSinkProtocol: AnyObject, Sendable {
 }
 
 extension Sink {
-    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
-        if !baseSink.disposed {
-            await baseSink.observer.on(event, c.call())
-        }
-    }
-    
     func setDisposed() -> Bool {
         baseSink.setDisposed()
     }
