@@ -424,14 +424,8 @@ private final actor FlatMapSink<
             await iterDisposable.setDisposable(subscription)
         }
     }
-
-    func derivedEventArrived(
-        _ disposeKey: CompositeDisposable.DisposeKey,
-        _ event: Event<Observer.Element>,
-        _ c: C
-    )
-        async {
-
+    
+    func derivedEventArrived(_ disposeKey: CompositeDisposable.DisposeKey, _ event: Event<Observer.Element>, _ c: C) async {
         switch event {
         case .next(let value):
             await forwardOn(.next(value), c.call())
@@ -445,7 +439,7 @@ private final actor FlatMapSink<
         }
     }
 
-    func run(_ source: Observable<SourceElement>, _ c: C) async -> Disposable {
+    func run(_ source: Observable<SourceElement>, _ c: C) async {
         await baseSink.run(self, source, c.call())
     }
 
@@ -501,13 +495,13 @@ private final class MergeSinkIter<
     }
 }
 
-protocol MergeSink: Sink {
+protocol MergeSink: Sink, Actor {
     associatedtype SourceElement
     associatedtype DerivedSequence: ObservableConvertibleType where DerivedSequence.Element == Observer.Element
 
     var baseSink: MergeSinkBase<SourceElement, DerivedSequence, Observer> { get }
 
-    func derivedEventArrived(_ disposeKey: CompositeDisposable.DisposeKey, _ event: Event<Observer.Element>, _ c: C)
+    func derivedEventArrived(_ disposeKey: CompositeDisposable.DisposeKey, _ event: Event<Observer.Element>, _ c: C) async
 }
 
 final class MergeSinkBase<
@@ -688,7 +682,7 @@ private final class FlatMap<
     SourceElement: Sendable,
     DerivedSequence: ObservableConvertibleType
 >: Producer<DerivedSequence.Element> {
-    typealias Selector = (SourceElement) async throws -> DerivedSequence
+    typealias Selector = @Sendable (SourceElement) async throws -> DerivedSequence
 
     private let source: Observable<SourceElement>
 
