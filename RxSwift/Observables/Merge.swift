@@ -395,7 +395,7 @@ private final actor FlatMapSink<
         case .completed:
             baseSink.stopped = true
             await baseSink.sourceSubscription.dispose()
-            await baseSink.checkCompleted(c.call())
+            await checkCompleted(c.call())
         }
     }
 
@@ -435,7 +435,7 @@ private final actor FlatMapSink<
         case .completed:
             await baseSink.group.remove(for: disposeKey)
             baseSink.activeCount -= 1
-            await baseSink.checkCompleted(c.call())
+            await checkCompleted(c.call())
         }
     }
 
@@ -445,6 +445,15 @@ private final actor FlatMapSink<
 
     func performMap(_ element: SourceElement) async throws -> DerivedSequence {
         try await selector(element)
+    }
+    
+    func checkCompleted(_ c: C) async {
+        if baseSink.stopped, baseSink.activeCount == 0 {
+            await baseSink.observer.on(.completed, c.call())
+            if baseSink.setDisposed() {
+                fatalError("disposed?")
+            }
+        }
     }
 
     func dispose() async {}
@@ -553,15 +562,6 @@ final class MergeSinkBase<
 
     var disposed: Bool {
         baseSink.disposed
-    }
-
-    func checkCompleted(_ c: C) async {
-        if stopped, activeCount == 0, !baseSink.disposed {
-            await observer.on(.completed, c.call())
-            if baseSink.setDisposed() {
-                fatalError("disposed?")
-            }
-        }
     }
 }
 
