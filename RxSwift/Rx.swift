@@ -48,6 +48,15 @@ func rxAssertExpectedNoEventsAfterDisposal(file: StaticString = #file, line: UIn
     assertionFailure("Expected no events since we're already disposed", file: file, line: line)
 }
 
+func rxAssert(
+    _ condition: @autoclosure () -> Bool,
+    _ message: String = String(),
+    file: StaticString = #file,
+    line: UInt = #line
+) {
+    assert(condition(), message, file: file, line: line)
+}
+
 func rxFatalErrorInDebug(_ lastMessage: @autoclosure () -> String, file: StaticString = #file, line: UInt = #line) {
     #if DEBUG
         fatalError(lastMessage(), file: file, line: line)

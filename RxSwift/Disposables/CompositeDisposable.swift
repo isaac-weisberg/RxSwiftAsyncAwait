@@ -89,6 +89,16 @@ public final class UnsynchronizedCompositeDisposable: @unchecked Sendable {
 
         return key
     }
+    
+    public func insertUnchecked(_ disposable: AsynchronousDisposable) -> DisposeKey {
+        let key = _insert(disposable)
+
+        guard let key else {
+            fatalError()
+        }
+
+        return key
+    }
 
     private func _insert(_ disposable: AsynchronousDisposable) -> DisposeKey? {
         let bagKey = disposables?.insert(disposable)
@@ -103,8 +113,8 @@ public final class UnsynchronizedCompositeDisposable: @unchecked Sendable {
     /// Removes and disposes the disposable identified by `disposeKey` from the CompositeDisposable.
     ///
     /// - parameter disposeKey: Key used to identify disposable to be removed.
-    public func remove(for disposeKey: DisposeKey) async {
-        await _remove(for: disposeKey)?.dispose()
+    public func remove(for disposeKey: DisposeKey) -> Disposable? {
+        return _remove(for: disposeKey)
     }
 
     private func _remove(for disposeKey: DisposeKey) -> AsynchronousDisposable? {
@@ -131,7 +141,7 @@ public final class UnsynchronizedCompositeDisposable: @unchecked Sendable {
 
 public typealias CompositeDisposable = UnsynchronizedCompositeDisposable
 
-public actor ActorCompositeDisposable: AsynchronousCancelable {
+actor ActorCompositeDisposable: AsynchronousCancelable {
     let disposable: CompositeDisposable
 
     init(_ disposable: CompositeDisposable) {

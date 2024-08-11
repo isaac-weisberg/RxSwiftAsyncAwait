@@ -55,6 +55,22 @@ public final actor SingleAssignmentDisposable: AsynchronousCancelable {
             self.disposable = nil
         }
     }
+    
+    public func setDisposableUnchecked(_ disposable: AsynchronousDisposable) -> Bool {
+        self.disposable = disposable
+        
+        let previousState = fetchOr(state, DisposeState.disposableSet.rawValue)
+
+        if (previousState & DisposeState.disposableSet.rawValue) != 0 {
+            rxFatalError("oldState.disposable != nil")
+        }
+
+        if (previousState & DisposeState.disposed.rawValue) != 0 {
+            rxFatalError("actually, it's disposed")
+        }
+        
+        return false
+    }
 
     /// Disposes the underlying disposable.
     public func dispose() async {

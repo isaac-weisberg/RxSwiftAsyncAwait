@@ -17,14 +17,14 @@ protocol BaseSinkProtocol: AnyObject, Sendable {
     associatedtype Observer: ObserverType
 
     var observer: Observer { get }
-
+    
     var disposed: Bool { get }
     
-    func setDisposed() -> Bool
+    func setDisposed()
 }
 
 extension Sink {
-    func setDisposed() -> Bool {
+    func setDisposed() {
         baseSink.setDisposed()
     }
 }
@@ -51,12 +51,9 @@ final class BaseSink<Observer: ObserverType>: BaseSinkProtocol, @unchecked Senda
     
     var disposed: Bool = false
     
-    func setDisposed() -> Bool {
-        if !disposed {
-            disposed = true
-            return true
-        }
-        return false
+    func setDisposed() {
+        rxAssert(!disposed, "Disposing me the second time? Is there somebody eagerly calling this dispose, while previous we were disposed by someone else?")
+        disposed = true
     }
 }
 
