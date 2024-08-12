@@ -8,6 +8,31 @@
 
 import Foundation
 
+protocol ActorLock: Actor {
+    func perform<R>(_ work: () -> R) -> R
+}
+
+extension ActorLock {
+    func perform<R>(_ work: () -> R) -> R {
+        work()
+    }
+}
+
+final class ActorLocked<Value: Sendable>: @unchecked Sendable {
+    let actor: ActorLock
+    var value: Value
+    
+    init(actor: ActorLock) {
+        self.actor = actor
+    }
+    
+    func perform<R: Sendable>(_ work: @Sendable (inout Value) -> R) async -> R {
+        await actor.perform { @Sendable in
+            work(&value)
+        }
+    }
+}
+
 public final class AsyncAwaitLock {
     public init() async {}
     public init() {}

@@ -11,6 +11,56 @@
 
  If an underlying disposable resource has already been set, future attempts to set the underlying disposable resource will throw an exception.
  */
+
+final class SimpleDisposableBox {
+    var disposed: Bool = false
+    var disposable: Disposable?
+}
+
+public final class UnsynchronizedSingleAssignmentDisposable {
+    private struct DisposeState: OptionSet {
+        let rawValue: Int32
+
+        static let disposed = DisposeState(rawValue: 1 << 0)
+        static let disposableSet = DisposeState(rawValue: 1 << 1)
+    }
+
+    // state
+    private let state: NonAtomicInt
+    var disposable = nil as AsynchronousDisposable?
+
+    /// - returns: A value that indicates whether the object is disposed.
+    public func isDisposed() -> Bool {
+        isFlagSet(state, DisposeState.disposed.rawValue)
+    }
+
+    /// Initializes a new instance of the `SingleAssignmentDisposable`.
+    public init() {
+        state = NonAtomicInt(0)
+        SynchronousDisposeBaseInit()
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
+    }
+    
+    public func setDisposableUnchecked(_ disposable: AsynchronousDisposable) -> Bool {
+        self.disposable = disposable
+        
+        let previousState = fetchOr(state, DisposeState.disposableSet.rawValue)
+
+        if (previousState & DisposeState.disposableSet.rawValue) != 0 {
+            rxFatalError("oldState.disposable != nil")
+        }
+
+        if (previousState & DisposeState.disposed.rawValue) != 0 {
+            rxFatalError("actually, it's disposed")
+        }
+        
+        return false
+    }
+}
+
 public final actor SingleAssignmentDisposable: AsynchronousCancelable {
     private struct DisposeState: OptionSet {
         let rawValue: Int32

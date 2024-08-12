@@ -22,6 +22,7 @@ public protocol AsynchronousDisposable: AnyObject, Sendable {//}, DisposableType
 public typealias SynchronousDisposable = AsynchronousDisposable
 
 public typealias Disposable = AsynchronousDisposable
+
 //
 //extension SynchronousDisposable {
 //    func asAnyDisposable() -> AnySynchronousDisposable {
