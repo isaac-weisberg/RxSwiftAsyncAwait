@@ -83,46 +83,46 @@ public extension ObservableType {
 //        await merge(maxConcurrent: 1)
 //    }
 // }
-//
-// public extension ObservableType {
-//    /**
-//     Merges elements from all observable sequences from collection into a single observable sequence.
-//
-//     - seealso: [merge operator on reactivex.io](http://reactivex.io/documentation/operators/merge.html)
-//
-//     - parameter sources: Collection of observable sequences to merge.
-//     - returns: The observable sequence that merges the elements of the observable sequences.
-//     */
-//    static func merge<Collection: Swift.Collection>(_ sources: Collection) async -> Observable<Element>
-//        where Collection.Element == Observable<Element> {
-//        await MergeArray(sources: Array(sources))
-//    }
-//
-//    /**
-//     Merges elements from all observable sequences from array into a single observable sequence.
-//
-//     - seealso: [merge operator on reactivex.io](http://reactivex.io/documentation/operators/merge.html)
-//
-//     - parameter sources: Array of observable sequences to merge.
-//     - returns: The observable sequence that merges the elements of the observable sequences.
-//     */
-//    static func merge(_ sources: [Observable<Element>]) async -> Observable<Element> {
-//        await MergeArray(sources: sources)
-//    }
-//
-//    /**
-//     Merges elements from all observable sequences into a single observable sequence.
-//
-//     - seealso: [merge operator on reactivex.io](http://reactivex.io/documentation/operators/merge.html)
-//
-//     - parameter sources: Collection of observable sequences to merge.
-//     - returns: The observable sequence that merges the elements of the observable sequences.
-//     */
-//    static func merge(_ sources: Observable<Element>...) async -> Observable<Element> {
-//        await MergeArray(sources: sources)
-//    }
-// }
-//
+
+public extension ObservableType {
+    /**
+     Merges elements from all observable sequences from collection into a single observable sequence.
+
+     - seealso: [merge operator on reactivex.io](http://reactivex.io/documentation/operators/merge.html)
+
+     - parameter sources: Collection of observable sequences to merge.
+     - returns: The observable sequence that merges the elements of the observable sequences.
+     */
+    static func merge<Collection: Swift.Collection>(_ sources: Collection) -> Observable<Element>
+        where Collection.Element == Observable<Element> {
+        MergeArray(sources: Array(sources))
+    }
+
+    /**
+     Merges elements from all observable sequences from array into a single observable sequence.
+
+     - seealso: [merge operator on reactivex.io](http://reactivex.io/documentation/operators/merge.html)
+
+     - parameter sources: Array of observable sequences to merge.
+     - returns: The observable sequence that merges the elements of the observable sequences.
+     */
+    static func merge(_ sources: [Observable<Element>]) -> Observable<Element> {
+        MergeArray(sources: sources)
+    }
+
+    /**
+     Merges elements from all observable sequences into a single observable sequence.
+
+     - seealso: [merge operator on reactivex.io](http://reactivex.io/documentation/operators/merge.html)
+
+     - parameter sources: Collection of observable sequences to merge.
+     - returns: The observable sequence that merges the elements of the observable sequences.
+     */
+    static func merge(_ sources: Observable<Element>...) -> Observable<Element> {
+        MergeArray(sources: sources)
+    }
+}
+
 //// MARK: concatMap
 //
 // public extension ObservableType {
@@ -349,19 +349,117 @@ public extension ObservableType {
 ////        return sink
 ////    }
 ////}
-//
-//// MARK: Merge
-//
-// private final class MergeBasicSink<Source: ObservableConvertibleType, Observer: ObserverType>: MergeSink<
-//    Source,
-//    Source,
-//    Observer
-// > where Observer.Element == Source.Element {
-//    override func performMap(_ element: Source) async throws -> Source {
-//        element
-//    }
-// }
-//
+
+// MARK: Merge
+
+private final actor MergeBasicSink<Source: ObservableConvertibleType, Observer: ObserverType>: Disposable
+    where Observer.Element == Source.Element {
+
+    let observer: Observer
+    init(observer: Observer) {
+        self.observer = observer
+    }
+    
+    private enum Input {
+        case run
+        case sourceEvent(Event<Source>)
+        case derivedEvent(Event<Source.Element>)
+        case dispose
+    }
+    
+    enum Action {
+        case subscribeTo(Source)
+        case dispose
+    }
+    
+    private struct State {
+        var disposed = false
+        var running = false
+        
+    }
+    
+    func run(_ sources: Observable<Source>) {
+        
+    }
+    
+    func acceptSourceEvent(_ c: C, _ event: Event<Source>) async {
+        await acceptInput(c.call(), .sourceEvent(event))
+    }
+    
+    func acceptDerivedEvent(_ c: C, _ event: Event<Source.Element>) async {
+        await acceptInput(c.call(), .derivedEvent(event))
+    }
+
+    func dispose() async {
+        await acceptInput(C(), .dispose)
+    }
+    
+    private var state = State()
+    
+    private func acceptInput(_ c: C, _ input: Input) async {
+        let (state, actions) = reduce(state, input)
+        
+        self.state = state
+        
+        if actions.isEmpty {
+            return
+        }
+        
+        Task.detached {
+            await self.performActions(actions)
+        }
+    }
+    
+    private func reduce(_ state: State, _ input: Input) -> (State, [Action]) {
+        
+    }
+    
+    nonisolated private func performActions(_ actions: [Action]) async {
+        if actions.count == 1 {
+            await performAction(actions[0])
+        } else {
+            await withTaskGroup(of: Void.self, body: { taskGroup in
+                actions.forEach { action in
+                    taskGroup.addTask {
+                        await self.performAction(action)
+                    }
+                }
+            })
+        }
+    }
+    
+    nonisolated private func performAction(_ action: Action) async {
+        
+    }
+}
+
+final class MergeBasicSinkSourceObserver<Source: ObservableConvertibleType, Observer: ObserverType>: ObserverType where Observer.Element == Source.Element {
+    typealias Element = Source
+    
+    fileprivate let sink: MergeBasicSink<Source, Observer>
+    
+    fileprivate init(sink: MergeBasicSink<Source, Observer>) {
+        self.sink = sink
+    }
+    
+    func on(_ event: Event<Source>, _ c: C) async {
+        await sink.acceptSourceEvent(c.call(), event)
+    }
+}
+
+final class MergeBasicSinkDerivedObserver<Source: ObservableConvertibleType, Observer: ObserverType>: ObserverType where Observer.Element == Source.Element {
+    typealias Element = Source.Element
+    
+    fileprivate let sink: MergeBasicSink<Source, Observer>
+    
+    fileprivate init(sink: MergeBasicSink<Source, Observer>) {
+        self.sink = sink
+    }
+    
+    func on(_ event: Event<Element>, _ c: C) async {
+        await sink.acceptDerivedEvent(c.call(), event)
+    }
+}
 
 // MARK: FlatMap
 
@@ -881,23 +979,19 @@ private final class FlatMapFirst<
 //        return sink
 //    }
 // }
-//
-// private final class MergeArray<Element>: Producer<Element> {
-//    private let sources: [Observable<Element>]
-//
-//    init(sources: [Observable<Element>]) async {
-//        self.sources = sources
-//        await super.init()
-//    }
-//
-//    override func run<Observer: ObserverType>(
-//        _ c: C,
-//        _ observer: Observer,
-//        cancel: Cancelable
-//    )
-//        async -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-//        let sink = await MergeBasicSink<Observable<Element>, Observer>(observer: observer)
-//        let subscription = await sink.run(sources, c.call())
-//        return sink
-//    }
-// }
+
+private final class MergeArray<Element: Sendable>: Producer<Element> {
+    private let sources: [Observable<Element>]
+
+    init(sources: [Observable<Element>]) {
+        self.sources = sources
+        super.init()
+    }
+
+    override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Element == Observer.Element, Observer: ObserverType {
+        let sink = MergeBasicSink<Observable<Element>, Observer>(observer: observer)
+        let subscription = await sink.run(sources, c.call())
+        return sink
+    }
+}
