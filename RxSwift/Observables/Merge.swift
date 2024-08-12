@@ -352,74 +352,105 @@ public extension ObservableType {
 
 // MARK: Merge
 
-private final actor MergeBasicSink<Source: ObservableConvertibleType, Observer: ObserverType>: Disposable
-    where Observer.Element == Source.Element {
+private final actor TotalMergeSink<
+    Source: Sendable,
+    DerivedSequence: ObservableConvertibleType,
+    Observer: ObserverType
+>: Disposable
+    where Observer.Element == DerivedSequence.Element {
 
     let observer: Observer
     init(observer: Observer) {
         self.observer = observer
     }
-    
+
     private enum Input {
-        case run
+        enum Run {
+            case singleSource(Observable<Source>)
+            case multipleDerives([DerivedSequence])
+        }
+
+        case run(Run)
         case sourceEvent(Event<Source>)
-        case derivedEvent(Event<Source.Element>)
+        case derivedEvent(Event<DerivedSequence.Element>)
         case dispose
     }
-    
+
     enum Action {
         case subscribeTo(Source)
         case dispose
     }
-    
+
     private struct State {
-        var disposed = false
-        var running = false
-        
+        enum Stage {
+            case running
+            case sourceDisposed
+            case disposed
+        }
+
+        var stage: Stage?
     }
-    
-    func run(_ sources: Observable<Source>) {
-        
+
+    func runOnImmediateDerived(_ c: C, _ derivedSequences: [DerivedSequence]) {
+        acceptInput(c.call(), .run(.multipleDerives(derivedSequences)))
     }
-    
-    func acceptSourceEvent(_ c: C, _ event: Event<Source>) async {
-        await acceptInput(c.call(), .sourceEvent(event))
+
+    func run(_ c: C, _ source: Observable<Source>) {
+        acceptInput(c.call(), .run(.singleSource(source)))
     }
-    
-    func acceptDerivedEvent(_ c: C, _ event: Event<Source.Element>) async {
-        await acceptInput(c.call(), .derivedEvent(event))
+
+    func acceptSourceEvent(_ c: C, _ event: Event<Source>) {
+        acceptInput(c.call(), .sourceEvent(event))
+    }
+
+    func acceptDerivedEvent(_ c: C, _ event: Event<DerivedSequence.Element>) {
+        acceptInput(c.call(), .derivedEvent(event))
     }
 
     func dispose() async {
-        await acceptInput(C(), .dispose)
+        acceptInput(C(), .dispose)
     }
-    
+
     private var state = State()
-    
-    private func acceptInput(_ c: C, _ input: Input) async {
+
+    private func acceptInput(_ c: C, _ input: Input) {
         let (state, actions) = reduce(state, input)
-        
+
         self.state = state
-        
+
         if actions.isEmpty {
             return
         }
-        
+
         Task.detached {
             await self.performActions(actions)
         }
     }
-    
+
     private func reduce(_ state: State, _ input: Input) -> (State, [Action]) {
+        switch input {
+        case .run(let run):
+            rxAssert(state.stage == nil)
+            
+            let actions = [
+                
+            ]
+        case .sourceEvent(let event):
+            
+        case .derivedEvent(let event):
+            
+        case .dispose:
+            
+        }
         
     }
-    
-    nonisolated private func performActions(_ actions: [Action]) async {
+
+    private nonisolated func performActions(_ actions: [Action]) async {
         if actions.count == 1 {
             await performAction(actions[0])
         } else {
             await withTaskGroup(of: Void.self, body: { taskGroup in
-                actions.forEach { action in
+                for action in actions {
                     taskGroup.addTask {
                         await self.performAction(action)
                     }
@@ -427,35 +458,41 @@ private final actor MergeBasicSink<Source: ObservableConvertibleType, Observer: 
             })
         }
     }
-    
-    nonisolated private func performAction(_ action: Action) async {
-        
-    }
+
+    private nonisolated func performAction(_ action: Action) async {}
 }
 
-final class MergeBasicSinkSourceObserver<Source: ObservableConvertibleType, Observer: ObserverType>: ObserverType where Observer.Element == Source.Element {
+final class TotalMergeSinkSourceObserver<
+    Source: Sendable,
+    DerivedSequence: ObservableConvertibleType,
+    Observer: ObserverType
+>: ObserverType where Observer.Element == DerivedSequence.Element {
     typealias Element = Source
-    
-    fileprivate let sink: MergeBasicSink<Source, Observer>
-    
-    fileprivate init(sink: MergeBasicSink<Source, Observer>) {
+
+    fileprivate let sink: TotalMergeSink<Source, DerivedSequence, Observer>
+
+    fileprivate init(sink: TotalMergeSink<Source, DerivedSequence, Observer>) {
         self.sink = sink
     }
-    
+
     func on(_ event: Event<Source>, _ c: C) async {
         await sink.acceptSourceEvent(c.call(), event)
     }
 }
 
-final class MergeBasicSinkDerivedObserver<Source: ObservableConvertibleType, Observer: ObserverType>: ObserverType where Observer.Element == Source.Element {
-    typealias Element = Source.Element
-    
-    fileprivate let sink: MergeBasicSink<Source, Observer>
-    
-    fileprivate init(sink: MergeBasicSink<Source, Observer>) {
+final class TotalMergeSinkDerivedObserver<
+    Source: Sendable,
+    DerivedSequence: ObservableConvertibleType,
+    Observer: ObserverType
+>: ObserverType where Observer.Element == DerivedSequence.Element {
+    typealias Element = DerivedSequence.Element
+
+    fileprivate let sink: TotalMergeSink<Source, DerivedSequence, Observer>
+
+    fileprivate init(sink: TotalMergeSink<Source, DerivedSequence, Observer>) {
         self.sink = sink
     }
-    
+
     func on(_ event: Event<Element>, _ c: C) async {
         await sink.acceptDerivedEvent(c.call(), event)
     }
