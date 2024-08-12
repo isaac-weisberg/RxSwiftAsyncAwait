@@ -12,7 +12,7 @@
  If an underlying disposable resource has already been set, future attempts to set the underlying disposable resource will throw an exception.
  */
 
-final class SimpleDisposableBox {
+final class SimpleDisposableBox: @unchecked Sendable {
     var disposed: Bool = false
     var disposable: Disposable?
 }

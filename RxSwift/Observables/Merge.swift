@@ -384,7 +384,7 @@ private final actor TotalMergeSink<
 
         case run(Run)
         case sourceEvent(Event<Source>)
-        case derivedEvent(Event<DerivedSequence.Element>)
+        case derivedEvent(Event<DerivedSequence.Element>, SimpleDisposableBox)
         case dispose
     }
 
@@ -400,15 +400,14 @@ private final actor TotalMergeSink<
         let action: Action
     }
 
-    private typealias SourceSubscription = SimpleDisposableBox
     private typealias DerivedSubscription = IdentityHashable<SimpleDisposableBox>
     private typealias DerivedSubscriptions = Set<DerivedSubscription>
 
     private struct State {
         init(
-            stage: Stage?,
-            sourceSubscription: SourceSubscription?,
-            derivedSubscriptions: DerivedSubscriptions?
+            stage: Stage,
+            sourceSubscription: SourceSubscription,
+            derivedSubscriptions: DerivedSubscriptions
         ) {
             self.stage = stage
             self.sourceSubscription = sourceSubscription
@@ -416,13 +415,20 @@ private final actor TotalMergeSink<
         }
 
         enum Stage {
+            case neverRun
             case running
             case disposed
         }
 
-        var stage: Stage?
-        var sourceSubscription: SourceSubscription?
-        var derivedSubscriptions: DerivedSubscriptions?
+        enum SourceSubscription {
+            case neverUsed
+            case active(SimpleDisposableBox)
+            case released
+        }
+
+        var stage: Stage = .neverRun
+        var sourceSubscription: SourceSubscription = .neverUsed
+        var derivedSubscriptions: DerivedSubscriptions
     }
 
     func runOnImmediateDerived(_ c: C, _ derivedSequences: [DerivedSequence]) async {
@@ -437,15 +443,20 @@ private final actor TotalMergeSink<
         await acceptInput(c.call(), .sourceEvent(event))
     }
 
-    func acceptDerivedEvent(_ c: C, _ event: Event<DerivedSequence.Element>) async {
-        await acceptInput(c.call(), .derivedEvent(event))
+    func acceptDerivedEvent(
+        _ c: C,
+        _ event: Event<DerivedSequence.Element>,
+        _ subscription: SimpleDisposableBox
+    )
+        async {
+        await acceptInput(c.call(), .derivedEvent(event, subscription))
     }
 
     func dispose() async {
         await acceptInput(C(), .dispose)
     }
 
-    private var state = State(stage: nil, sourceSubscription: nil, derivedSubscriptions: nil)
+    private var state = State(stage: .neverRun, sourceSubscription: .neverUsed, derivedSubscriptions: Set())
 
     private func acceptInput(_ c: C, _ input: Input) async {
         let (state, actions) = reduce(c.call(), state, input)
@@ -461,13 +472,17 @@ private final actor TotalMergeSink<
     private func reduce(_ c: C, _ state: State, _ input: Input) -> (State, [ActionWithC]) {
         switch input {
         case .run(let run):
-            rxAssert(state.stage == nil)
-            rxAssert(state.derivedSubscriptions == nil)
+            rxAssert(state.stage == .neverRun)
+            rxAssert(state.derivedSubscriptions.isEmpty)
 
             switch run {
             case .singleSource(let source):
                 let disposable = SimpleDisposableBox()
-                let state = State(stage: .running, sourceSubscription: disposable, derivedSubscriptions: nil)
+                let state = State(
+                    stage: .running,
+                    sourceSubscription: .active(disposable),
+                    derivedSubscriptions: state.derivedSubscriptions
+                )
                 let actions = [
                     ActionWithC(c: c.call(), action: Action.subscribeToSource(source, disposable)),
                 ]
@@ -487,7 +502,7 @@ private final actor TotalMergeSink<
 
                 let state = State(
                     stage: .running,
-                    sourceSubscription: nil,
+                    sourceSubscription: .neverUsed,
                     derivedSubscriptions: derivedSubscriptions
                 )
 
@@ -495,7 +510,17 @@ private final actor TotalMergeSink<
             }
 
         case .sourceEvent(let event):
+
+            // MARK: sourceEvent
+
             rxAssert(state.stage == .running)
+            let sourceSubscription: SimpleDisposableBox
+            switch state.sourceSubscription {
+            case .neverUsed, .released:
+                fatalError() // Source completed, yet there is no source? lole
+            case .active(let simpleDisposableBox):
+                sourceSubscription = simpleDisposableBox
+            }
 
             switch event {
             case .next(let element):
@@ -503,14 +528,117 @@ private final actor TotalMergeSink<
             case .error(let error):
 
             case .completed:
+                rxAssert(!sourceSubscription.disposed)
+
+                let sourceDisposalActions: [ActionWithC]
+                if let disposable = sourceSubscription.disposable {
+                    sourceSubscription.disposable = nil
+                    sourceDisposalActions = [
+                        ActionWithC(c: c.call(), action: .dispose(disposable)),
+                    ]
+                } else {
+                    // subscribe must've not returned yet
+                    sourceDisposalActions = []
+                }
+
+                let theWholeProcessIsDone = state.derivedSubscriptions.isEmpty
+
+                if theWholeProcessIsDone {
+                    let emitCompletedAction = ActionWithC(c: c.call(), action: .forwardEvent(.completed))
+                    let state = State(
+                        stage: .disposed,
+                        sourceSubscription: .released,
+                        derivedSubscriptions: Set()
+                    )
+
+                    let actions = [emitCompletedAction] + sourceDisposalActions
+
+                    return (state, actions)
+                } else {
+
+                    let state = State(
+                        stage: .running,
+                        sourceSubscription: .released,
+                        derivedSubscriptions: state.derivedSubscriptions
+                    )
+
+                    return (state, sourceDisposalActions)
+                }
             }
 
-        case .derivedEvent(let event):
+        case .derivedEvent(let event, let disposableBox):
+
+            // MARK: derivedEvent
+
+            switch event {
+            case .next(let element):
+
+            case .error(let error):
+
+            case .completed:
+                var newDerivedSubs = state.derivedSubscriptions
+
+                let removedElement = newDerivedSubs.remove(IdentityHashable(inner: disposableBox))
+                rxAssert(removedElement != nil)
+
+                let disposeActions: [ActionWithC]
+                disposableBox.disposed = true
+                if let disposable = disposableBox.disposable {
+                    disposeActions = [
+                        ActionWithC(
+                            c: c.call(),
+                            action: .dispose(disposable)
+                        ),
+                    ]
+                } else {
+                    disposeActions = []
+                    // subscribe must ve not returned yet
+                }
+
+                let sourceIsDone: Bool
+
+                switch state.sourceSubscription {
+                case .neverUsed:
+                    sourceIsDone = true
+                case .active(let disposableBox):
+                    rxAssert(!disposableBox.disposed) // when I dispose, I release the box
+                    sourceIsDone = false
+                case .released:
+                    sourceIsDone = true
+                }
+                let theWholeSinkIsDone = sourceIsDone && newDerivedSubs.isEmpty
+
+                if theWholeSinkIsDone {
+                    let emitCompletedAction = ActionWithC(c: c.call(), action: .forwardEvent(.completed))
+                    let actions = [emitCompletedAction] + disposeActions
+
+                    let state = State(
+                        stage: .disposed,
+                        sourceSubscription: state.sourceSubscription,
+                        derivedSubscriptions: newDerivedSubs
+                    )
+
+                    return (state, actions)
+
+                } else {
+                    let state = State(
+                        stage: .running,
+                        sourceSubscription: state.sourceSubscription,
+                        derivedSubscriptions: newDerivedSubs
+                    )
+
+                    return (state, disposeActions)
+                }
+            }
 
         case .dispose:
+
+            // MARK: dispose
+
             let sourceSubscriptionsActions: [ActionWithC]
             let sourceSubscription = state.sourceSubscription
-            if let sourceSubscription {
+            switch sourceSubscription {
+            case .active(let sourceSubscription):
                 if sourceSubscription.disposed {
                     // already disposed because it has completed
                     sourceSubscriptionsActions = []
@@ -530,41 +658,42 @@ private final actor TotalMergeSink<
                         sourceSubscriptionsActions = []
                     }
                 }
+            case .neverUsed:
+                // no problem
+                break
+            case .released:
+                // no problem
+                break
             }
 
-            var derivedSubscriptionsActions: [ActionWithC]
-            if let derivedSubscriptions = state.derivedSubscriptions {
-                derivedSubscriptionsActions = []
-                derivedSubscriptionsActions.reserveCapacity(derivedSubscriptions.count)
-                for derivedSubscription in derivedSubscriptions {
-                    rxAssert(
-                        !derivedSubscription.inner
-                            .disposed
-                    ) // when I made it disposed, I removed it from the set, so...
+            var derivedSubscriptionsActions: [ActionWithC] = []
+            derivedSubscriptionsActions.reserveCapacity(state.derivedSubscriptions.count)
+            for derivedSubscription in state.derivedSubscriptions {
+                rxAssert(
+                    !derivedSubscription.inner
+                        .disposed
+                ) // when I made it disposed, I removed it from the set, so...
 
-                    derivedSubscription.inner.disposed = true
-                    if let disposable = derivedSubscription.inner.disposable {
-                        derivedSubscription.inner.disposable = nil
-                        derivedSubscriptionsActions.append(
-                            ActionWithC(
-                                c: c.call(),
-                                action: .dispose(disposable)
-                            )
+                derivedSubscription.inner.disposed = true
+                if let disposable = derivedSubscription.inner.disposable {
+                    derivedSubscription.inner.disposable = nil
+                    derivedSubscriptionsActions.append(
+                        ActionWithC(
+                            c: c.call(),
+                            action: .dispose(disposable)
                         )
-                    } else {
-                        // this means that the subscribe hasn't returned yet, so it will disposed after that
-                    }
+                    )
+                } else {
+                    // this means that the subscribe hasn't returned yet, so it will disposed after that
                 }
-            } else {
-                derivedSubscriptionsActions = []
             }
 
             let totalActions = sourceSubscriptionsActions + derivedSubscriptionsActions
 
             let state = State(
                 stage: .disposed,
-                sourceSubscription: nil,
-                derivedSubscriptions: nil
+                sourceSubscription: .released,
+                derivedSubscriptions: Set()
             )
 
             return (state, totalActions)
@@ -599,7 +728,7 @@ private final actor TotalMergeSink<
                 disposableBox.disposable = disposable
             }
         case .subscribeToDerived(let derivedSequence, let disposableBox):
-            let observer = TotalMergeSinkDerivedObserver(sink: self)
+            let observer = TotalMergeSinkDerivedObserver(sink: self, disposable: disposableBox)
             let disposable = await derivedSequence.asObservable().subscribe(c.call(), observer)
             if disposableBox.disposed {
                 await disposable.dispose()
@@ -640,13 +769,14 @@ final class TotalMergeSinkDerivedObserver<
     typealias Element = DerivedSequence.Element
 
     fileprivate let sink: TotalMergeSink<Source, DerivedSequence, Observer>
+    private let disposable: SimpleDisposableBox
 
-    fileprivate init(sink: TotalMergeSink<Source, DerivedSequence, Observer>) {
+    fileprivate init(sink: TotalMergeSink<Source, DerivedSequence, Observer>, disposable: SimpleDisposableBox) {
         self.sink = sink
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await sink.acceptDerivedEvent(c.call(), event)
+        await sink.acceptDerivedEvent(c.call(), event, disposable)
     }
 }
 
