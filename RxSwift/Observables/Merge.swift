@@ -36,9 +36,9 @@ public extension ObservableType {
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on
      each element of the input sequence that was received while no other sequence was being calculated.
      */
-    func flatMapFirst<Source: ObservableConvertibleType>(_ selector: @escaping (Element) async throws -> Source) async
+    func flatMapFirst<Source: ObservableConvertibleType>(_ selector: @Sendable @escaping (Element) throws -> Source)
         -> Observable<Source.Element> {
-        await FlatMapFirst(source: asObservable(), selector: selector)
+        FlatMapFirst(source: asObservable(), selector: selector)
     }
 }
 
