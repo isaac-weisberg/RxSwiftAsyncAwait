@@ -15,6 +15,15 @@
 final class SimpleDisposableBox: @unchecked Sendable {
     var disposed: Bool = false
     var disposable: Disposable?
+    
+    func setDisposedAndMoveDisposable() -> Disposable? {
+        rxAssert(!disposed) // Disposing something twice...
+        
+        disposed = true
+        let disposable = self.disposable
+        self.disposable = nil
+        return disposable
+    }
 }
 
 public final class UnsynchronizedSingleAssignmentDisposable {

@@ -526,15 +526,13 @@ private final actor TotalMergeSink<
             case .next(let element):
 
             case .error(let error):
+                return stateAndActionForEveryErrorCase(c.call(), error)
 
             case .completed:
-                rxAssert(!sourceSubscription.disposed)
-
                 let sourceDisposalActions: [ActionWithC]
-                if let disposable = sourceSubscription.disposable {
-                    sourceSubscription.disposable = nil
+                if let existingSourceDisposable = sourceSubscription.setDisposedAndMoveDisposable() {
                     sourceDisposalActions = [
-                        ActionWithC(c: c.call(), action: .dispose(disposable)),
+                        ActionWithC(c: c.call(), action: .dispose(existingSourceDisposable)),
                     ]
                 } else {
                     // subscribe must've not returned yet
@@ -574,6 +572,7 @@ private final actor TotalMergeSink<
             case .next(let element):
 
             case .error(let error):
+                return stateAndActionForEveryErrorCase(c.call(), error)
 
             case .completed:
                 var newDerivedSubs = state.derivedSubscriptions
@@ -643,14 +642,13 @@ private final actor TotalMergeSink<
                     // already disposed because it has completed
                     sourceSubscriptionsActions = []
                 } else {
-                    sourceSubscription.disposed = true
-                    if let disposable = sourceSubscription.disposable {
-                        sourceSubscription.disposable = nil
+                    let sourceDisposable = sourceSubscription.setDisposedAndMoveDisposable()
+                    if let sourceDisposable {
                         // nice, it was running, but time to dispose
                         sourceSubscriptionsActions = [
                             ActionWithC(
                                 c: c.call(),
-                                action: .dispose(disposable)
+                                action: .dispose(sourceDisposable)
                             ),
                         ]
                     } else {
@@ -740,6 +738,37 @@ private final actor TotalMergeSink<
         case .forwardEvent(let event):
             await observer.on(event, c.call())
         }
+    }
+
+    private func stateAndActionForEveryErrorCase(_ c: C, _ error: Error) -> (State, [ActionWithC]) {
+        let errorEventAction = ActionWithC(c: c.call(), action: .forwardEvent(.error(error)))
+
+        let sourceDisposeActions: [ActionWithC]
+        switch state.sourceSubscription {
+        case .neverUsed, .released:
+            sourceDisposeActions = []
+        case .active(let simpleDisposableBox):
+            if let disposable = simpleDisposableBox.setDisposedAndMoveDisposable() {
+                sourceDisposeActions = [
+                    ActionWithC(c: c.call(), action: .dispose(disposable)),
+                ]
+            } else {
+                // subscribe hasn't finished yet
+                sourceDisposeActions = []
+            }
+        }
+
+        let derivedDisposeActions = state.derivedSubscriptions.compactMap { box in
+            if let disposable = box.inner.setDisposedAndMoveDisposable() {
+                return ActionWithC(c: c.call(), action: .dispose(disposable))
+            }
+            return nil
+        }
+
+        let allActions = [errorEventAction] + sourceDisposeActions + derivedDisposeActions
+
+        let state = State(stage: .disposed, sourceSubscription: .released, derivedSubscriptions: Set())
+        return (state, allActions)
     }
 }
 
