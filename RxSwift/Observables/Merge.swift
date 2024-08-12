@@ -371,8 +371,13 @@ private final actor TotalMergeSink<
 >: Disposable
     where Observer.Element == DerivedSequence.Element {
 
+    typealias Selector = @Sendable (Source) throws -> DerivedSequence
+
+    let selector: Selector
     let observer: Observer
-    init(observer: Observer) {
+
+    init(selector: @escaping Selector, observer: Observer) {
+        self.selector = selector
         self.observer = observer
     }
 
@@ -470,6 +475,8 @@ private final actor TotalMergeSink<
     }
 
     private func reduce(_ c: C, _ state: State, _ input: Input) -> (State, [ActionWithC]) {
+        rxAssert(state.stage != .disposed)
+
         switch input {
         case .run(let run):
             rxAssert(state.stage == .neverRun)
@@ -525,6 +532,28 @@ private final actor TotalMergeSink<
             switch event {
             case .next(let element):
 
+                let derivedSequence: DerivedSequence
+                do {
+                    derivedSequence = try selector(element)
+                } catch {
+                    return stateAndActionForEveryErrorCase(c.call(), error)
+                }
+
+                let disposableBox = SimpleDisposableBox()
+                let subscribeAction = ActionWithC(
+                    c: c.call(),
+                    action: .subscribeToDerived(derivedSequence, disposableBox)
+                )
+
+                var newDerivedSubs = state.derivedSubscriptions
+                newDerivedSubs.insert(IdentityHashable(inner: disposableBox))
+
+                let state = State(
+                    stage: .running,
+                    sourceSubscription: state.sourceSubscription,
+                    derivedSubscriptions: newDerivedSubs
+                )
+
             case .error(let error):
                 return stateAndActionForEveryErrorCase(c.call(), error)
 
@@ -570,6 +599,14 @@ private final actor TotalMergeSink<
 
             switch event {
             case .next(let element):
+                let forwardOnAction = ActionWithC(c: c.call(), action: .forwardEvent(.next(element)))
+
+                let state = State(
+                    stage: .running,
+                    sourceSubscription: state.sourceSubscription,
+                    derivedSubscriptions: state.derivedSubscriptions
+                )
+                return (state, [forwardOnAction])
 
             case .error(let error):
                 return stateAndActionForEveryErrorCase(c.call(), error)
