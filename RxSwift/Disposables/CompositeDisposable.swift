@@ -113,7 +113,13 @@ public final class UnsynchronizedCompositeDisposable: @unchecked Sendable {
     /// Removes and disposes the disposable identified by `disposeKey` from the CompositeDisposable.
     ///
     /// - parameter disposeKey: Key used to identify disposable to be removed.
-    public func remove(for disposeKey: DisposeKey) -> Disposable? {
+    public func removeDisposing(for disposeKey: DisposeKey) async {
+        await _remove(for: disposeKey)?.dispose()
+    }
+    /// Removes and disposes the disposable identified by `disposeKey` from the CompositeDisposable.
+    ///
+    /// - parameter disposeKey: Key used to identify disposable to be removed.
+    public func removeReturning(for disposeKey: DisposeKey) -> Disposable? {
         return _remove(for: disposeKey)
     }
 

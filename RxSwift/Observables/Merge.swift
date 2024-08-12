@@ -23,25 +23,25 @@ public extension ObservableConvertibleType {
     }
 }
 
-//
-// public extension ObservableType {
-//    /**
-//     Projects each element of an observable sequence to an observable sequence and merges the resulting observable
-//     sequences into one observable sequence.
-//     If element is received while there is some projected observable sequence being merged it will simply be ignored.
-//
-//     - seealso: [flatMapFirst operator on reactivex.io](http://reactivex.io/documentation/operators/flatmap.html)
-//
-//     - parameter selector: A transform function to apply to element that was observed while no observable is executing
-//     in parallel.
-//     - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on
-//     each element of the input sequence that was received while no other sequence was being calculated.
-//     */
-//    func flatMapFirst<Source: ObservableConvertibleType>(_ selector: @escaping (Element) async throws -> Source) async
-//        -> Observable<Source.Element> {
-//        await FlatMapFirst(source: asObservable(), selector: selector)
-//    }
-// }
+public extension ObservableType {
+    /**
+     Projects each element of an observable sequence to an observable sequence and merges the resulting observable
+     sequences into one observable sequence.
+     If element is received while there is some projected observable sequence being merged it will simply be ignored.
+
+     - seealso: [flatMapFirst operator on reactivex.io](http://reactivex.io/documentation/operators/flatmap.html)
+
+     - parameter selector: A transform function to apply to element that was observed while no observable is executing
+     in parallel.
+     - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on
+     each element of the input sequence that was received while no other sequence was being calculated.
+     */
+    func flatMapFirst<Source: ObservableConvertibleType>(_ selector: @escaping (Element) async throws -> Source) async
+        -> Observable<Source.Element> {
+        await FlatMapFirst(source: asObservable(), selector: selector)
+    }
+}
+
 //
 // public extension ObservableType where Element: ObservableConvertibleType {
 //    /**
@@ -443,8 +443,9 @@ private final actor FlatMapSink<
             await baseSink.observer.on(.error(error), c.call())
             await dispose()
         case .completed:
-            await baseSink.derivedSubscriptions.remove(for: disposeKey)
             activeCount -= 1
+            await baseSink.derivedSubscriptions.removeReturning(for: disposeKey)?.dispose()
+
             await checkCompleted(c.call())
         }
     }
@@ -483,7 +484,7 @@ private final actor FlatMapFirstSink<
     private var sourceStopped = false
     let baseSink: MergeSinkBase<SourceElement, DerivedSequence, Observer>
 
-    init(selector: @escaping Selector, observer: Observer) async {
+    init(selector: @escaping Selector, observer: Observer) {
         self.selector = selector
         baseSink = MergeSinkBase(observer: observer)
     }
@@ -551,20 +552,20 @@ private final actor FlatMapFirstSink<
             await baseSink.observer.onNext(element, c.call())
         case .error(let error):
             waitingOnADerivedSequence = false
-            
+
             setDisposed()
             await baseSink.observer.onError(error, c.call())
             await baseSink.disposeAfterSettingDisposed()
         case .completed:
             waitingOnADerivedSequence = false
-            
+
             if sourceStopped {
                 setDisposed()
-                
+
                 await baseSink.observer.onCompleted(c.call())
                 await baseSink.disposeAfterSettingDisposed()
             } else {
-                let derivedSubscription = baseSink.derivedSubscriptions.remove(for: disposeKey)
+                let derivedSubscription = baseSink.derivedSubscriptions.removeReturning(for: disposeKey)
                 rxAssert(derivedSubscription != nil)
                 await derivedSubscription?.dispose()
             }
@@ -803,39 +804,33 @@ private final class FlatMap<
     }
 }
 
-//
-// private final class FlatMapFirst<
-//    SourceElement,
-//    DerivedSequence: ObservableConvertibleType
-// >: Producer<DerivedSequence.Element> {
-//    typealias Selector = (SourceElement) async throws -> DerivedSequence
-//
-//    private let source: Observable<SourceElement>
-//
-//    private let selector: Selector
-//
-//    init(source: Observable<SourceElement>, selector: @escaping Selector) async {
-//        self.source = source
-//        self.selector = selector
-//        await super.init()
-//    }
-//
-//    override func run<Observer: ObserverType>(
-//        _ c: C,
-//        _ observer: Observer,
-//        cancel: Cancelable
-//    )
-//        async -> (sink: Disposable, subscription: Disposable)
-//        where Observer.Element == DerivedSequence.Element {
-//        let sink = await FlatMapFirstSink<SourceElement, DerivedSequence, Observer>(
-//            selector: selector,
-//            observer: observer,
-//            cancel: cancel
-//        )
-//        let subscription = await sink.run(source, c.call())
-//        return sink
-//    }
-// }
+private final class FlatMapFirst<
+    SourceElement: Sendable,
+    DerivedSequence: ObservableConvertibleType
+>: Producer<DerivedSequence.Element> {
+    typealias Selector = @Sendable (SourceElement) throws -> DerivedSequence
+
+    private let source: Observable<SourceElement>
+
+    private let selector: Selector
+
+    init(source: Observable<SourceElement>, selector: @escaping Selector) {
+        self.source = source
+        self.selector = selector
+        super.init()
+    }
+
+    override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where DerivedSequence.Element == Observer.Element, Observer: ObserverType {
+        let sink = FlatMapFirstSink<SourceElement, DerivedSequence, Observer>(
+            selector: selector,
+            observer: observer
+        )
+        await sink.run(c.call(), source)
+        return sink
+    }
+}
+
 //
 // final class ConcatMap<SourceElement, DerivedSequence: ObservableConvertibleType>: Producer<DerivedSequence.Element> {
 //    typealias Selector = (SourceElement) throws -> DerivedSequence
