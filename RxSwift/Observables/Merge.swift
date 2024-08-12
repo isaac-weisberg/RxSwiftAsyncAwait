@@ -509,13 +509,15 @@ private final actor TotalMergeSink<
 
         case .dispose:
             let sourceSubscriptionsActions: [ActionWithC]
-            if let sourceSubscription = state.sourceSubscription {
+            let sourceSubscription = state.sourceSubscription
+            if let sourceSubscription {
                 if sourceSubscription.disposed {
                     // already disposed because it has completed
                     sourceSubscriptionsActions = []
                 } else {
                     sourceSubscription.disposed = true
                     if let disposable = sourceSubscription.disposable {
+                        sourceSubscription.disposable = nil
                         // nice, it was running, but time to dispose
                         sourceSubscriptionsActions = [
                             ActionWithC(
@@ -530,11 +532,42 @@ private final actor TotalMergeSink<
                 }
             }
 
-            let sourceSubscriptionsActionsCount = sourceSubscriptionsActions.count
-            let derivedSubscriptionsCount = state.derivedSubscriptions?.count ?? 0
-            let actionsCount = sourceSubscriptionsActionsCount + derivedSubscriptionsCount
-            var actions: [ActionWithC]
-            actions.reserveCapacity(sourceSubscriptionsActionsCount + derivedSubscriptionsCount)
+            var derivedSubscriptionsActions: [ActionWithC]
+            if let derivedSubscriptions = state.derivedSubscriptions {
+                derivedSubscriptionsActions = []
+                derivedSubscriptionsActions.reserveCapacity(derivedSubscriptions.count)
+                for derivedSubscription in derivedSubscriptions {
+                    rxAssert(
+                        !derivedSubscription.inner
+                            .disposed
+                    ) // when I made it disposed, I removed it from the set, so...
+
+                    derivedSubscription.inner.disposed = true
+                    if let disposable = derivedSubscription.inner.disposable {
+                        derivedSubscription.inner.disposable = nil
+                        derivedSubscriptionsActions.append(
+                            ActionWithC(
+                                c: c.call(),
+                                action: .dispose(disposable)
+                            )
+                        )
+                    } else {
+                        // this means that the subscribe hasn't returned yet, so it will disposed after that
+                    }
+                }
+            } else {
+                derivedSubscriptionsActions = []
+            }
+
+            let totalActions = sourceSubscriptionsActions + derivedSubscriptionsActions
+
+            let state = State(
+                stage: .disposed,
+                sourceSubscription: nil,
+                derivedSubscriptions: nil
+            )
+
+            return (state, totalActions)
         }
     }
 
