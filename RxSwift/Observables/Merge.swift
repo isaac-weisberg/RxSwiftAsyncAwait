@@ -42,18 +42,19 @@ public extension ObservableType {
     }
 }
 
-//
-// public extension ObservableType where Element: ObservableConvertibleType {
-//    /**
-//     Merges elements from all observable sequences in the given enumerable sequence into a single observable sequence.
-//
-//     - seealso: [merge operator on reactivex.io](http://reactivex.io/documentation/operators/merge.html)
-//
-//     - returns: The observable sequence that merges the elements of the observable sequences.
-//     */
-//    func merge() async -> Observable<Element.Element> {
-//        await Merge(source: asObservable())
-//    }
+public extension ObservableType where Element: ObservableConvertibleType {
+    /**
+     Merges elements from all observable sequences in the given enumerable sequence into a single observable sequence.
+
+     - seealso: [merge operator on reactivex.io](http://reactivex.io/documentation/operators/merge.html)
+
+     - returns: The observable sequence that merges the elements of the observable sequences.
+     */
+    func merge() -> Observable<Element.Element> {
+        Merge(source: asObservable())
+    }
+}
+
 //
 //    /**
 //     Merges elements from all inner observable sequences into a single observable sequence, limiting the number of
@@ -374,10 +375,11 @@ private final actor TotalMergeSink<
     typealias FlatMapSelector = @Sendable (Source) throws -> DerivedSequence
     typealias FlatMapFirstSelector = FlatMapSelector
 
-    enum Mode {
+    enum Mode: Sendable {
         case flatMap(Observable<Source>, FlatMapSelector)
         case flatMapFirst(Observable<Source>, FlatMapFirstSelector)
         case merge([DerivedSequence])
+        case mergeBasic(Observable<Source>, @Sendable (Source) -> DerivedSequence)
     }
 
     let mode: Mode
@@ -445,7 +447,7 @@ private final actor TotalMergeSink<
 
     func run(_ c: C) async {
         switch mode {
-        case .flatMap(let source, _), .flatMapFirst(let source, _):
+        case .flatMap(let source, _), .flatMapFirst(let source, _), .mergeBasic(let source, _):
             await acceptInput(c.call(), .run(.singleSource(source)))
         case .merge(let derivedSequences):
             await acceptInput(c.call(), .run(.multipleDerives(derivedSequences)))
@@ -541,9 +543,11 @@ private final actor TotalMergeSink<
 
             switch event {
             case .next(let element):
-                let derivedSequence: DerivedSequence
+                let derivedSequence: DerivedSequence?
 
                 switch mode {
+                case .mergeBasic(_, let transform):
+                    derivedSequence = transform(element)
                 case .flatMap(_, let flatMapSelector):
                     do {
                         derivedSequence = try flatMapSelector(element)
@@ -563,26 +567,20 @@ private final actor TotalMergeSink<
                     let shouldSubscribe = thereAreNoDerivedSubscriptionsRunning
 
                     if !shouldSubscribe {
-                        return (state, [])
+                        derivedSequence = nil
+                    } else {
+                        do {
+                            derivedSequence = try selector(element)
+                        } catch {
+                            return stateAndActionForEveryErrorCase(c.call(), error)
+                        }
                     }
-                    let derivedSequence: DerivedSequence
-                    do {
-                        derivedSequence = try selector(element)
-                    } catch {
-                        return stateAndActionForEveryErrorCase(c.call(), error)
-                    }
-                    let subscriptionBox = SimpleDisposableBox()
-                    let subscribeAction = ActionWithC(
-                        c: c.call(),
-                        action: .subscribeToDerived(derivedSequence, subscriptionBox)
-                    )
-
-                    var state = state
-                    state.derivedSubscriptions.insert(DerivedSubscription(inner: subscriptionBox))
-
-                    return (state, [subscribeAction])
                 case .merge:
                     fatalError() // source can't emit it merge mode
+                }
+
+                guard let derivedSequence else {
+                    return (state, [])
                 }
 
                 let disposableBox = SimpleDisposableBox()
@@ -1085,27 +1083,26 @@ private final class FlatMapFirst<
 //        return sink
 //    }
 // }
-//
-// final class Merge<DerivedSequence: ObservableConvertibleType>: Producer<DerivedSequence.Element> {
-//    private let source: Observable<DerivedSequence>
-//
-//    init(source: Observable<DerivedSequence>) async {
-//        self.source = source
-//        await super.init()
-//    }
-//
-//    override func run<Observer: ObserverType>(
-//        _ c: C,
-//        _ observer: Observer,
-//        cancel: Cancelable
-//    )
-//        async -> (sink: Disposable, subscription: Disposable)
-//        where Observer.Element == DerivedSequence.Element {
-//        let sink = await MergeBasicSink<DerivedSequence, Observer>(observer: observer)
-//        let subscription = await sink.run(source, c.call())
-//        return sink
-//    }
-// }
+
+final class Merge<DerivedSequence: ObservableConvertibleType>: Producer<DerivedSequence.Element> {
+    private let source: Observable<DerivedSequence>
+
+    init(source: Observable<DerivedSequence>) {
+        self.source = source
+        super.init()
+    }
+
+    override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where DerivedSequence.Element == Observer.Element, Observer: ObserverType {
+        let sink = TotalMergeSink<DerivedSequence, DerivedSequence, Observer>(
+            mode: .mergeBasic(source) { $0 },
+            observer: observer
+        )
+        await sink.run(c.call())
+        return sink
+    }
+
+}
 
 private final class MergeArray<Element: Sendable>: Producer<Element> {
     private let sources: [Observable<Element>]
