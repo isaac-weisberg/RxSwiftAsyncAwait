@@ -53,37 +53,35 @@ public extension ObservableType where Element: ObservableConvertibleType {
     func merge() -> Observable<Element.Element> {
         Merge(source: asObservable())
     }
+
+    /**
+     Merges elements from all inner observable sequences into a single observable sequence, limiting the number of
+     concurrent subscriptions to inner sequences.
+
+     - seealso: [merge operator on reactivex.io](http://reactivex.io/documentation/operators/merge.html)
+
+     - parameter maxConcurrent: Maximum number of inner observable sequences being subscribed to concurrently.
+     - returns: The observable sequence that merges the elements of the inner sequences.
+     */
+    func merge(maxConcurrent: Int)
+        -> Observable<Element.Element> {
+        MergeLimited(source: asObservable(), maxConcurrent: maxConcurrent)
+    }
 }
 
-//
-//    /**
-//     Merges elements from all inner observable sequences into a single observable sequence, limiting the number of
-//     concurrent subscriptions to inner sequences.
-//
-//     - seealso: [merge operator on reactivex.io](http://reactivex.io/documentation/operators/merge.html)
-//
-//     - parameter maxConcurrent: Maximum number of inner observable sequences being subscribed to concurrently.
-//     - returns: The observable sequence that merges the elements of the inner sequences.
-//     */
-//    func merge(maxConcurrent: Int) async
-//        -> Observable<Element.Element> {
-//        await MergeLimited(source: asObservable(), maxConcurrent: maxConcurrent)
-//    }
-// }
-//
-// public extension ObservableType where Element: ObservableConvertibleType {
-//    /**
-//     Concatenates all inner observable sequences, as long as the previous observable sequence terminated successfully.
-//
-//     - seealso: [concat operator on reactivex.io](http://reactivex.io/documentation/operators/concat.html)
-//
-//     - returns: An observable sequence that contains the elements of each observed inner sequence, in sequential
-//     order.
-//     */
-//    func concat() async -> Observable<Element.Element> {
-//        await merge(maxConcurrent: 1)
-//    }
-// }
+public extension ObservableType where Element: ObservableConvertibleType {
+    /**
+     Concatenates all inner observable sequences, as long as the previous observable sequence terminated successfully.
+
+     - seealso: [concat operator on reactivex.io](http://reactivex.io/documentation/operators/concat.html)
+
+     - returns: An observable sequence that contains the elements of each observed inner sequence, in sequential
+     order.
+     */
+    func concat() -> Observable<Element.Element> {
+        merge(maxConcurrent: 1)
+    }
+}
 
 public extension ObservableType {
     /**
@@ -324,32 +322,21 @@ public extension ObservableType {
 //    }
 // }
 //
-////private final class MergeLimited<DerivedSequence: ObservableConvertibleType>: Producer<DerivedSequence.Element> {
-////    private let source: Observable<DerivedSequence>
-////    private let maxConcurrent: Int
-////
-////    init(source: Observable<DerivedSequence>, maxConcurrent: Int) async {
-////        self.source = source
-////        self.maxConcurrent = maxConcurrent
-////        await super.init()
-////    }
-////
-////    override func run<Observer: ObserverType>(
-////        _ c: C,
-////        _ observer: Observer,
-////        cancel: Cancelable
-////    )
-////        async -> (sink: Disposable, subscription: Disposable)
-////        where Observer.Element == DerivedSequence.Element {
-////        let sink = await MergeLimitedBasicSink<DerivedSequence, Observer>(
-////            maxConcurrent: maxConcurrent,
-////            observer: observer,
-////            cancel: cancel
-////        )
-////        let subscription = await sink.run(source, c.call())
-////        return sink
-////    }
-////}
+private final class MergeLimited<DerivedSequence: ObservableConvertibleType>: Producer<DerivedSequence.Element> {
+    private let source: Observable<DerivedSequence>
+    private let maxConcurrent: Int
+
+    init(source: Observable<DerivedSequence>, maxConcurrent: Int) {
+        self.source = source
+        self.maxConcurrent = maxConcurrent
+        super.init()
+    }
+    override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable where DerivedSequence.Element == Observer.Element, Observer : ObserverType {
+        let sink = TotalMergeSink(mode: <#T##TotalMergeSink<Sendable, ObservableConvertibleType, ObserverType>.Mode#>, observer: observer)
+        await sink.run(c.call())
+        return sink
+    }
+}
 
 // MARK: Merge
 
@@ -380,6 +367,7 @@ private final actor TotalMergeSink<
         case flatMapFirst(Observable<Source>, FlatMapFirstSelector)
         case merge([DerivedSequence])
         case mergeBasic(Observable<Source>, @Sendable (Source) -> DerivedSequence)
+        case merge
     }
 
     let mode: Mode
