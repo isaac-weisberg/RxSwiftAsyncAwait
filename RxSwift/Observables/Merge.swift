@@ -322,17 +322,31 @@ public extension ObservableType {
 //    }
 // }
 //
-private final class MergeLimited<DerivedSequence: ObservableConvertibleType>: Producer<DerivedSequence.Element> {
-    private let source: Observable<DerivedSequence>
+private final class MergeLimited<
+    Source: Sendable,
+    DerivedSequence: ObservableConvertibleType
+>: Producer<DerivedSequence.Element> {
+    typealias Selector = @Sendable (Source) throws -> DerivedSequence
+    private let source: Observable<Source>
+    private let selector: Selector
     private let maxConcurrent: Int
 
-    init(source: Observable<DerivedSequence>, maxConcurrent: Int) {
+    init(source: Observable<Source>, selector: @escaping Selector, maxConcurrent: Int) {
         self.source = source
         self.maxConcurrent = maxConcurrent
         super.init()
     }
-    override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable where DerivedSequence.Element == Observer.Element, Observer : ObserverType {
-        let sink = TotalMergeSink(mode: <#T##TotalMergeSink<Sendable, ObservableConvertibleType, ObserverType>.Mode#>, observer: observer)
+
+    override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where DerivedSequence.Element == Observer.Element, Observer: ObserverType {
+        let sink = TotalMergeSink(
+            mode: .mergeLimited(TotalMergeSink.Mode.MergeLimited(
+                source: source,
+                maxConcurrent: maxConcurrent,
+                selector: selector
+            )),
+            observer: observer
+        )
         await sink.run(c.call())
         return sink
     }
@@ -363,11 +377,17 @@ private final actor TotalMergeSink<
     typealias FlatMapFirstSelector = FlatMapSelector
 
     enum Mode: Sendable {
+        struct MergeLimited {
+            let source: Observable<Source>
+            let maxConcurrent: Int
+            let selector: @Sendable (Source) throws -> DerivedSequence
+        }
+
         case flatMap(Observable<Source>, FlatMapSelector)
         case flatMapFirst(Observable<Source>, FlatMapFirstSelector)
         case merge([DerivedSequence])
         case mergeBasic(Observable<Source>, @Sendable (Source) -> DerivedSequence)
-        case merge
+        case mergeLimited(MergeLimited)
     }
 
     let mode: Mode
@@ -404,16 +424,19 @@ private final actor TotalMergeSink<
 
     private typealias DerivedSubscription = IdentityHashable<SimpleDisposableBox>
     private typealias DerivedSubscriptions = Set<DerivedSubscription>
+    private typealias DerivedSequenceQueue = Queue<DerivedSequence>
 
     private struct State {
         init(
             stage: Stage,
             sourceSubscription: SourceSubscription,
-            derivedSubscriptions: DerivedSubscriptions
+            derivedSubscriptions: DerivedSubscriptions,
+            queuedDerivedSubscriptions: DerivedSequenceQueue?
         ) {
             self.stage = stage
             self.sourceSubscription = sourceSubscription
             self.derivedSubscriptions = derivedSubscriptions
+            self.queuedDerivedSubscriptions = queuedDerivedSubscriptions
         }
 
         enum Stage {
@@ -431,12 +454,17 @@ private final actor TotalMergeSink<
         var stage: Stage = .neverRun
         var sourceSubscription: SourceSubscription = .neverUsed
         var derivedSubscriptions: DerivedSubscriptions
+        var queuedDerivedSubscriptions: DerivedSequenceQueue?
     }
 
     func run(_ c: C) async {
         switch mode {
         case .flatMap(let source, _), .flatMapFirst(let source, _), .mergeBasic(let source, _):
             await acceptInput(c.call(), .run(.singleSource(source)))
+
+        case .mergeLimited(let mergeLimited):
+            await acceptInput(c.call(), .run(.singleSource(mergeLimited.source)))
+
         case .merge(let derivedSequences):
             await acceptInput(c.call(), .run(.multipleDerives(derivedSequences)))
         }
@@ -459,7 +487,12 @@ private final actor TotalMergeSink<
         await acceptInput(C(), .dispose)
     }
 
-    private var state = State(stage: .neverRun, sourceSubscription: .neverUsed, derivedSubscriptions: Set())
+    private var state = State(
+        stage: .neverRun,
+        sourceSubscription: .neverUsed,
+        derivedSubscriptions: Set(),
+        queuedDerivedSubscriptions: nil
+    )
 
     private func acceptInput(_ c: C, _ input: Input) async {
         let (state, actions) = reduce(c.call(), state, input)
@@ -484,11 +517,21 @@ private final actor TotalMergeSink<
 
             switch run {
             case .singleSource(let source):
+                let queuedDerivedSubscriptions: DerivedSequenceQueue?
+                
+                switch mode {
+                case .flatMap, .flatMapFirst, .merge, .mergeBasic:
+                    queuedDerivedSubscriptions = nil
+                case .mergeLimited(let mergeLimited):
+                    queuedDerivedSubscriptions = DerivedSequenceQueue(capacity: 2)
+                }
+                
                 let disposable = SimpleDisposableBox()
                 let state = State(
                     stage: .running,
                     sourceSubscription: .active(disposable),
-                    derivedSubscriptions: state.derivedSubscriptions
+                    derivedSubscriptions: state.derivedSubscriptions,
+                    queuedDerivedSubscriptions: queuedDerivedSubscriptions
                 )
                 let actions = [
                     ActionWithC(c: c.call(), action: Action.subscribeToSource(source, disposable)),
@@ -510,7 +553,8 @@ private final actor TotalMergeSink<
                 let state = State(
                     stage: .running,
                     sourceSubscription: .neverUsed,
-                    derivedSubscriptions: derivedSubscriptions
+                    derivedSubscriptions: derivedSubscriptions,
+                    queuedDerivedSubscriptions: nil
                 )
 
                 return (state, actions)
@@ -528,6 +572,7 @@ private final actor TotalMergeSink<
             case .active(let simpleDisposableBox):
                 sourceSubscription = simpleDisposableBox
             }
+            var queuedDerivedSubscriptions = state.queuedDerivedSubscriptions
 
             switch event {
             case .next(let element):
@@ -563,6 +608,10 @@ private final actor TotalMergeSink<
                             return stateAndActionForEveryErrorCase(c.call(), error)
                         }
                     }
+                case .mergeLimited(let mergeLimited):
+                    
+                    
+                    
                 case .merge:
                     fatalError() // source can't emit it merge mode
                 }
@@ -583,7 +632,8 @@ private final actor TotalMergeSink<
                 let state = State(
                     stage: .running,
                     sourceSubscription: state.sourceSubscription,
-                    derivedSubscriptions: newDerivedSubs
+                    derivedSubscriptions: newDerivedSubs,
+                    queuedDerivedSubscriptions: queuedDerivedSubscriptions
                 )
 
                 return (state, [subscribeAction])
