@@ -29,7 +29,7 @@ extension Disposables {
     static public func create() -> AsynchronousDisposable { NopAsyncDisposable.noOp }
 }
 
-private struct NopAsyncDisposable : AsynchronousDisposable {
+private final class NopAsyncDisposable : AsynchronousDisposable {
  
     fileprivate static let noOp: AsynchronousDisposable = NopAsyncDisposable()
     

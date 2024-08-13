@@ -19,10 +19,11 @@ extension ActorLock {
 }
 
 final class ActorLocked<Value: Sendable>: @unchecked Sendable {
-    let actor: ActorLock
     var value: Value
+    let actor: ActorLock
     
-    init(actor: ActorLock) {
+    init(_ value: Value, _ actor: ActorLock) {
+        self.value = value
         self.actor = actor
     }
     
