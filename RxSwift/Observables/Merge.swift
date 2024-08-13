@@ -372,9 +372,11 @@ private final actor TotalMergeSink<
     where Observer.Element == DerivedSequence.Element {
 
     typealias FlatMapSelector = @Sendable (Source) throws -> DerivedSequence
+    typealias FlatMapFirstSelector = FlatMapSelector
 
     enum Mode {
         case flatMap(Observable<Source>, FlatMapSelector)
+        case flatMapFirst(Observable<Source>, FlatMapFirstSelector)
         case merge([DerivedSequence])
     }
 
@@ -443,7 +445,7 @@ private final actor TotalMergeSink<
 
     func run(_ c: C) async {
         switch mode {
-        case .flatMap(let source, _):
+        case .flatMap(let source, _), .flatMapFirst(let source, _):
             await acceptInput(c.call(), .run(.singleSource(source)))
         case .merge(let derivedSequences):
             await acceptInput(c.call(), .run(.multipleDerives(derivedSequences)))
@@ -548,6 +550,37 @@ private final actor TotalMergeSink<
                     } catch {
                         return stateAndActionForEveryErrorCase(c.call(), error)
                     }
+                case .flatMapFirst(_, let selector):
+                    let thereAreNoDerivedSubscriptionsRunning: Bool
+                    rxAssert(state.derivedSubscriptions.count <= 1)
+                    if let firstDerivedSubscription = state.derivedSubscriptions.first {
+                        rxAssert(!firstDerivedSubscription.inner.disposed)
+                        thereAreNoDerivedSubscriptionsRunning = false
+                    } else {
+                        thereAreNoDerivedSubscriptionsRunning = true
+                    }
+
+                    let shouldSubscribe = thereAreNoDerivedSubscriptionsRunning
+
+                    if !shouldSubscribe {
+                        return (state, [])
+                    }
+                    let derivedSequence: DerivedSequence
+                    do {
+                        derivedSequence = try selector(element)
+                    } catch {
+                        return stateAndActionForEveryErrorCase(c.call(), error)
+                    }
+                    let subscriptionBox = SimpleDisposableBox()
+                    let subscribeAction = ActionWithC(
+                        c: c.call(),
+                        action: .subscribeToDerived(derivedSequence, subscriptionBox)
+                    )
+
+                    var state = state
+                    state.derivedSubscriptions.insert(DerivedSubscription(inner: subscriptionBox))
+
+                    return (state, [subscribeAction])
                 case .merge:
                     fatalError() // source can't emit it merge mode
                 }
@@ -858,202 +891,6 @@ final class TotalMergeSinkDerivedObserver<
     }
 }
 
-// MARK: FlatMapFirst
-
-private final actor FlatMapFirstSink<
-    SourceElement: Sendable,
-    DerivedSequence: ObservableConvertibleType,
-    Observer: ObserverType
->: MergeSink, ObserverType where Observer.Element == DerivedSequence.Element {
-    typealias Selector = (SourceElement) throws -> DerivedSequence
-
-    typealias Element = SourceElement
-
-    private let selector: Selector
-
-    private var waitingOnADerivedSequence = false
-    private var sourceStopped = false
-    let baseSink: MergeSinkBase<SourceElement, DerivedSequence, Observer>
-
-    init(selector: @escaping Selector, observer: Observer) {
-        self.selector = selector
-        baseSink = MergeSinkBase(observer: observer)
-    }
-
-    func run(_ c: C, _ source: Observable<SourceElement>) async {
-        await baseSink.run(self, source, c.call())
-    }
-
-    func on(_ event: Event<Element>, _ c: C) async {
-        if baseSink.disposed {
-            return
-        }
-
-        switch event {
-        case .next(let element):
-            if waitingOnADerivedSequence {
-                // nothing
-                return
-            }
-
-            let derivedSequence: DerivedSequence
-            do {
-                derivedSequence = try selector(element)
-            } catch {
-                setDisposed()
-                await baseSink.observer.onError(error, c.call())
-                await baseSink.disposeAfterSettingDisposed()
-                return
-            }
-            let disp = SingleAssignmentDisposable()
-            let key = baseSink.derivedSubscriptions.insertUnchecked(disp)
-            let observer = MergeSinkIter(parent: self, disposeKey: key)
-            let derivedDisposable = await derivedSequence.asObservable().subscribe(c.call(), observer)
-
-            _ = await disp.setDisposableUnchecked(derivedDisposable)
-        case .error(let error):
-            setDisposed()
-            await baseSink.observer.onError(error, c.call())
-            await baseSink.disposeAfterSettingDisposed()
-        case .completed:
-            if waitingOnADerivedSequence {
-                return
-            }
-
-            sourceStopped = true
-            await baseSink.observer.on(.completed, c.call())
-            await baseSink.disposeAfterSettingDisposed()
-        }
-    }
-
-    func derivedEventArrived(
-        _ disposeKey: CompositeDisposable.DisposeKey,
-        _ event: Event<Observer.Element>,
-        _ c: C
-    )
-        async {
-        if baseSink.disposed {
-            return
-        }
-
-        rxAssert(waitingOnADerivedSequence)
-
-        switch event {
-        case .next(let element):
-            await baseSink.observer.onNext(element, c.call())
-        case .error(let error):
-            waitingOnADerivedSequence = false
-
-            setDisposed()
-            await baseSink.observer.onError(error, c.call())
-            await baseSink.disposeAfterSettingDisposed()
-        case .completed:
-            waitingOnADerivedSequence = false
-
-            if sourceStopped {
-                setDisposed()
-
-                await baseSink.observer.onCompleted(c.call())
-                await baseSink.disposeAfterSettingDisposed()
-            } else {
-                let derivedSubscription = baseSink.derivedSubscriptions.removeReturning(for: disposeKey)
-                rxAssert(derivedSubscription != nil)
-                await derivedSubscription?.dispose()
-            }
-        }
-    }
-
-    func dispose() async {
-        baseSink.setDisposed()
-        await baseSink.disposeAfterSettingDisposed()
-    }
-}
-
-private final class MergeSinkIter<
-    TheSink: MergeSink
->: ObserverType {
-    typealias Parent = TheSink
-    typealias DisposeKey = CompositeDisposable.DisposeKey
-    typealias Element = TheSink.DerivedSequence.Element
-
-    private let parent: Parent
-    private let disposeKey: DisposeKey
-
-    init(parent: Parent, disposeKey: DisposeKey) {
-        self.parent = parent
-        self.disposeKey = disposeKey
-    }
-
-    func on(_ event: Event<Element>, _ c: C) async {
-        await parent.derivedEventArrived(disposeKey, event, c.call())
-    }
-}
-
-protocol MergeSink: Sink, Actor {
-    associatedtype SourceElement
-    associatedtype DerivedSequence: ObservableConvertibleType where DerivedSequence.Element == Observer.Element
-
-    var baseSink: MergeSinkBase<SourceElement, DerivedSequence, Observer> { get }
-
-    func derivedEventArrived(
-        _ disposeKey: CompositeDisposable.DisposeKey,
-        _ event: Event<Observer.Element>,
-        _ c: C
-    ) async
-}
-
-final class MergeSinkBase<
-    SourceElement,
-    ResultingSequence: ObservableConvertibleType,
-    Observer: ObserverType
->: BaseSinkProtocol, @unchecked Sendable {
-    // Base Sink Protocol
-    let baseSink: BaseSink<Observer>
-
-    init(observer: Observer) {
-        derivedSubscriptions = UnsynchronizedCompositeDisposable(disposables: [])
-        sourceSubscription = SingleAssignmentDisposable()
-        baseSink = BaseSink(observer: observer)
-    }
-
-    func setDisposed() {
-        baseSink.setDisposed()
-    }
-
-    var observer: Observer {
-        baseSink.observer
-    }
-
-    // MARK: - Actual merge sink
-
-    typealias ResultType = Observer.Element
-    typealias Element = SourceElement
-
-    // state
-    let derivedSubscriptions: UnsynchronizedCompositeDisposable
-    let sourceSubscription: SingleAssignmentDisposable
-
-    func run<SourceObserver: ObserverType>(
-        _ observer: SourceObserver,
-        _ source: Observable<SourceElement>,
-        _ c: C
-    )
-        async where SourceObserver.Element == SourceElement {
-        let subscription = await source.subscribe(c.call(), observer)
-        await sourceSubscription.setDisposable(subscription)
-    }
-
-    var disposed: Bool {
-        baseSink.disposed
-    }
-
-    func disposeAfterSettingDisposed() async {
-        assert(baseSink.disposed)
-        await derivedSubscriptions.dispose()
-        await sourceSubscription.dispose()
-    }
-}
-
 // private class MergeSink<SourceElement, DerivedSequence: ObservableConvertibleType, Observer: ObserverType>:
 //    ObserverType where Observer.Element == DerivedSequence.Element {
 //    typealias ResultType = Observer.Element
@@ -1213,11 +1050,8 @@ private final class FlatMapFirst<
 
     override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where DerivedSequence.Element == Observer.Element, Observer: ObserverType {
-        let sink = FlatMapFirstSink<SourceElement, DerivedSequence, Observer>(
-            selector: selector,
-            observer: observer
-        )
-        await sink.run(c.call(), source)
+        let sink = TotalMergeSink(mode: .flatMapFirst(source, selector), observer: observer)
+        await sink.run(c.call())
         return sink
     }
 }
