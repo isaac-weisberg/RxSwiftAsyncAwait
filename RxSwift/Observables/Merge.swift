@@ -145,37 +145,6 @@ public extension ObservableType {
     }
 }
 
-private final class MergeLimited<
-    Source: Sendable,
-    DerivedSequence: ObservableConvertibleType
->: Producer<DerivedSequence.Element> {
-    typealias Selector = @Sendable (Source) throws -> DerivedSequence
-    private let source: Observable<Source>
-    private let selector: Selector
-    private let maxConcurrent: Int
-
-    init(source: Observable<Source>, selector: @escaping Selector, maxConcurrent: Int) {
-        self.source = source
-        self.selector = selector
-        self.maxConcurrent = maxConcurrent
-        super.init()
-    }
-
-    override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
-        where DerivedSequence.Element == Observer.Element, Observer: ObserverType {
-        let sink = TotalMergeSink(
-            mode: .flatMapLimited(TotalMergeSink.Mode.FlatMapLimited(
-                source: source,
-                maxConcurrent: maxConcurrent,
-                selector: selector
-            )),
-            observer: observer
-        )
-        await sink.run(c.call())
-        return sink
-    }
-}
-
 // MARK: Merge
 
 struct IdentityHashable<T: AnyObject>: Hashable {
@@ -190,7 +159,7 @@ struct IdentityHashable<T: AnyObject>: Hashable {
     }
 }
 
-private final actor TotalMergeSink<
+private final actor TotalFlatMapSink<
     Source: Sendable,
     DerivedSequence: ObservableConvertibleType,
     Observer: ObserverType
@@ -800,16 +769,16 @@ private final actor TotalMergeSink<
     }
 }
 
-final class TotalMergeSinkSourceObserver<
+private final class TotalMergeSinkSourceObserver<
     Source: Sendable,
     DerivedSequence: ObservableConvertibleType,
     Observer: ObserverType
 >: ObserverType where Observer.Element == DerivedSequence.Element {
     typealias Element = Source
 
-    fileprivate let sink: TotalMergeSink<Source, DerivedSequence, Observer>
+    fileprivate let sink: TotalFlatMapSink<Source, DerivedSequence, Observer>
 
-    fileprivate init(sink: TotalMergeSink<Source, DerivedSequence, Observer>) {
+    fileprivate init(sink: TotalFlatMapSink<Source, DerivedSequence, Observer>) {
         self.sink = sink
     }
 
@@ -818,17 +787,17 @@ final class TotalMergeSinkSourceObserver<
     }
 }
 
-final class TotalMergeSinkDerivedObserver<
+private final class TotalMergeSinkDerivedObserver<
     Source: Sendable,
     DerivedSequence: ObservableConvertibleType,
     Observer: ObserverType
 >: ObserverType where Observer.Element == DerivedSequence.Element {
     typealias Element = DerivedSequence.Element
 
-    fileprivate let sink: TotalMergeSink<Source, DerivedSequence, Observer>
+    fileprivate let sink: TotalFlatMapSink<Source, DerivedSequence, Observer>
     private let disposable: SimpleDisposableBox
 
-    fileprivate init(sink: TotalMergeSink<Source, DerivedSequence, Observer>, disposable: SimpleDisposableBox) {
+    fileprivate init(sink: TotalFlatMapSink<Source, DerivedSequence, Observer>, disposable: SimpleDisposableBox) {
         self.sink = sink
         self.disposable = disposable
     }
@@ -862,9 +831,9 @@ private final class FlatMap<
     )
         async -> AsynchronousDisposable
         where Observer.Element == DerivedSequence.Element {
-        let sink = TotalMergeSink(
+        let sink = TotalFlatMapSink(
             mode: .flatMap(
-                TotalMergeSink.Mode.FlatMap(
+                TotalFlatMapSink.Mode.FlatMap(
                     source: source,
                     selector: selector
                 )
@@ -894,9 +863,9 @@ private final class FlatMapFirst<
 
     override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where DerivedSequence.Element == Observer.Element, Observer: ObserverType {
-        let sink = TotalMergeSink(
+        let sink = TotalFlatMapSink(
             mode: .flatMapFirst(
-                TotalMergeSink.Mode.FlatMap(
+                TotalFlatMapSink.Mode.FlatMap(
                     source: source,
                     selector: selector
                 )
@@ -908,7 +877,7 @@ private final class FlatMapFirst<
     }
 }
 
-final class ConcatMap<
+private final class ConcatMap<
     SourceElement: Sendable,
     DerivedSequence: ObservableConvertibleType
 >: Producer<DerivedSequence.Element> {
@@ -925,8 +894,8 @@ final class ConcatMap<
 
     override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where DerivedSequence.Element == Observer.Element, Observer: ObserverType {
-        let sink = TotalMergeSink<SourceElement, DerivedSequence, Observer>(
-            mode: TotalMergeSink.Mode.flatMapLimited(TotalMergeSink.Mode.FlatMapLimited(
+        let sink = TotalFlatMapSink<SourceElement, DerivedSequence, Observer>(
+            mode: TotalFlatMapSink.Mode.flatMapLimited(TotalFlatMapSink.Mode.FlatMapLimited(
                 source: source,
                 maxConcurrent: 1,
                 selector: selector
@@ -939,7 +908,7 @@ final class ConcatMap<
 
 }
 
-final class Merge<DerivedSequence: ObservableConvertibleType>: Producer<DerivedSequence.Element> {
+private final class Merge<DerivedSequence: ObservableConvertibleType>: Producer<DerivedSequence.Element> {
     private let source: Observable<DerivedSequence>
 
     init(source: Observable<DerivedSequence>) {
@@ -949,9 +918,9 @@ final class Merge<DerivedSequence: ObservableConvertibleType>: Producer<DerivedS
 
     override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where DerivedSequence.Element == Observer.Element, Observer: ObserverType {
-        let sink = TotalMergeSink<DerivedSequence, DerivedSequence, Observer>(
+        let sink = TotalFlatMapSink<DerivedSequence, DerivedSequence, Observer>(
             mode: .flatMap(
-                TotalMergeSink.Mode.FlatMap(
+                TotalFlatMapSink.Mode.FlatMap(
                     source: source,
                     selector: { $0 }
                 )
@@ -974,13 +943,44 @@ private final class MergeArray<Element: Sendable>: Producer<Element> {
 
     override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where Element == Observer.Element, Observer: ObserverType {
-        let sink = TotalMergeSink<Never, Observable<Element>, Observer>(mode: .mergeArray(sources), observer: observer)
+        let sink = TotalFlatMapSink<Never, Observable<Element>, Observer>(mode: .mergeArray(sources), observer: observer)
         await sink.run(c.call())
         return sink
     }
 }
 
-extension Set {
+private final class MergeLimited<
+    Source: Sendable,
+    DerivedSequence: ObservableConvertibleType
+>: Producer<DerivedSequence.Element> {
+    typealias Selector = @Sendable (Source) throws -> DerivedSequence
+    private let source: Observable<Source>
+    private let selector: Selector
+    private let maxConcurrent: Int
+
+    init(source: Observable<Source>, selector: @escaping Selector, maxConcurrent: Int) {
+        self.source = source
+        self.selector = selector
+        self.maxConcurrent = maxConcurrent
+        super.init()
+    }
+
+    override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where DerivedSequence.Element == Observer.Element, Observer: ObserverType {
+        let sink = TotalFlatMapSink(
+            mode: .flatMapLimited(TotalFlatMapSink.Mode.FlatMapLimited(
+                source: source,
+                maxConcurrent: maxConcurrent,
+                selector: selector
+            )),
+            observer: observer
+        )
+        await sink.run(c.call())
+        return sink
+    }
+}
+
+private extension Set {
     func removing(_ elem: Element) -> Set {
         var copy = self
         copy.remove(elem)
