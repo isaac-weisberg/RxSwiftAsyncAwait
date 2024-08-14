@@ -21,8 +21,8 @@ public extension ObservableType {
         _ second: Source,
         resultSelector: @escaping (Element, Source.Element) throws -> ResultType
     )
-        async -> Observable<ResultType> {
-        await WithLatestFrom(first: asObservable(), second: second.asObservable(), resultSelector: resultSelector)
+        -> Observable<ResultType> {
+        WithLatestFrom(first: asObservable(), second: second.asObservable(), resultSelector: resultSelector)
     }
 
     /**
@@ -34,8 +34,8 @@ public extension ObservableType {
      - parameter second: Second observable source.
      - returns: An observable sequence containing the result of combining each element of the self  with the latest element from the second source, if any, using the specified result selector function.
      */
-    func withLatestFrom<Source: ObservableConvertibleType>(_ second: Source) async -> Observable<Source.Element> {
-        await WithLatestFrom(first: asObservable(), second: second.asObservable(), resultSelector: { $1 })
+    func withLatestFrom<Source: ObservableConvertibleType>(_ second: Source) -> Observable<Source.Element> {
+        WithLatestFrom(first: asObservable(), second: second.asObservable(), resultSelector: { $1 })
     }
 }
 
@@ -74,6 +74,9 @@ private final actor WithLatestFromSink<FirstType: Sendable, SecondType: Sendable
     }
 
     func onSecondEvent(_ event: Event<SecondType>, _ c: C) async {
+        if baseSink.disposed {
+            return
+        }
         switch event {
         case .next(let element):
             latest = element
@@ -85,33 +88,36 @@ private final actor WithLatestFromSink<FirstType: Sendable, SecondType: Sendable
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
+        if baseSink.disposed {
+            return
+        }
         switch event {
         case .next(let value):
             guard let latest else { return }
             do {
                 let res = try parent.resultSelector(value, latest)
 
-                await forwardOn(.next(res), c.call())
+                await baseSink.observer.on(.next(res), c.call())
             } catch let e {
-                await self.forwardOn(.error(e), c.call())
+                await baseSink.observer.on(.error(e), c.call())
                 await self.dispose()
             }
         case .completed:
-            await forwardOn(.completed, c.call())
+            await baseSink.observer.on(.completed, c.call())
             await dispose()
         case .error(let error):
-            await forwardOn(.error(error), c.call())
+            await baseSink.observer.on(.error(error), c.call())
             await dispose()
         }
     }
 
     func dispose() async {
-        if setDisposed() {
-            await firstSubscription?.dispose()
-            firstSubscription = nil
-            await secondSubscription?.dispose()
-            secondSubscription = nil
-        }
+        baseSink.setDisposed()
+
+        await firstSubscription?.dispose()
+        firstSubscription = nil
+        await secondSubscription?.dispose()
+        secondSubscription = nil
     }
 }
 
