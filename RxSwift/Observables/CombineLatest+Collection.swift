@@ -54,7 +54,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
     var values: [SourceElement?]
     var isDone: [Bool]
     var numberOfDone = 0
-    var subscriptions: [AsynchronousDisposable?]
+    var subscriptions: [SingleAssignmentDisposable]
     var disposed = false
 
     init(parentSources: Collection, resultSelector: @escaping ResultSelector, observer: Observer) {
@@ -63,7 +63,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         self.resultSelector = resultSelector
         values = [SourceElement?](repeating: nil, count: parentCount)
         isDone = [Bool](repeating: false, count: parentCount)
-        subscriptions = Array(repeating: nil, count: parentCount)
+        subscriptions = Array(repeating: SingleAssignmentDisposable(), count: parentCount)
 
         self.observer = observer
     }
@@ -80,8 +80,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
             var index = 0
             while index < subscriptions.count {
                 let subscription = subscriptions[index]
-                subscriptions[index] = nil
-                await subscription!.dispose()
+                await subscription.dispose()?.dispose()
                 index += 1
             }
         }
@@ -133,7 +132,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
                 await forwardOn(.completed, c.call())
                 await dispose()
             } else {
-                await subscriptions[atIndex]!.dispose()
+                await subscriptions[atIndex].dispose()?.dispose()
             }
         }
     }
@@ -151,7 +150,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
                 await self.on(c.call(), event, atIndex: index)
             }))
 
-            subscriptions[j] = disposable
+            await subscriptions[j].setDisposable(disposable)?.dispose()
 
             j += 1
         }

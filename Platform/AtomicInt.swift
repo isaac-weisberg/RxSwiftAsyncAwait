@@ -146,7 +146,7 @@ func isFlagSet(_ this: ActualAtomicInt, _ mask: Int32) async -> Bool {
     await (load(this) & mask) != 0
 }
 
-final class NonAtomicInt {
+final class NonAtomicInt: Sendable {
     fileprivate var value: Int32
 
     public init(_ value: Int32 = 0) {

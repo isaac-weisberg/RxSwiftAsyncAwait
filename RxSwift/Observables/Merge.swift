@@ -203,13 +203,13 @@ final actor TotalFlatMapSink<
 
         case run(Run)
         case sourceEvent(Event<Source>)
-        case derivedEvent(Event<DerivedSequence.Element>, SimpleDisposableBox)
+        case derivedEvent(Event<DerivedSequence.Element>, SingleAssignmentDisposable)
         case dispose
     }
 
     private enum Action: @unchecked Sendable {
-        case subscribeToSource(Observable<Source>, SimpleDisposableBox)
-        case subscribeToDerived(DerivedSequence, SimpleDisposableBox)
+        case subscribeToSource(Observable<Source>, SingleAssignmentDisposable)
+        case subscribeToDerived(DerivedSequence, SingleAssignmentDisposable)
         case forwardEvent(Event<DerivedSequence.Element>)
         case dispose(Disposable)
     }
@@ -219,7 +219,7 @@ final actor TotalFlatMapSink<
         let action: Action
     }
 
-    private typealias DerivedSubscription = IdentityHashable<SimpleDisposableBox>
+    private typealias DerivedSubscription = IdentityHashable<SingleAssignmentDisposable>
     private typealias DerivedSubscriptions = Set<DerivedSubscription>
     private typealias DerivedSequenceQueue = Queue<DerivedSequence>
 
@@ -244,7 +244,7 @@ final actor TotalFlatMapSink<
 
         enum SourceSubscription {
             case neverUsed
-            case active(SimpleDisposableBox)
+            case active(SingleAssignmentDisposable)
             case released
 
             func isRunning() -> Bool {
@@ -290,7 +290,7 @@ final actor TotalFlatMapSink<
     func acceptDerivedEvent(
         _ c: C,
         _ event: Event<DerivedSequence.Element>,
-        _ subscription: SimpleDisposableBox
+        _ subscription: SingleAssignmentDisposable
     )
         async {
         await acceptInput(c.call(), .derivedEvent(event, subscription))
@@ -339,7 +339,7 @@ final actor TotalFlatMapSink<
                     queuedDerivedSubscriptions = DerivedSequenceQueue(capacity: 2)
                 }
 
-                let disposable = SimpleDisposableBox()
+                let disposable = SingleAssignmentDisposable()
                 let state = State(
                     stage: .running,
                     sourceSubscription: .active(disposable),
@@ -358,7 +358,7 @@ final actor TotalFlatMapSink<
                 derivedSubscriptions.reserveCapacity(derives.count)
 
                 for derive in derives {
-                    let disposable = SimpleDisposableBox()
+                    let disposable = SingleAssignmentDisposable()
                     actions.append(ActionWithC(c: c.call(), action: .subscribeToDerived(derive, disposable)))
                     derivedSubscriptions.insert(DerivedSubscription(inner: disposable))
                 }
@@ -389,23 +389,20 @@ final actor TotalFlatMapSink<
             let sourceSubscription = state.sourceSubscription
             switch sourceSubscription {
             case .active(let sourceSubscription):
-                if sourceSubscription.disposed {
-                    // already disposed because it has completed
-                    sourceSubscriptionsActions = []
+                rxAssert(!sourceSubscription.isDisposed) // should've been released already
+
+                let sourceDisposable = sourceSubscription.dispose()
+                if let sourceDisposable {
+                    // nice, it was running, but time to dispose
+                    sourceSubscriptionsActions = [
+                        ActionWithC(
+                            c: c.call(),
+                            action: .dispose(sourceDisposable)
+                        ),
+                    ]
                 } else {
-                    let sourceDisposable = sourceSubscription.setDisposedAndMoveDisposable()
-                    if let sourceDisposable {
-                        // nice, it was running, but time to dispose
-                        sourceSubscriptionsActions = [
-                            ActionWithC(
-                                c: c.call(),
-                                action: .dispose(sourceDisposable)
-                            ),
-                        ]
-                    } else {
-                        // will be assigned when source's subscribe will return
-                        sourceSubscriptionsActions = []
-                    }
+                    // will be assigned when source's subscribe will return
+                    sourceSubscriptionsActions = []
                 }
             case .neverUsed, .released:
                 sourceSubscriptionsActions = []
@@ -415,13 +412,10 @@ final actor TotalFlatMapSink<
             derivedSubscriptionsActions.reserveCapacity(state.derivedSubscriptions.count)
             for derivedSubscription in state.derivedSubscriptions {
                 rxAssert(
-                    !derivedSubscription.inner
-                        .disposed
+                    !derivedSubscription.inner.isDisposed
                 ) // when I made it disposed, I removed it from the set, so...
 
-                derivedSubscription.inner.disposed = true
-                if let disposable = derivedSubscription.inner.disposable {
-                    derivedSubscription.inner.disposable = nil
+                if let disposable = derivedSubscription.inner.dispose() {
                     derivedSubscriptionsActions.append(
                         ActionWithC(
                             c: c.call(),
@@ -468,19 +462,11 @@ final actor TotalFlatMapSink<
         case .subscribeToSource(let sourceSequence, let disposableBox):
             let observer = TotalMergeSinkSourceObserver(sink: self)
             let disposable = await sourceSequence.subscribe(c.call(), observer)
-            if disposableBox.disposed {
-                await disposable.dispose()
-            } else {
-                disposableBox.disposable = disposable
-            }
+            await disposableBox.setDisposable(disposable)?.dispose()
         case .subscribeToDerived(let derivedSequence, let disposableBox):
             let observer = TotalMergeSinkDerivedObserver(sink: self, disposable: disposableBox)
             let disposable = await derivedSequence.asObservable().subscribe(c.call(), observer)
-            if disposableBox.disposed {
-                await disposable.dispose()
-            } else {
-                disposableBox.disposable = disposable
-            }
+            await disposableBox.setDisposable(disposable)?.dispose()
         case .dispose(let disposable):
             await disposable.dispose()
         case .forwardEvent(let event):
@@ -505,7 +491,7 @@ final actor TotalFlatMapSink<
                 } catch {
                     return stateAndActionForEveryErrorCase(c.call(), error)
                 }
-                let disposable = SimpleDisposableBox()
+                let disposable = SingleAssignmentDisposable()
                 actions = [
                     ActionWithC(c: c.call(), action: .subscribeToDerived(derivedSequenceToSubscribeTo, disposable)),
                 ]
@@ -531,7 +517,7 @@ final actor TotalFlatMapSink<
                 if let firstDerivedSubscription = state.derivedSubscriptions.first {
                     derivedSubscriptionsAfterDisposal = state.derivedSubscriptions
                         .removing(firstDerivedSubscription)
-                    if let disposable = firstDerivedSubscription.inner.setDisposedAndMoveDisposable() {
+                    if let disposable = firstDerivedSubscription.inner.dispose() {
                         disposeActions = [
                             ActionWithC(c: c.call(), action: .dispose(disposable)),
                         ]
@@ -543,7 +529,7 @@ final actor TotalFlatMapSink<
                     disposeActions = []
                 }
 
-                let disposable = SimpleDisposableBox()
+                let disposable = SingleAssignmentDisposable()
                 let subscribeAction = [
                     ActionWithC(c: c.call(), action: .subscribeToDerived(derivedSequenceToSubscribeTo, disposable)),
                 ]
@@ -562,7 +548,7 @@ final actor TotalFlatMapSink<
                 let thereAreNoDerivedSubscriptionsRunning: Bool
                 rxAssert(state.derivedSubscriptions.count <= 1)
                 if let firstDerivedSubscription = state.derivedSubscriptions.first {
-                    rxAssert(!firstDerivedSubscription.inner.disposed)
+                    rxAssert(!firstDerivedSubscription.inner.isDisposed)
                     thereAreNoDerivedSubscriptionsRunning = false
                 } else {
                     thereAreNoDerivedSubscriptionsRunning = true
@@ -578,7 +564,7 @@ final actor TotalFlatMapSink<
                         return stateAndActionForEveryErrorCase(c.call(), error)
                     }
 
-                    let disposable = SimpleDisposableBox()
+                    let disposable = SingleAssignmentDisposable()
 
                     actions = [
                         ActionWithC(c: c.call(), action: .subscribeToDerived(derivedSequenceToSubscribeTo, disposable)),
@@ -611,7 +597,7 @@ final actor TotalFlatMapSink<
                 let shouldSubscribe = numberOfActiveSubscriptions < mergeLimited.maxConcurrent
 
                 if shouldSubscribe {
-                    let disposable = SimpleDisposableBox()
+                    let disposable = SingleAssignmentDisposable()
 
                     actions = [
                         ActionWithC(c: c.call(), action: .subscribeToDerived(derivedSequence, disposable)),
@@ -643,16 +629,16 @@ final actor TotalFlatMapSink<
             return stateAndActionForEveryErrorCase(c.call(), error)
 
         case .completed:
-            let sourceSubscription: SimpleDisposableBox
+            let sourceSubscription: SingleAssignmentDisposable
             switch state.sourceSubscription {
             case .neverUsed, .released:
                 fatalError() // Source completed, yet there is no source? lole
-            case .active(let simpleDisposableBox):
-                sourceSubscription = simpleDisposableBox
+            case .active(let singleAssignmentDisposable):
+                sourceSubscription = singleAssignmentDisposable
             }
 
             let sourceDisposalActions: [ActionWithC]
-            if let existingSourceDisposable = sourceSubscription.setDisposedAndMoveDisposable() {
+            if let existingSourceDisposable = sourceSubscription.dispose() {
                 sourceDisposalActions = [
                     ActionWithC(c: c.call(), action: .dispose(existingSourceDisposable)),
                 ]
@@ -691,7 +677,7 @@ final actor TotalFlatMapSink<
     private func stateAndActionForDerivedEvent(
         _ c: C,
         _ event: Event<DerivedSequence.Element>,
-        disposableBox: SimpleDisposableBox
+        disposableBox: SingleAssignmentDisposable
     ) -> (State, [ActionWithC]) {
 
         switch event {
@@ -714,7 +700,7 @@ final actor TotalFlatMapSink<
                 .removing(IdentityHashable(inner: disposableBox))
 
             let disposeActions: [ActionWithC]
-            if let disposable = disposableBox.setDisposedAndMoveDisposable() {
+            if let disposable = disposableBox.dispose() {
                 disposeActions = [
                     ActionWithC(
                         c: c.call(),
@@ -739,7 +725,7 @@ final actor TotalFlatMapSink<
             case .flatMapLimited(let mergeLimited):
                 var newQueue = state.queuedDerivedSubscriptions
                 if let dequeuedDerviedSubscription = newQueue?.dequeue() {
-                    let disposable = SimpleDisposableBox()
+                    let disposable = SingleAssignmentDisposable()
                     derivedSubscriptionsAfterPotentialDequeue = derivedSubsAfterRemovingCurrent
                         .inserting(DerivedSubscription(inner: disposable))
                     newSubscribeActions = [
@@ -794,8 +780,8 @@ final actor TotalFlatMapSink<
         switch state.sourceSubscription {
         case .neverUsed, .released:
             sourceDisposeActions = []
-        case .active(let simpleDisposableBox):
-            if let disposable = simpleDisposableBox.setDisposedAndMoveDisposable() {
+        case .active(let singleAssignmentDisposable):
+            if let disposable = singleAssignmentDisposable.dispose() {
                 sourceDisposeActions = [
                     ActionWithC(c: c.call(), action: .dispose(disposable)),
                 ]
@@ -806,7 +792,7 @@ final actor TotalFlatMapSink<
         }
 
         let derivedDisposeActions = state.derivedSubscriptions.compactMap { box in
-            if let disposable = box.inner.setDisposedAndMoveDisposable() {
+            if let disposable = box.inner.dispose() {
                 return ActionWithC(c: c.call(), action: .dispose(disposable))
             }
             return nil
@@ -850,9 +836,12 @@ private final class TotalMergeSinkDerivedObserver<
     typealias Element = DerivedSequence.Element
 
     fileprivate let sink: TotalFlatMapSink<Source, DerivedSequence, Observer>
-    private let disposable: SimpleDisposableBox
+    private let disposable: SingleAssignmentDisposable
 
-    fileprivate init(sink: TotalFlatMapSink<Source, DerivedSequence, Observer>, disposable: SimpleDisposableBox) {
+    fileprivate init(
+        sink: TotalFlatMapSink<Source, DerivedSequence, Observer>,
+        disposable: SingleAssignmentDisposable
+    ) {
         self.sink = sink
         self.disposable = disposable
     }

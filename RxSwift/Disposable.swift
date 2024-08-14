@@ -14,7 +14,7 @@
 //}
 
 /// Represents a disposable resource.
-public protocol AsynchronousDisposable: AnyObject, Sendable {//}, DisposableType {
+public protocol AsynchronousDisposable: Sendable {//}, DisposableType {
     /// Dispose resource.
     func dispose() async
 }
