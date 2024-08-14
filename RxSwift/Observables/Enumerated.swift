@@ -35,37 +35,40 @@ private final actor EnumeratedSink<Source: ObservableType, Observer: ObserverTyp
         baseSink = BaseSink(observer: observer)
     }
 
-    var innerDisposable: Disposable?
+    let innerDisposable = SingleAssignmentDisposable()
 
     func on(_ event: Event<Source.Element>, _ c: C) async {
+        if baseSink.disposed {
+            return
+        }
+        
         switch event {
         case .next(let value):
             do {
                 let nextIndex = try incrementChecked(&index)
                 let next = (index: nextIndex, element: value)
-                await forwardOn(.next(next), c.call())
+                
+                await baseSink.observer.on(.next(next), c.call())
             } catch let e {
-                await self.forwardOn(.error(e), c.call())
+                await baseSink.observer.on(.error(e), c.call())
                 await self.dispose()
             }
         case .completed:
-            await forwardOn(.completed, c.call())
+            await baseSink.observer.on(.completed, c.call())
             await dispose()
         case .error(let error):
-            await forwardOn(.error(error), c.call())
+            await baseSink.observer.on(.error(error), c.call())
             await dispose()
         }
     }
 
     func run(_ c: C) async {
-        innerDisposable = await source.subscribe(c.call(), self)
+        await innerDisposable.setDisposable(await source.subscribe(c.call(), self))?.dispose()
     }
 
     func dispose() async {
-        if setDisposed() {
-            await innerDisposable?.dispose()
-            innerDisposable = nil
-        }
+        setDisposed()
+        await innerDisposable.dispose()?.dispose()
     }
 }
 
