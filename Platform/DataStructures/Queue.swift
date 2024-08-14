@@ -146,3 +146,11 @@ struct Queue<T>: Sequence {
         }
     }
 }
+
+extension Queue {
+    func enqueing(_ element: T) -> Self { {
+        var copy = self
+        copy.enqueue(element)
+        return copy
+    }
+}

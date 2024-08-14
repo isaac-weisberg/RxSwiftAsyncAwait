@@ -182,6 +182,7 @@ private final actor TotalFlatMapSink<
 
         case flatMap(FlatMap)
         case flatMapFirst(FlatMap)
+        case flatMapLatest(FlatMap)
         case mergeArray([DerivedSequence])
         case flatMapLimited(FlatMapLimited)
     }
@@ -271,7 +272,7 @@ private final actor TotalFlatMapSink<
 
     func run(_ c: C) async {
         switch mode {
-        case .flatMap(let flatMap), .flatMapFirst(let flatMap):
+        case .flatMap(let flatMap), .flatMapFirst(let flatMap), .flatMapLatest(let flatMap):
             await acceptInput(c.call(), .run(.singleSource(flatMap.source)))
 
         case .flatMapLimited(let mergeLimited):
@@ -332,7 +333,7 @@ private final actor TotalFlatMapSink<
                 let queuedDerivedSubscriptions: DerivedSequenceQueue?
 
                 switch mode {
-                case .flatMap, .flatMapFirst, .mergeArray:
+                case .flatMap, .flatMapFirst, .mergeArray, .flatMapLatest:
                     queuedDerivedSubscriptions = nil
                 case .flatMapLimited(let mergeLimited):
                     queuedDerivedSubscriptions = DerivedSequenceQueue(capacity: 2)
@@ -491,17 +492,31 @@ private final actor TotalFlatMapSink<
 
         switch event {
         case .next(let element):
-            let queuedDerivedSubscriptions: DerivedSequenceQueue?
-            let derivedSequenceToSubscribeTo: DerivedSequence?
+            let newState: State
+            let actions: [ActionWithC]
 
             switch mode {
+            case .flatMapLatest(let flatMap):
+                fatalError()
+
             case .flatMap(let flatMap):
+                let derivedSequenceToSubscribeTo: DerivedSequence
                 do {
                     derivedSequenceToSubscribeTo = try flatMap.selector(element)
                 } catch {
                     return stateAndActionForEveryErrorCase(c.call(), error)
                 }
-                queuedDerivedSubscriptions = state.queuedDerivedSubscriptions
+                let disposable = SimpleDisposableBox()
+                actions = [
+                    ActionWithC(c: c.call(), action: .subscribeToDerived(derivedSequenceToSubscribeTo, disposable)),
+                ]
+                newState = State(
+                    stage: .running,
+                    sourceSubscription: state.sourceSubscription,
+                    derivedSubscriptions: state.derivedSubscriptions.inserting(DerivedSubscription(inner: disposable)),
+                    queuedDerivedSubscriptions: state.queuedDerivedSubscriptions
+                )
+
             case .flatMapFirst(let flatMap):
                 let thereAreNoDerivedSubscriptionsRunning: Bool
                 rxAssert(state.derivedSubscriptions.count <= 1)
@@ -514,21 +529,38 @@ private final actor TotalFlatMapSink<
 
                 let shouldSubscribe = thereAreNoDerivedSubscriptionsRunning
 
-                if !shouldSubscribe {
-                    derivedSequenceToSubscribeTo = nil
-                } else {
+                if shouldSubscribe {
+                    let derivedSequenceToSubscribeTo: DerivedSequence
                     do {
                         derivedSequenceToSubscribeTo = try flatMap.selector(element)
                     } catch {
                         return stateAndActionForEveryErrorCase(c.call(), error)
                     }
+
+                    let disposable = SimpleDisposableBox()
+
+                    actions = [
+                        ActionWithC(c: c.call(), action: .subscribeToDerived(derivedSequenceToSubscribeTo, disposable)),
+                    ]
+
+                    newState = State(
+                        stage: .running,
+                        sourceSubscription: state.sourceSubscription,
+                        derivedSubscriptions: state.derivedSubscriptions
+                            .inserting(DerivedSubscription(inner: disposable)),
+                        queuedDerivedSubscriptions: state.queuedDerivedSubscriptions
+                    )
+
+                } else {
+                    actions = []
+                    newState = state
                 }
-                queuedDerivedSubscriptions = state.queuedDerivedSubscriptions
+
             case .flatMapLimited(let mergeLimited):
                 rxAssert(state.queuedDerivedSubscriptions != nil)
-                let theDerivedSequence: DerivedSequence
+                let derivedSequence: DerivedSequence
                 do {
-                    theDerivedSequence = try mergeLimited.selector(element)
+                    derivedSequence = try mergeLimited.selector(element)
                 } catch {
                     return stateAndActionForEveryErrorCase(c.call(), error)
                 }
@@ -538,51 +570,33 @@ private final actor TotalFlatMapSink<
                 let shouldSubscribe = numberOfActiveSubscriptions < mergeLimited.maxConcurrent
 
                 if shouldSubscribe {
-                    derivedSequenceToSubscribeTo = theDerivedSequence
-                    queuedDerivedSubscriptions = state.queuedDerivedSubscriptions
-                } else {
-                    derivedSequenceToSubscribeTo = nil
+                    let disposable = SimpleDisposableBox()
 
-                    var newQueuedDerivedSubscriptions = state.queuedDerivedSubscriptions!
-                    newQueuedDerivedSubscriptions.enqueue(theDerivedSequence)
-                    queuedDerivedSubscriptions = newQueuedDerivedSubscriptions
+                    actions = [
+                        ActionWithC(c: c.call(), action: .subscribeToDerived(derivedSequence, disposable)),
+                    ]
+                    newState = State(
+                        stage: .running,
+                        sourceSubscription: state.sourceSubscription,
+                        derivedSubscriptions: state.derivedSubscriptions
+                            .inserting(DerivedSubscription(inner: disposable)),
+                        queuedDerivedSubscriptions: state.queuedDerivedSubscriptions
+                    )
+                } else {
+                    actions = []
+                    newState = State(
+                        stage: .running,
+                        sourceSubscription: state.sourceSubscription,
+                        derivedSubscriptions: state.derivedSubscriptions,
+                        queuedDerivedSubscriptions: state.queuedDerivedSubscriptions!.enqueing(derivedSequence)
+                    )
                 }
+
             case .mergeArray:
                 fatalError() // source can't emit it merge mode
             }
 
-            let newDerivedSubs: DerivedSubscriptions
-            let actions: [ActionWithC]
-            if let derivedSequenceToSubscribeTo {
-                let disposableBox = SimpleDisposableBox()
-                let subscribeAction = ActionWithC(
-                    c: c.call(),
-                    action: .subscribeToDerived(derivedSequenceToSubscribeTo, disposableBox)
-                )
-
-                newDerivedSubs = state.derivedSubscriptions
-                    .inserting(IdentityHashable(inner: disposableBox))
-
-                let state = State(
-                    stage: .running,
-                    sourceSubscription: state.sourceSubscription,
-                    derivedSubscriptions: newDerivedSubs,
-                    queuedDerivedSubscriptions: queuedDerivedSubscriptions
-                )
-                actions = [subscribeAction]
-            } else {
-                newDerivedSubs = state.derivedSubscriptions
-                actions = []
-            }
-
-            let state = State(
-                stage: .running,
-                sourceSubscription: state.sourceSubscription,
-                derivedSubscriptions: newDerivedSubs,
-                queuedDerivedSubscriptions: queuedDerivedSubscriptions
-            )
-
-            return (state, actions)
+            return (newState, actions)
 
         case .error(let error):
             return stateAndActionForEveryErrorCase(c.call(), error)
@@ -677,7 +691,7 @@ private final actor TotalFlatMapSink<
             let derivedSubscriptionsAfterPotentialDequeue: DerivedSubscriptions
 
             switch mode {
-            case .flatMapFirst, .mergeArray, .flatMap:
+            case .flatMapFirst, .mergeArray, .flatMap, .flatMapLatest:
                 queuedDerivedSubscriptions = nil
                 newSubscribeActions = []
                 derivedSubscriptionsAfterPotentialDequeue = derivedSubsAfterRemovingCurrent
@@ -943,7 +957,10 @@ private final class MergeArray<Element: Sendable>: Producer<Element> {
 
     override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where Element == Observer.Element, Observer: ObserverType {
-        let sink = TotalFlatMapSink<Never, Observable<Element>, Observer>(mode: .mergeArray(sources), observer: observer)
+        let sink = TotalFlatMapSink<Never, Observable<Element>, Observer>(
+            mode: .mergeArray(sources),
+            observer: observer
+        )
         await sink.run(c.call())
         return sink
     }
