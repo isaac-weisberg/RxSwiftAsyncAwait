@@ -159,7 +159,7 @@ struct IdentityHashable<T: AnyObject>: Hashable {
     }
 }
 
-private final actor TotalFlatMapSink<
+final actor TotalFlatMapSink<
     Source: Sendable,
     DerivedSequence: ObservableConvertibleType,
     Observer: ObserverType
@@ -374,6 +374,7 @@ private final actor TotalFlatMapSink<
             }
 
         case .sourceEvent(let event):
+
             return stateAndActionForSourceEvent(c.call(), event)
 
         case .derivedEvent(let event, let disposableBox):
@@ -496,8 +497,6 @@ private final actor TotalFlatMapSink<
             let actions: [ActionWithC]
 
             switch mode {
-            case .flatMapLatest(let flatMap):
-                fatalError()
 
             case .flatMap(let flatMap):
                 let derivedSequenceToSubscribeTo: DerivedSequence
@@ -514,6 +513,48 @@ private final actor TotalFlatMapSink<
                     stage: .running,
                     sourceSubscription: state.sourceSubscription,
                     derivedSubscriptions: state.derivedSubscriptions.inserting(DerivedSubscription(inner: disposable)),
+                    queuedDerivedSubscriptions: state.queuedDerivedSubscriptions
+                )
+
+            case .flatMapLatest(let flatMap):
+                let derivedSequenceToSubscribeTo: DerivedSequence
+                do {
+                    derivedSequenceToSubscribeTo = try flatMap.selector(element)
+                } catch {
+                    return stateAndActionForEveryErrorCase(c.call(), error)
+                }
+
+                rxAssert(state.derivedSubscriptions.count <= 1)
+
+                let derivedSubscriptionsAfterDisposal: DerivedSubscriptions
+                let disposeActions: [ActionWithC]
+                if let firstDerivedSubscription = state.derivedSubscriptions.first {
+                    derivedSubscriptionsAfterDisposal = state.derivedSubscriptions
+                        .removing(firstDerivedSubscription)
+                    if let disposable = firstDerivedSubscription.inner.setDisposedAndMoveDisposable() {
+                        disposeActions = [
+                            ActionWithC(c: c.call(), action: .dispose(disposable)),
+                        ]
+                    } else {
+                        disposeActions = []
+                    }
+                } else {
+                    derivedSubscriptionsAfterDisposal = state.derivedSubscriptions
+                    disposeActions = []
+                }
+
+                let disposable = SimpleDisposableBox()
+                let subscribeAction = [
+                    ActionWithC(c: c.call(), action: .subscribeToDerived(derivedSequenceToSubscribeTo, disposable)),
+                ]
+                let derivedSubscriptions = derivedSubscriptionsAfterDisposal
+                    .inserting(DerivedSubscription(inner: disposable))
+
+                actions = disposeActions + subscribeAction
+                state = State(
+                    stage: .running,
+                    sourceSubscription: state.sourceSubscription,
+                    derivedSubscriptions: derivedSubscriptions,
                     queuedDerivedSubscriptions: state.queuedDerivedSubscriptions
                 )
 
@@ -593,7 +634,7 @@ private final actor TotalFlatMapSink<
                 }
 
             case .mergeArray:
-                fatalError() // source can't emit it merge mode
+                fatalError() // source can't emit in merge mode
             }
 
             return (newState, actions)
