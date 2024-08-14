@@ -19,8 +19,8 @@ public extension ObservableType where Element == Data {
   /// - returns: An `Observable` of the decoded type
   func decode<Item: Decodable,
               Decoder: DataDecoder>(type: Item.Type,
-                                    decoder: Decoder) async -> Observable<Item> {
-      await map { try decoder.decode(type, from: $0) }
+                                    decoder: Decoder) -> Observable<Item> {
+      map { try decoder.decode(type, from: $0) }
   }
 }
 

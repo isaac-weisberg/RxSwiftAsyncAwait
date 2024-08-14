@@ -1,10 +1,10 @@
-////
-////  CombineLatest.swift
-////  RxSwift
-////
-////  Created by Krunoslav Zaher on 3/21/15.
-////  Copyright © 2015 Krunoslav Zaher. All rights reserved.
-////
+//
+//  CombineLatest.swift
+//  RxSwift
+//
+//  Created by Krunoslav Zaher on 3/21/15.
+//  Copyright © 2015 Krunoslav Zaher. All rights reserved.
+//
 //
 //protocol CombineLatestProtocol: AnyObject {
 //    func next(_ c: C, _ index: Int) async

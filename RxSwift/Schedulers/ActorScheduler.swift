@@ -10,7 +10,7 @@ public protocol ActorScheduler: Sendable {
 public final class SerialNonrecursiveActorScheduler: ActorScheduler {
     let lock: ActualNonRecursiveLock
 
-    init(lock: ActualNonRecursiveLock) {
+    public init(lock: ActualNonRecursiveLock) {
         self.lock = lock
     }
 
@@ -21,7 +21,7 @@ public final class SerialNonrecursiveActorScheduler: ActorScheduler {
     }
 }
 
-public final class ConcurrentSynchronousActorScheduler: ActorScheduler {
+public final class ConcurrentActorScheduler: ActorScheduler {
     public func perform(_ c: C, _ work: @Sendable @escaping (C) async -> Void) async -> Void {
         _ = Task {
             await work(c.call())
