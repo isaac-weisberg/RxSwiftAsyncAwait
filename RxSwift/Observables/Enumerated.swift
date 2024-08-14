@@ -6,7 +6,7 @@
 //  Copyright © 2017 Krunoslav Zaher. All rights reserved.
 //
 
-public extension ObservableType {
+public extension ObservableConvertibleType {
     /**
      Enumerates the elements of an observable sequence.
 
@@ -16,38 +16,34 @@ public extension ObservableType {
      */
     func enumerated()
         -> Observable<(index: Int, element: Element)> {
-        Enumerated(source: self)
+        Enumerated(source: asObservable())
     }
 }
 
-private final actor EnumeratedSink<Source: ObservableType, Observer: ObserverType>: Sink,
+private final actor EnumeratedSink<Source: Sendable, Observer: ObserverType>: SinkOverSingleSubscription,
     ObserverType where Observer.Element == (
         index: Int,
-        element: Source.Element
+        element: Source
     ) {
     var index = 0
 
-    let source: Source
-    let baseSink: BaseSink<Observer>
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
-    init(source: Source, observer: Observer) {
-        self.source = source
-        baseSink = BaseSink(observer: observer)
+    init(observer: Observer) {
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
-    let innerDisposable = SingleAssignmentDisposable()
-
-    func on(_ event: Event<Source.Element>, _ c: C) async {
+    func on(_ event: Event<Source>, _ c: C) async {
         if baseSink.disposed {
             return
         }
-        
+
         switch event {
         case .next(let value):
             do {
                 let nextIndex = try incrementChecked(&index)
                 let next = (index: nextIndex, element: value)
-                
+
                 await baseSink.observer.on(.next(next), c.call())
             } catch let e {
                 await baseSink.observer.on(.error(e), c.call())
@@ -62,20 +58,15 @@ private final actor EnumeratedSink<Source: ObservableType, Observer: ObserverTyp
         }
     }
 
-    func run(_ c: C) async {
-        await innerDisposable.setDisposable(await source.subscribe(c.call(), self))?.dispose()
-    }
-
     func dispose() async {
-        setDisposed()
-        await innerDisposable.dispose()?.dispose()
+        await baseSink.setDisposed()?.dispose()
     }
 }
 
-private final class Enumerated<Source: ObservableType>: Producer<(index: Int, element: Source.Element)> {
-    private let source: Source
+private final class Enumerated<Source: Sendable>: Producer<(index: Int, element: Source)> {
+    private let source: Observable<Source>
 
-    init(source: Source) {
+    init(source: Observable<Source>) {
         self.source = source
         super.init()
     }
@@ -83,10 +74,10 @@ private final class Enumerated<Source: ObservableType>: Producer<(index: Int, el
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
         where Observer.Element == (
             index: Int,
-            element: Source.Element
+            element: Source
         ) {
-        let sink = EnumeratedSink(source: source, observer: observer)
-        await sink.run(c.call())
+        let sink = EnumeratedSink(observer: observer)
+        await sink.run(c.call(), source)
         return sink
     }
 }

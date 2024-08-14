@@ -138,10 +138,6 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
     }
 
     func run(_ c: C) async {
-        if disposed {
-            return
-        }
-
         var j = 0
         for i in parentSources {
             let index = j

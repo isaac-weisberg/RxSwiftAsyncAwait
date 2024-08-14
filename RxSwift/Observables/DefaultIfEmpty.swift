@@ -15,20 +15,20 @@ public extension ObservableType {
      - parameter default: Default element to be sent if the source does not emit any elements
      - returns: An observable sequence which emits default element end completes in case the original sequence is empty
      */
-    func ifEmpty(default: Element) async -> Observable<Element> {
-        await DefaultIfEmpty(source: asObservable(), default: `default`)
+    func ifEmpty(default: Element) -> Observable<Element> {
+        DefaultIfEmpty(source: asObservable(), default: `default`)
     }
 }
 
-private final actor DefaultIfEmptySink<Observer: ObserverType>: Sink, ObserverType {
+private final actor DefaultIfEmptySink<Observer: ObserverType>: SinkOverSingleSubscription, ObserverType {
     typealias Element = Observer.Element
     private let `default`: Element
     private var isEmpty = true
-    let baseSink: BaseSink<Observer>
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
     init(default: Element, observer: Observer) async {
         self.default = `default`
-        baseSink = BaseSink(observer: observer)
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -47,16 +47,20 @@ private final actor DefaultIfEmptySink<Observer: ObserverType>: Sink, ObserverTy
             await dispose()
         }
     }
+
+    func dispose() async {
+        await baseSink.setDisposed()?.dispose()
+    }
 }
 
-private final class DefaultIfEmpty<SourceType>: Producer<SourceType> {
+private final class DefaultIfEmpty<SourceType: Sendable>: Producer<SourceType> {
     private let source: Observable<SourceType>
     private let `default`: SourceType
 
-    init(source: Observable<SourceType>, default: SourceType) async {
+    init(source: Observable<SourceType>, default: SourceType) {
         self.source = source
         self.default = `default`
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(
@@ -65,7 +69,7 @@ private final class DefaultIfEmpty<SourceType>: Producer<SourceType> {
     )
         async -> AsynchronousDisposable where Observer.Element == SourceType {
         let sink = await DefaultIfEmptySink(default: self.default, observer: observer)
-        let subscription = await source.subscribe(c.call(), sink)
+        await sink.run(c.call(), source)
         return sink
     }
 }
