@@ -65,7 +65,11 @@ public extension ObservableType where Element: ObservableConvertibleType {
      */
     func merge(maxConcurrent: Int)
         -> Observable<Element.Element> {
-        MergeLimited(source: asObservable(), maxConcurrent: maxConcurrent)
+        MergeLimited<Element, Element>(
+            source: asObservable(),
+            selector: { $0 },
+            maxConcurrent: maxConcurrent
+        )
     }
 }
 
@@ -333,6 +337,7 @@ private final class MergeLimited<
 
     init(source: Observable<Source>, selector: @escaping Selector, maxConcurrent: Int) {
         self.source = source
+        self.selector = selector
         self.maxConcurrent = maxConcurrent
         super.init()
     }
@@ -763,8 +768,8 @@ private final actor TotalMergeSink<
                     action: .subscribeToDerived(derivedSequenceToSubscribeTo, disposableBox)
                 )
 
-                var newDerivedSubs = state.derivedSubscriptions
-                newDerivedSubs.insert(IdentityHashable(inner: disposableBox))
+                newDerivedSubs = state.derivedSubscriptions
+                    .inserting(IdentityHashable(inner: disposableBox))
 
                 let state = State(
                     stage: .running,
@@ -775,6 +780,7 @@ private final actor TotalMergeSink<
                 actions = [subscribeAction]
             } else {
                 newDerivedSubs = state.derivedSubscriptions
+                actions = []
             }
 
             let state = State(
@@ -901,7 +907,7 @@ private final actor TotalMergeSink<
                 }
                 queuedDerivedSubscriptions = newQueue
             }
-            
+
             let newDerivedSubscriptions = derivedSubscriptionsAfterPotentialDequeue
 
             let sourceIsDone = !state.sourceSubscription.isRunning()
