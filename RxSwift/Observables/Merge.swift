@@ -386,7 +386,6 @@ private final actor TotalMergeSink<
         case flatMap(Observable<Source>, FlatMapSelector)
         case flatMapFirst(Observable<Source>, FlatMapFirstSelector)
         case merge([DerivedSequence])
-        case mergeBasic(Observable<Source>, @Sendable (Source) -> DerivedSequence)
         case mergeLimited(MergeLimited)
     }
 
@@ -459,7 +458,7 @@ private final actor TotalMergeSink<
 
     func run(_ c: C) async {
         switch mode {
-        case .flatMap(let source, _), .flatMapFirst(let source, _), .mergeBasic(let source, _):
+        case .flatMap(let source, _), .flatMapFirst(let source, _):
             await acceptInput(c.call(), .run(.singleSource(source)))
 
         case .mergeLimited(let mergeLimited):
@@ -518,14 +517,14 @@ private final actor TotalMergeSink<
             switch run {
             case .singleSource(let source):
                 let queuedDerivedSubscriptions: DerivedSequenceQueue?
-                
+
                 switch mode {
-                case .flatMap, .flatMapFirst, .merge, .mergeBasic:
+                case .flatMap, .flatMapFirst, .merge:
                     queuedDerivedSubscriptions = nil
                 case .mergeLimited(let mergeLimited):
                     queuedDerivedSubscriptions = DerivedSequenceQueue(capacity: 2)
                 }
-                
+
                 let disposable = SimpleDisposableBox()
                 let state = State(
                     stage: .running,
@@ -561,121 +560,7 @@ private final actor TotalMergeSink<
             }
 
         case .sourceEvent(let event):
-
-            // MARK: sourceEvent
-
-            rxAssert(state.stage == .running)
-            let sourceSubscription: SimpleDisposableBox
-            switch state.sourceSubscription {
-            case .neverUsed, .released:
-                fatalError() // Source completed, yet there is no source? lole
-            case .active(let simpleDisposableBox):
-                sourceSubscription = simpleDisposableBox
-            }
-            var queuedDerivedSubscriptions = state.queuedDerivedSubscriptions
-
-            switch event {
-            case .next(let element):
-                let derivedSequence: DerivedSequence?
-
-                switch mode {
-                case .mergeBasic(_, let transform):
-                    derivedSequence = transform(element)
-                case .flatMap(_, let flatMapSelector):
-                    do {
-                        derivedSequence = try flatMapSelector(element)
-                    } catch {
-                        return stateAndActionForEveryErrorCase(c.call(), error)
-                    }
-                case .flatMapFirst(_, let selector):
-                    let thereAreNoDerivedSubscriptionsRunning: Bool
-                    rxAssert(state.derivedSubscriptions.count <= 1)
-                    if let firstDerivedSubscription = state.derivedSubscriptions.first {
-                        rxAssert(!firstDerivedSubscription.inner.disposed)
-                        thereAreNoDerivedSubscriptionsRunning = false
-                    } else {
-                        thereAreNoDerivedSubscriptionsRunning = true
-                    }
-
-                    let shouldSubscribe = thereAreNoDerivedSubscriptionsRunning
-
-                    if !shouldSubscribe {
-                        derivedSequence = nil
-                    } else {
-                        do {
-                            derivedSequence = try selector(element)
-                        } catch {
-                            return stateAndActionForEveryErrorCase(c.call(), error)
-                        }
-                    }
-                case .mergeLimited(let mergeLimited):
-                    
-                    
-                    
-                case .merge:
-                    fatalError() // source can't emit it merge mode
-                }
-
-                guard let derivedSequence else {
-                    return (state, [])
-                }
-
-                let disposableBox = SimpleDisposableBox()
-                let subscribeAction = ActionWithC(
-                    c: c.call(),
-                    action: .subscribeToDerived(derivedSequence, disposableBox)
-                )
-
-                var newDerivedSubs = state.derivedSubscriptions
-                newDerivedSubs.insert(IdentityHashable(inner: disposableBox))
-
-                let state = State(
-                    stage: .running,
-                    sourceSubscription: state.sourceSubscription,
-                    derivedSubscriptions: newDerivedSubs,
-                    queuedDerivedSubscriptions: queuedDerivedSubscriptions
-                )
-
-                return (state, [subscribeAction])
-
-            case .error(let error):
-                return stateAndActionForEveryErrorCase(c.call(), error)
-
-            case .completed:
-                let sourceDisposalActions: [ActionWithC]
-                if let existingSourceDisposable = sourceSubscription.setDisposedAndMoveDisposable() {
-                    sourceDisposalActions = [
-                        ActionWithC(c: c.call(), action: .dispose(existingSourceDisposable)),
-                    ]
-                } else {
-                    // subscribe must've not returned yet
-                    sourceDisposalActions = []
-                }
-
-                let theWholeProcessIsDone = state.derivedSubscriptions.isEmpty
-
-                if theWholeProcessIsDone {
-                    let emitCompletedAction = ActionWithC(c: c.call(), action: .forwardEvent(.completed))
-                    let state = State(
-                        stage: .disposed,
-                        sourceSubscription: .released,
-                        derivedSubscriptions: Set()
-                    )
-
-                    let actions = [emitCompletedAction] + sourceDisposalActions
-
-                    return (state, actions)
-                } else {
-
-                    let state = State(
-                        stage: .running,
-                        sourceSubscription: .released,
-                        derivedSubscriptions: state.derivedSubscriptions
-                    )
-
-                    return (state, sourceDisposalActions)
-                }
-            }
+            return stateAndActionForSourceEvent(c.call(), event)
 
         case .derivedEvent(let event, let disposableBox):
 
@@ -856,6 +741,152 @@ private final actor TotalMergeSink<
             await observer.on(event, c.call())
         }
     }
+    
+    private func stateAndActionForSourceEvent(_ c: C, _ event: Event<Source>) -> (State, [ActionWithC]) {
+        rxAssert(state.stage == .running)
+
+        switch event {
+        case .next(let element):
+            let queuedDerivedSubscriptions: DerivedSequenceQueue?
+            let derivedSequenceToSubscribeTo: DerivedSequence?
+
+            switch mode {
+            case .flatMap(_, let flatMapSelector):
+                do {
+                    derivedSequenceToSubscribeTo = try flatMapSelector(element)
+                } catch {
+                    return stateAndActionForEveryErrorCase(c.call(), error)
+                }
+                queuedDerivedSubscriptions = state.queuedDerivedSubscriptions
+            case .flatMapFirst(_, let selector):
+                let thereAreNoDerivedSubscriptionsRunning: Bool
+                rxAssert(state.derivedSubscriptions.count <= 1)
+                if let firstDerivedSubscription = state.derivedSubscriptions.first {
+                    rxAssert(!firstDerivedSubscription.inner.disposed)
+                    thereAreNoDerivedSubscriptionsRunning = false
+                } else {
+                    thereAreNoDerivedSubscriptionsRunning = true
+                }
+
+                let shouldSubscribe = thereAreNoDerivedSubscriptionsRunning
+
+                if !shouldSubscribe {
+                    derivedSequenceToSubscribeTo = nil
+                } else {
+                    do {
+                        derivedSequenceToSubscribeTo = try selector(element)
+                    } catch {
+                        return stateAndActionForEveryErrorCase(c.call(), error)
+                    }
+                }
+                queuedDerivedSubscriptions = state.queuedDerivedSubscriptions
+            case .mergeLimited(let mergeLimited):
+                rxAssert(state.queuedDerivedSubscriptions != nil)
+                let theDerivedSequence: DerivedSequence
+                do {
+                    theDerivedSequence = try mergeLimited.selector(element)
+                } catch {
+                    return stateAndActionForEveryErrorCase(c.call(), error)
+                }
+
+                let numberOfActiveSubscriptions = state.derivedSubscriptions.count
+
+                let shouldSubscribe = numberOfActiveSubscriptions < mergeLimited.maxConcurrent
+
+                if shouldSubscribe {
+                    derivedSequenceToSubscribeTo = theDerivedSequence
+                    queuedDerivedSubscriptions = state.queuedDerivedSubscriptions
+                } else {
+                    derivedSequenceToSubscribeTo = nil
+                    
+                    var newQueuedDerivedSubscriptions = state.queuedDerivedSubscriptions!
+                    newQueuedDerivedSubscriptions.enqueue(theDerivedSequence)
+                    queuedDerivedSubscriptions = newQueuedDerivedSubscriptions
+                }
+            case .merge:
+                fatalError() // source can't emit it merge mode
+            }
+
+            let newDerivedSubs: DerivedSubscriptions
+            let actions: [ActionWithC]
+            if let derivedSequenceToSubscribeTo {
+                let disposableBox = SimpleDisposableBox()
+                let subscribeAction = ActionWithC(
+                    c: c.call(),
+                    action: .subscribeToDerived(derivedSequenceToSubscribeTo, disposableBox)
+                )
+                
+                var newDerivedSubs = state.derivedSubscriptions
+                newDerivedSubs.insert(IdentityHashable(inner: disposableBox))
+                
+                let state = State(
+                    stage: .running,
+                    sourceSubscription: state.sourceSubscription,
+                    derivedSubscriptions: newDerivedSubs,
+                    queuedDerivedSubscriptions: queuedDerivedSubscriptions
+                )
+                actions = [subscribeAction]
+            } else {
+                newDerivedSubs = state.derivedSubscriptions
+            }
+            
+            let state = State(
+                stage: .running,
+                sourceSubscription: state.sourceSubscription,
+                derivedSubscriptions: newDerivedSubs,
+                queuedDerivedSubscriptions: queuedDerivedSubscriptions
+            )
+
+            return (state, actions)
+
+        case .error(let error):
+            return stateAndActionForEveryErrorCase(c.call(), error)
+
+        case .completed:
+            let sourceSubscription: SimpleDisposableBox
+            switch state.sourceSubscription {
+            case .neverUsed, .released:
+                fatalError() // Source completed, yet there is no source? lole
+            case .active(let simpleDisposableBox):
+                sourceSubscription = simpleDisposableBox
+            }
+            
+            let sourceDisposalActions: [ActionWithC]
+            if let existingSourceDisposable = sourceSubscription.setDisposedAndMoveDisposable() {
+                sourceDisposalActions = [
+                    ActionWithC(c: c.call(), action: .dispose(existingSourceDisposable)),
+                ]
+            } else {
+                // subscribe must've not returned yet
+                sourceDisposalActions = []
+            }
+
+            let theWholeProcessIsDone = state.derivedSubscriptions.isEmpty
+
+            if theWholeProcessIsDone {
+                let emitCompletedAction = ActionWithC(c: c.call(), action: .forwardEvent(.completed))
+                let state = State(
+                    stage: .disposed,
+                    sourceSubscription: .released,
+                    derivedSubscriptions: Set(),
+                    queuedDerivedSubscriptions: nil
+                )
+
+                let actions = [emitCompletedAction] + sourceDisposalActions
+
+                return (state, actions)
+            } else {
+                let state = State(
+                    stage: .running,
+                    sourceSubscription: .released,
+                    derivedSubscriptions: state.derivedSubscriptions,
+                    queuedDerivedSubscriptions: state.queuedDerivedSubscriptions
+                )
+
+                return (state, sourceDisposalActions)
+            }
+        }
+    }
 
     private func stateAndActionForEveryErrorCase(_ c: C, _ error: Error) -> (State, [ActionWithC]) {
         let errorEventAction = ActionWithC(c: c.call(), action: .forwardEvent(.error(error)))
@@ -884,7 +915,12 @@ private final actor TotalMergeSink<
 
         let allActions = [errorEventAction] + sourceDisposeActions + derivedDisposeActions
 
-        let state = State(stage: .disposed, sourceSubscription: .released, derivedSubscriptions: Set())
+        let state = State(
+            stage: .disposed,
+            sourceSubscription: .released,
+            derivedSubscriptions: Set(),
+            queuedDerivedSubscriptions: nil
+        )
         return (state, allActions)
     }
 }
@@ -1133,7 +1169,7 @@ final class Merge<DerivedSequence: ObservableConvertibleType>: Producer<DerivedS
     override func run<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where DerivedSequence.Element == Observer.Element, Observer: ObserverType {
         let sink = TotalMergeSink<DerivedSequence, DerivedSequence, Observer>(
-            mode: .mergeBasic(source) { $0 },
+            mode: .flatMap(source) { $0 },
             observer: observer
         )
         await sink.run(c.call())
