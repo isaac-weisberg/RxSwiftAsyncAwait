@@ -45,8 +45,6 @@ public extension ObservableType where Element: RxAbstractInteger {
     }
 }
 
-import Foundation
-
 private final actor TimerSink<Observer: ObserverType>: Sink where Observer.Element: RxAbstractInteger {
     typealias Parent = Timer<Observer.Element>
 
@@ -73,9 +71,7 @@ private final actor TimerSink<Observer: ObserverType>: Sink where Observer.Eleme
                 }
             }
 
-            Task {
-                await self.forwardOn(.next(state), c.call())
-            }
+            await baseSink.observer.on(.next(state), c.call())
 
             while true {
                 do {
@@ -84,18 +80,16 @@ private final actor TimerSink<Observer: ObserverType>: Sink where Observer.Eleme
                     return
                 }
                 state += 1
-                Task {
-                    await self.forwardOn(.next(state), c.call())
-                }
+                await baseSink.observer.on(.next(state), c.call())
             }
         }
     }
 
     func dispose() async {
-        if setDisposed() {
-            timerTask?.cancel()
-            timerTask = nil
-        }
+        setDisposed()
+        timerTask?.cancel()
+        timerTask = nil
+
     }
 }
 
@@ -122,17 +116,16 @@ private final actor TimerOneOffSink<Observer: ObserverType>: Sink where Observer
                 }
             }
 
-            await forwardOn(.next(0), c.call())
-            await forwardOn(.completed, c.call())
+            await baseSink.observer.on(.next(0), c.call())
+            await baseSink.observer.on(.completed, c.call())
             await dispose()
         }
     }
 
     func dispose() async {
-        if baseSink.setDisposed() {
-            timerTask?.cancel()
-            timerTask = nil
-        }
+        baseSink.setDisposed()
+        timerTask?.cancel()
+        timerTask = nil
     }
 }
 
