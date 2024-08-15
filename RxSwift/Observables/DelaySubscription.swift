@@ -18,49 +18,66 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run the subscription delay timer on.
      - returns: Time-shifted sequence.
      */
-    func delaySubscription(_ dueTime: RxTimeInterval, scheduler: SchedulerType) async
-        -> Observable<Element>
-    {
-        await DelaySubscription(source: self.asObservable(), dueTime: dueTime, scheduler: scheduler)
+    func delaySubscription(_ dueTime: RxTimeInterval)
+        -> Observable<Element> {
+        DelaySubscription(source: asObservable(), dueTime: dueTime)
     }
 }
 
-private final class DelaySubscriptionSink<Observer: ObserverType>:
-    Sink, ObserverType
-{
+private final actor DelaySubscriptionSink<Observer: ObserverType>:
+    Sink, ObserverType {
     typealias Element = Observer.Element
-    
+
     let baseSink: BaseSink<Observer>
-    
-    init(observer: Observer) async {
+    let dueTime: RxTimeInterval
+    let timerDisposable = SingleAssignmentDisposableContainer<DisposableTimer>()
+    let sourceSubscription = SingleAssignmentDisposable()
+
+    init(observer: Observer, dueTime: RxTimeInterval) {
         baseSink = BaseSink(observer: observer)
+        self.dueTime = dueTime
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await self.forwardOn(event, c.call())
+        if baseSink.disposed {}
+        await forwardOn(event, c.call())
         if event.isStopEvent {
-            await self.dispose()
+            await dispose()
         }
+    }
+
+    func run(_ c: C, _ source: Observable<Element>) {
+        let timer = DisposableTimer(dueTime) { _ in
+            await self.handleTimer(c.call(), source: source)
+        }
+        timerDisposable.setDisposable(timer)?.dispose()
+    }
+
+    func handleTimer(_ c: C, source: Observable<Element>) async {
+        await sourceSubscription.setDisposable(source.subscribe(c.call(), self))?.dispose()
+    }
+
+    func dispose() async {
+        baseSink.setDisposed()
+        timerDisposable.dispose()?.dispose()
+        await sourceSubscription.dispose()?.dispose()
     }
 }
 
-private final class DelaySubscription<Element>: Producer<Element> {
+private final class DelaySubscription<Element: Sendable>: Producer<Element> {
     private let source: Observable<Element>
     private let dueTime: RxTimeInterval
-    private let scheduler: SchedulerType
 
-    init(source: Observable<Element>, dueTime: RxTimeInterval, scheduler: SchedulerType) async {
+    init(source: Observable<Element>, dueTime: RxTimeInterval) {
         self.source = source
         self.dueTime = dueTime
-        self.scheduler = scheduler
-        await super.init()
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
-        let sink = await DelaySubscriptionSink(observer: observer)
-        let subscription = await self.scheduler.scheduleRelative((), c.call(), dueTime: self.dueTime) { c, _ in
-            await self.source.subscribe(c.call(), sink)
-        }
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element {
+        let sink = DelaySubscriptionSink(observer: observer, dueTime: dueTime)
+        await sink.run(c.call(), source)
 
         return sink
     }
