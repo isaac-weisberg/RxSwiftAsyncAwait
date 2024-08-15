@@ -108,6 +108,11 @@ public extension PrimitiveSequence {
         -> PrimitiveSequence<Trait, Element> {
         PrimitiveSequence(raw: source.observe(on: scheduler))
     }
+    
+    func subscribe(on scheduler: some AsyncScheduler)
+        -> PrimitiveSequence<Trait, Element> {
+        PrimitiveSequence(raw: source.subscribe(on: scheduler))
+    }
 
 //    /**
 //     Continues an observable sequence that is terminated by an error with the observable sequence produced by the

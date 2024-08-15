@@ -19,9 +19,9 @@ public extension ObservableType {
         _ collection: Collection,
         resultSelector: @Sendable @escaping ([Collection.Element.Element]) throws -> Element
     )
-        async -> Observable<Element>
+        -> Observable<Element>
         where Collection.Element: ObservableType {
-        await CombineLatestCollectionType(sources: collection, resultSelector: resultSelector)
+        CombineLatestCollectionType(sources: collection, resultSelector: resultSelector)
     }
 
     /**
@@ -31,10 +31,10 @@ public extension ObservableType {
 
      - returns: An observable sequence containing the result of combining elements of the sources.
      */
-    static func combineLatest<Collection: Swift.Collection & Sendable>(_ collection: Collection) async
+    static func combineLatest<Collection: Swift.Collection & Sendable>(_ collection: Collection)
         -> Observable<[Element]>
         where Collection.Element: ObservableType, Collection.Element.Element == Element {
-        await CombineLatestCollectionType(sources: collection, resultSelector: { $0 })
+        CombineLatestCollectionType(sources: collection, resultSelector: { $0 })
     }
 }
 
@@ -70,7 +70,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
 
     func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
         if !disposed {
-            await self.observer.on(event, c.call())
+            await observer.on(event, c.call())
         }
     }
 
@@ -173,7 +173,7 @@ final class CombineLatestCollectionType<Collection: Swift.Collection & Sendable,
     let resultSelector: ResultSelector
     let count: Int
 
-    init(sources: Collection, resultSelector: @escaping ResultSelector) async {
+    init(sources: Collection, resultSelector: @escaping ResultSelector) {
         self.sources = sources
         self.resultSelector = resultSelector
         count = self.sources.count

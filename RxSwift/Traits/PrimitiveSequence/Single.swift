@@ -331,10 +331,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-//    func flatMap<Result>(_ selector: @escaping (Element) async throws -> Single<Result>) async
-//        -> Single<Result> {
-//        await Single<Result>(raw: primitiveSequence.source.flatMap(selector))
-//    }
+    func flatMap<Result>(_ selector: @Sendable @escaping (Element) throws -> Single<Result>)
+        -> Single<Result> {
+        Single<Result>(raw: primitiveSequence.source.flatMap(selector))
+    }
 
     /**
      Projects each element of an observable sequence to an observable sequence and merges the resulting observable sequences into one observable sequence.

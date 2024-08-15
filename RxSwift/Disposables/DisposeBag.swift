@@ -31,7 +31,7 @@ public extension AsynchronousDisposable {
 public final class DisposeBag {
     let actualDisposeBag: DisposeBagUnderThehood
 
-    init() {
+    public init() {
         actualDisposeBag = DisposeBagUnderThehood()
     }
 
@@ -100,10 +100,10 @@ public final actor DisposeBagUnderThehood: Sendable {
 
 public extension DisposeBag {
     /// Convenience init allows a list of disposables to be gathered for disposal.
-    convenience init(disposing disposables: AsynchronousDisposable...) async {
-        await self.init()
-        await actualDisposeBag.append(disposables)
-    }
+//    convenience init(disposing disposables: AsynchronousDisposable...) async {
+//        await self.init()
+//        await actualDisposeBag.append(disposables)
+//    }
 
     /// Convenience init which utilizes a function builder to let you pass in a list of
     /// disposables to make a DisposeBag of.
@@ -113,7 +113,7 @@ public extension DisposeBag {
 
     /// Convenience init allows an array of disposables to be gathered for disposal.
     convenience init(disposing disposables: [AsynchronousDisposable]) async {
-        await self.init()
+        self.init()
         await actualDisposeBag.append(disposables)
     }
 

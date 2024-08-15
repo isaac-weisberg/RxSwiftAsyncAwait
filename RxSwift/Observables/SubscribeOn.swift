@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public extension ObservableType {
+public extension ObservableConvertibleType {
     /**
      Wraps the source sequence in order to run its subscription and unsubscription logic on the specified
      scheduler.
@@ -24,7 +24,7 @@ public extension ObservableType {
      */
     func subscribe(on scheduler: some AsyncScheduler)
         -> Observable<Element> {
-        SubscribeOn(source: self, scheduler: scheduler)
+        SubscribeOn(source: asObservable(), scheduler: scheduler)
     }
 }
 
