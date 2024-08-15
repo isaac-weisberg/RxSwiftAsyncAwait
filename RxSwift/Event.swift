@@ -90,9 +90,9 @@ extension Event {
 }
 
 /// A type that can be converted to `Event<Element>`.
-public protocol EventConvertible {
+public protocol EventConvertible: Sendable {
     /// Type of element in event
-    associatedtype Element
+    associatedtype Element: Sendable
 
     /// Event representation of this instance
     var event: Event<Element> { get }
