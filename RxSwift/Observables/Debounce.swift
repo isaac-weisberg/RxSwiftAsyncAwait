@@ -57,6 +57,7 @@ private final actor DebounceSink<Observer: ObserverType>:
 
             let dueTime = parent.dueTime
 
+            timerTask?.cancel()
             timerTask = Task {
                 do {
                     try await Task.sleep(nanoseconds: dueTime.nanoseconds)
