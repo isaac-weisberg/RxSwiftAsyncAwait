@@ -6,7 +6,7 @@
 ////  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 ////
 //
-//final actor AddRefSink<Observer: ObserverType>: Sink, ObserverType {
+// final actor AddRefSink<Observer: ObserverType>: Sink, ObserverType {
 //    let baseSink: BaseSink<Observer>
 //
 //    init(observer: Observer) async {
@@ -24,15 +24,15 @@
 //            await dispose()
 //        }
 //    }
-//    
+//
 //    func dispose() async {
 //        if baseSink.setDisposed() {
-//            
+//
 //        }
 //    }
-//}
+// }
 //
-//final class AddRef<Element: Sendable>: Producer<Element> {
+// final class AddRef<Element: Sendable>: Producer<Element> {
 //    private let source: Observable<Element>
 //    private let refCount: RefCountDisposable
 //
@@ -53,4 +53,4 @@
 //
 //        return sink
 //    }
-//}
+// }

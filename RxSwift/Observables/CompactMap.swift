@@ -14,65 +14,42 @@ public extension ObservableType {
      - returns: An observable sequence whose elements are the result of filtering the transform function for each element of the source.
 
      */
-    func compactMap<Result>(_ transform: @escaping (Element) async throws -> Result?) async
-        -> Observable<Result>
-    {
-        await CompactMap(source: self.asObservable(), transform: transform)
+    func compactMap<Result>(_ transform: @Sendable @escaping (Element) throws -> Result?)
+        -> Observable<Result> {
+        CompactMap(source: asObservable(), transform: transform)
     }
 }
 
-private final class CompactMapSink<SourceType, Observer: ObserverType>: Sink, ObserverType {
-    typealias Transform = (SourceType) async throws -> ResultType?
-
-    typealias ResultType = Observer.Element
-    typealias Element = SourceType
-
-    private let transform: Transform
-    let baseSink: BaseSink<Observer>
-
-    init(transform: @escaping Transform, observer: Observer) async {
-        self.transform = transform
-        self.baseSink = BaseSink(observer: observer)
-    }
-
-    func on(_ event: Event<SourceType>, _ c: C) async {
-        switch event {
-        case .next(let element):
-            do {
-                if let mappedElement = try await self.transform(element) {
-                    await self.forwardOn(.next(mappedElement), c.call())
-                }
-            }
-            catch let e {
-                await self.forwardOn(.error(e), c.call())
-                await self.dispose()
-            }
-        case .error(let error):
-            await self.forwardOn(.error(error), c.call())
-            await self.dispose()
-        case .completed:
-            await self.forwardOn(.completed, c.call())
-            await self.dispose()
-        }
-    }
-}
-
-private final class CompactMap<SourceType, ResultType>: Producer<ResultType> {
-    typealias Transform = (SourceType) async throws -> ResultType?
+private final class CompactMap<SourceType: Sendable, ResultType: Sendable>: Producer<ResultType> {
+    typealias Transform = @Sendable (SourceType) throws -> ResultType?
 
     private let source: Observable<SourceType>
 
     private let transform: Transform
 
-    init(source: Observable<SourceType>, transform: @escaping Transform) async {
+    init(source: Observable<SourceType>, transform: @escaping Transform) {
         self.source = source
         self.transform = transform
-        await super.init()
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == ResultType {
-        let sink = await CompactMapSink(transform: self.transform, observer: observer)
-        let subscription = await self.source.subscribe(c.call(), sink)
-        return sink
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == ResultType {
+        await source.subscribe(c.call(), AnyObserver<SourceType>(eventHandler: { event, c in
+            switch event {
+            case .next(let element):
+                do {
+                    if let mappedElement = try self.transform(element) {
+                        await observer.on(.next(mappedElement), c.call())
+                    }
+                } catch let e {
+                    await observer.on(.error(e), c.call())
+                }
+            case .error(let error):
+                await observer.on(.error(error), c.call())
+            case .completed:
+                await observer.on(.completed, c.call())
+            }
+        }))
     }
 }
