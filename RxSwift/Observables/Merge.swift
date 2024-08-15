@@ -248,19 +248,18 @@ final actor TotalFlatMapSink<
             case released
 
             func isRunning() -> Bool {
-
-                let sourceIsDone: Bool
+                let sourceIsRunning: Bool
 
                 switch self {
                 case .neverUsed:
-                    sourceIsDone = true
+                    sourceIsRunning = false
                 case .active(let disposableBox):
                     rxAssert(!disposableBox.isDisposed) // when I dispose, I release the box
-                    sourceIsDone = false
+                    sourceIsRunning = true
                 case .released:
-                    sourceIsDone = true
+                    sourceIsRunning = false
                 }
-                return sourceIsDone
+                return sourceIsRunning
             }
         }
 

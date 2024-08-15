@@ -65,11 +65,12 @@ final class BaseSink<Observer: ObserverType>: @unchecked Sendable {
 
     var disposed = false
 
+    var timesDisposed = 0
     func setDisposed() {
-//        rxAssert(
-//            !disposed,
-//            "Disposing me the second time? Is there somebody eagerly calling this dispose, while previous we were disposed by someone else?"
-//        )
+        timesDisposed += 1
+        if timesDisposed > 2 {
+            rxAssert(false) // The RxSwift behavior for Sinks for now is to allow only two calls to dispose
+        }
         disposed = true
     }
 }
@@ -97,11 +98,12 @@ final class BaseSinkOverSingleSubscription<Observer: ObserverType>: @unchecked S
     var disposed = false
     let sourceDisposable = SingleAssignmentDisposable()
 
+    var timesDisposed = 0
     func setDisposed() -> Disposable? {
-//        rxAssert(
-//            !disposed,
-//            "Disposing me the second time? Is there somebody eagerly calling this dispose, while previous we were disposed by someone else?"
-//        )
+        timesDisposed += 1
+        if timesDisposed > 2 {
+            rxAssert(false) // The RxSwift behavior for Sinks for now is to allow only two calls to dispose
+        }
         disposed = true
         return sourceDisposable.dispose()
     }
