@@ -25,4 +25,4 @@ extension Lock {
 // https://lists.swift.org/pipermail/swift-dev/Week-of-Mon-20151214/000321.html
 // typealias SpinLock = AsyncAwaitLock
 
-extension AsyncAwaitLock: Lock {}
+//extension AsyncAwaitLock: Lock {}

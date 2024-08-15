@@ -4,7 +4,7 @@ public extension ObservableConvertibleType {
     }
 }
 
-public final class ObserveOn<Element: Sendable, Scheduler: AsyncScheduler> {
+public final class ObserveOn<Element: Sendable, Scheduler: AsyncScheduler>: Observable<Element> {
     let scheduler: Scheduler
     let source: Observable<Element>
 
@@ -13,7 +13,7 @@ public final class ObserveOn<Element: Sendable, Scheduler: AsyncScheduler> {
         self.source = source
     }
 
-    public func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+    override public func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
         await sink.run(c.call(), source)

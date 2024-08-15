@@ -40,38 +40,6 @@ public final class ActorLocked<Value: Sendable>: @unchecked Sendable {
     }
 }
 
-public final class AsyncAwaitLock {
-    public init() async {}
-    public init() {}
-    public func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R {
-        await work(c.call())
-    }
-
-    public func performLockedThrowing<R>(_ work: @escaping () async throws -> R) async throws -> R {
-        try await work()
-    }
-
-    #if VICIOUS_TRACING
-        public func performLocked<R>(
-            _ work: @escaping () async -> R,
-            _ file: StaticString = #file,
-            _ function: StaticString = #function,
-            _ line: UInt = #line
-        )
-            async -> R {
-            await work()
-        }
-
-    #else
-        public func performLocked<R>(
-            _ work: @escaping () async -> R
-        )
-            async -> R {
-            await work()
-        }
-    #endif
-}
-
 public final actor ActualNonRecursiveLock {
     private var latestTask: Task<Void, Never>?
     private var scheduledTasks = 0
