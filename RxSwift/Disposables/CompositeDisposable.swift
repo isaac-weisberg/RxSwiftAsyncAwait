@@ -193,7 +193,8 @@ public extension Disposables {
     static func create(_ disposables: [AsynchronousDisposable]) -> AsynchronousCancelable {
         switch disposables.count {
         case 2:
-            return Disposables.create(disposables[0], disposables[1])
+            fatalError()
+//            return BinaryDisposable(disposables[0], disposables[1])
         default:
             return ActorCompositeDisposable(CompositeDisposable(disposables: disposables))
         }

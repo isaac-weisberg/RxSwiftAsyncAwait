@@ -38,7 +38,6 @@ private final actor DebounceSink<Observer: ObserverType>:
     private var id = 0 as UInt64
     private var value: Element?
     private let timerSerialDisposable = SerialDisposableGeneric<DisposableTimer>()
-    private var timerTask: Task<Void, Never>?
 
     init(parent: ParentType, observer: Observer) {
         self.parent = parent
@@ -90,11 +89,11 @@ private final actor DebounceSink<Observer: ObserverType>:
     }
 
     func dispose() async {
-        let disposable = baseSink.setDisposed()
-        timerTask?.cancel()
-        timerTask = nil
+        let disposable1 = baseSink.setDisposed()
+        let disposable2 = timerSerialDisposable.dispose()
 
-        await disposable?.dispose()
+        disposable2?.dispose()
+        await disposable1?.dispose()
     }
 }
 
