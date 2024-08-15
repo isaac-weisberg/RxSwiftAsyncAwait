@@ -23,10 +23,19 @@ public extension ObservableType {
      - parameter onDispose: Action to invoke after subscription to source observable has been disposed for any reason. It can be either because sequence terminates for some reason or observer subscription being disposed.
      - returns: The source sequence with the side-effecting behavior applied.
      */
-    func `do`(onNext: ((Element) async throws -> Void)? = nil, afterNext: ((Element) async throws -> Void)? = nil, onError: ((Swift.Error) async throws -> Void)? = nil, afterError: ((Swift.Error) async throws -> Void)? = nil, onCompleted: (() async throws -> Void)? = nil, afterCompleted: (() async throws -> Void)? = nil, onSubscribe: (() async -> Void)? = nil, onSubscribed: (() async -> Void)? = nil, onDispose: (() async -> Void)? = nil) async
-        -> Observable<Element>
-    {
-        return await Do(source: self.asObservable(), eventHandler: { e in
+    func `do`(
+        onNext: (@Sendable (Element) async throws -> Void)? = nil,
+        afterNext: (@Sendable (Element) async throws -> Void)? = nil,
+        onError: (@Sendable (Swift.Error) async throws -> Void)? = nil,
+        afterError: (@Sendable (Swift.Error) async throws -> Void)? = nil,
+        onCompleted: (@Sendable () async throws -> Void)? = nil,
+        afterCompleted: (@Sendable () async throws -> Void)? = nil,
+        onSubscribe: (@Sendable () async -> Void)? = nil,
+        onSubscribed: (@Sendable () async -> Void)? = nil,
+        onDispose: (@Sendable () async -> Void)? = nil
+    )
+        -> Observable<Element> {
+        Do(source: asObservable(), eventHandler: { e in
             switch e {
             case .next(let element):
                 try await onNext?(element)
@@ -48,68 +57,89 @@ public extension ObservableType {
     }
 }
 
-private final actor DoSink<Observer: ObserverType>: Sink, ObserverType {
+private final actor DoSink<Observer: ObserverType>: SinkOverSingleSubscription, ObserverType {
     typealias Element = Observer.Element
-    typealias EventHandler = (Event<Element>) async throws -> Void
-    typealias AfterEventHandler = (Event<Element>) async throws -> Void
+    typealias EventHandler = @Sendable (Event<Element>) async throws -> Void
+    typealias AfterEventHandler = @Sendable (Event<Element>) async throws -> Void
+    typealias OnDisposeHandler = @Sendable () async -> Void
 
     private let eventHandler: EventHandler
     private let afterEventHandler: AfterEventHandler
-    let baseSink: BaseSink<Observer>
+    private let onDisposeHandler: OnDisposeHandler?
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
-    init(eventHandler: @escaping EventHandler, afterEventHandler: @escaping AfterEventHandler, observer: Observer) async {
+    init(
+        eventHandler: @escaping EventHandler,
+        afterEventHandler: @escaping AfterEventHandler,
+        onDisposeHandler: OnDisposeHandler?,
+        observer: Observer
+    ) {
         self.eventHandler = eventHandler
         self.afterEventHandler = afterEventHandler
-        self.baseSink = BaseSink(observer: observer)
+        self.onDisposeHandler = onDisposeHandler
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
         do {
-            try await self.eventHandler(event)
-            await self.forwardOn(event, c.call())
-            try await self.afterEventHandler(event)
+            try await eventHandler(event)
+            await forwardOn(event, c.call())
+            try await afterEventHandler(event)
             if event.isStopEvent {
-                await self.dispose()
+                await dispose()
             }
+        } catch {
+            await forwardOn(.error(error), c.call())
+            await dispose()
         }
-        catch {
-            await self.forwardOn(.error(error), c.call())
-            await self.dispose()
-        }
+    }
+
+    func dispose() async {
+        await baseSink.setDisposed()?.dispose()
+        await onDisposeHandler?()
     }
 }
 
-private final class Do<Element>: Producer<Element> {
-    typealias EventHandler = (Event<Element>) async throws -> Void
-    typealias AfterEventHandler = (Event<Element>) async throws -> Void
+private final class Do<Element: Sendable>: Producer<Element> {
+    typealias EventHandler = @Sendable (Event<Element>) async throws -> Void
+    typealias AfterEventHandler = @Sendable (Event<Element>) async throws -> Void
 
     private let source: Observable<Element>
     private let eventHandler: EventHandler
     private let afterEventHandler: AfterEventHandler
-    private let onSubscribe: (() async -> Void)?
-    private let onSubscribed: (() async -> Void)?
-    private let onDispose: (() async -> Void)?
+    private let onSubscribe: (@Sendable () async -> Void)?
+    private let onSubscribed: (@Sendable () async -> Void)?
+    private let onDispose: (@Sendable () async -> Void)?
 
-    init(source: Observable<Element>, eventHandler: @escaping EventHandler, afterEventHandler: @escaping AfterEventHandler, onSubscribe: (() async -> Void)?, onSubscribed: (() async -> Void)?, onDispose: (() async -> Void)?) async {
+    init(
+        source: Observable<Element>,
+        eventHandler: @escaping EventHandler,
+        afterEventHandler: @escaping AfterEventHandler,
+        onSubscribe: (@Sendable () async -> Void)?,
+        onSubscribed: (@Sendable () async -> Void)?,
+        onDispose: (@Sendable () async -> Void)?
+    ) {
         self.source = source
         self.eventHandler = eventHandler
         self.afterEventHandler = afterEventHandler
         self.onSubscribe = onSubscribe
         self.onSubscribed = onSubscribed
         self.onDispose = onDispose
-        await super.init()
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
-        await self.onSubscribe?()
-        let sink = await DoSink(eventHandler: self.eventHandler, afterEventHandler: self.afterEventHandler, observer: observer)
-        let subscription = await self.source.subscribe(c.call(), sink)
-        await self.onSubscribed?()
-        let onDispose = self.onDispose
-        let allSubscriptions = await Disposables.create {
-            await subscription.dispose()
-            await onDispose?()
-        }
-        return (sink: sink, subscription: allSubscriptions)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element {
+
+        await onSubscribe?()
+        let sink = DoSink(
+            eventHandler: eventHandler,
+            afterEventHandler: afterEventHandler,
+            onDisposeHandler: onDispose,
+            observer: observer
+        )
+        await sink.run(c.call(), source)
+        await onSubscribed?()
+        return sink
     }
 }
