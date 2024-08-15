@@ -58,7 +58,7 @@
 //    }
 // }
 
-extension Disposables {
+public extension Disposables {
     static func create(with dispose: @Sendable @escaping () async -> Void) -> AsynchronousCancelable {
         AnonymousAsynchronousDisposable(disposeAction: dispose)
     }

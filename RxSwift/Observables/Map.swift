@@ -18,19 +18,55 @@ public extension ObservableType {
      */
     func map<Result>(_ transform: @Sendable @escaping (Element) throws -> Result)
         -> Observable<Result> {
-        Map(source: self, transform: transform)
+        Map(source: asObservable(), transform: transform)
     }
 }
 
-private final class Map<Source: ObservableType, ResultType: Sendable>: Producer<ResultType> {
-    typealias SourceType = Source.Element
+private final actor MapSink<Element: Sendable, Observer: ObserverType>: SinkOverSingleSubscription, ObserverType {
+    typealias Predicate = (Element) throws -> Observer.Element
+
+    private let predicate: Predicate
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
+
+    init(predicate: @escaping Predicate, observer: Observer) {
+        self.predicate = predicate
+
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
+    }
+
+    func on(_ event: Event<Element>, _ c: C) async {
+        switch event {
+        case .next(let element):
+            do {
+                let newElement = try predicate(element)
+                await forwardOn(.next(newElement), c.call())
+            } catch {
+                await forwardOn(.error(error), c.call())
+                await dispose()
+            }
+        case .error(let error):
+            await forwardOn(.error(error), c.call())
+            await dispose()
+        case .completed:
+            await forwardOn(.completed, c.call())
+            await dispose()
+        }
+    }
+
+    func dispose() async {
+        await baseSink.setDisposed()?.dispose()
+    }
+}
+
+private final class Map<Element: Sendable, ResultType: Sendable>: Producer<ResultType> {
+    typealias SourceType = Element
     typealias Transform = @Sendable (SourceType) throws -> ResultType
 
-    private let source: Source
+    private let source: Observable<Element>
 
     private let transform: Transform
 
-    init(source: Source, transform: @escaping Transform) {
+    init(source: Observable<Element>, transform: @escaping Transform) {
         self.source = source
         self.transform = transform
         super.init()
@@ -38,20 +74,8 @@ private final class Map<Source: ObservableType, ResultType: Sendable>: Producer<
 
     override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == ResultType {
-        let subscription = await source.subscribe(c.call(), AnyAsyncObserver { [transform] element, c in
-            switch element {
-            case .next(let element):
-                do {
-                    try await observer.onNext(transform(element), c.call())
-                } catch {
-                    await observer.onError(error, c.call())
-                }
-            case .error(let error):
-                await observer.onError(error, c.call())
-            case .completed:
-                await observer.onCompleted(c.call())
-            }
-        })
-        return subscription
+        let sink = MapSink(predicate: transform, observer: observer)
+        await sink.run(c.call(), source)
+        return sink
     }
 }
