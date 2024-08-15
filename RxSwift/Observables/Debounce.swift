@@ -119,19 +119,19 @@ private final class Debounce<Element: Sendable>: Producer<Element> {
 }
 
 final class DisposableTimer: @unchecked Sendable {
-    typealias Handler = @Sendable () async -> Void
+    typealias Handler = @Sendable (DisposableTimer) async -> Void
 
     var task: Task<Void, Never>?
     var disposed = false
 
-    init(_ timeInterval: RxTimeInterval, _ propagateAndDispose: @escaping Handler) {
+    init(_ timeInterval: RxTimeInterval, _ handler: @escaping Handler) {
         task = Task {
             do {
                 try await Task.sleep(nanoseconds: timeInterval.nanoseconds)
             } catch {
                 return
             }
-            await propagateAndDispose()
+            await handler(self)
         }
     }
 
