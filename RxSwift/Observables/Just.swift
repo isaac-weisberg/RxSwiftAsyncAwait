@@ -38,25 +38,25 @@ private final actor JustScheduledSink<Observer: SyncObserverType>: AsynchronousD
 
     private let parent: Parent
     private let observer: Observer
-    private let disposedFlag = UnsynchronizedDisposedFlag()
+    private let disposedFlag = SingleAssignmentSyncDisposable()
 
     init(parent: Parent, observer: Observer) {
         self.parent = parent
         self.observer = observer
     }
 
-    func dispose() async {
-        disposedFlag.setDisposed()
+    func dispose() {
+        disposedFlag.dispose()?.dispose()
     }
 
     func run(_ c: C) async {
         let scheduler = parent.scheduler
         let element = parent.element
-        await scheduler.perform(locking(disposedFlag), c.call()) { [observer] c in
+        scheduler.perform(locking(disposedFlag), c.call()) { [observer] c in
             await observer.on(.next(element), c.call())
             await observer.on(.completed, c.call())
         }
-        await dispose()
+        dispose()
     }
     
     func perform<R>(_ work: () -> R) -> R {

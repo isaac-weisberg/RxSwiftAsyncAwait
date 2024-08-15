@@ -8,15 +8,10 @@
 
 /// Represents a disposable resource whose underlying disposable resource can be replaced by another disposable
 /// resource, causing automatic disposal of the previous underlying disposable resource.
-public final actor SerialDisposable: AsynchronousCancelable {
+public final class SerialDisposableGeneric<Disposable> {
     // state
-    private var current = nil as AsynchronousDisposable?
+    private var current = nil as Disposable?
     private var disposed = false
-
-    /// - returns: Was resource disposed.
-    public func isDisposed() -> Bool {
-        disposed
-    }
 
     /// Initializes a new instance of the `SerialDisposable`.
     public init() {
@@ -27,41 +22,24 @@ public final actor SerialDisposable: AsynchronousCancelable {
         SynchronousDisposeBaseDeinit()
     }
 
-    /**
-     Gets or sets the underlying disposable.
-
-     Assigning this property disposes the previous disposable object.
-
-     If the `SerialDisposable` has already been disposed, assignment to this property causes immediate disposal of the given disposable object.
-     */
-
-    public func getDisposable() -> AsynchronousDisposable {
-        current ?? Disposables.create()
+    /// - returns: Was resource disposed.
+    public var isDisposed: Bool {
+        disposed
     }
 
-    public func setDisposable(_ newDisposable: AsynchronousDisposable) async {
-        let disposable: AsynchronousDisposable? = {
-            if self.isDisposed() {
-                return newDisposable
-            } else {
-                let toDispose = self.current
-                self.current = newDisposable
-                return toDispose
-            }
-        }()
-
-        if let disposable {
-            await disposable.dispose()
+    public func replace(_ newDisposable: Disposable) -> Disposable? {
+        if disposed {
+            return newDisposable
+        } else {
+            let old = current
+            current = newDisposable
+            return old
         }
     }
 
     /// Disposes the underlying disposable as well as all future replacements.
-    public func dispose() async {
-        await _dispose()?.dispose()
-    }
-
-    private func _dispose() -> AsynchronousDisposable? {
-        guard !isDisposed() else { return nil }
+    public func dispose() -> Disposable? {
+        guard !isDisposed else { return nil }
 
         disposed = true
         let current = current
@@ -69,3 +47,5 @@ public final actor SerialDisposable: AsynchronousCancelable {
         return current
     }
 }
+
+public typealias SerialDisposable = SerialDisposableGeneric<Disposable>

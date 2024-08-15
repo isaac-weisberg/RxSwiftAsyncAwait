@@ -26,7 +26,7 @@ public extension ObservableType {
 
 private final actor DebounceSink<Observer: ObserverType>:
     SinkOverSingleSubscription,
-    ObserverType {
+    ObserverType, ActorLock {
     typealias Element = Observer.Element
     typealias ParentType = Debounce<Element>
 
@@ -37,6 +37,7 @@ private final actor DebounceSink<Observer: ObserverType>:
     // state
     private var id = 0 as UInt64
     private var value: Element?
+    private let timerSerialDisposable = SerialDisposableGeneric<DisposableTimer>()
     private var timerTask: Task<Void, Never>?
 
     init(parent: ParentType, observer: Observer) {
@@ -57,16 +58,10 @@ private final actor DebounceSink<Observer: ObserverType>:
 
             let dueTime = parent.dueTime
 
-            timerTask?.cancel()
-            timerTask = Task {
-                do {
-                    try await Task.sleep(nanoseconds: dueTime.nanoseconds)
-                } catch {
-                    return
-                }
-
-                await self.propagate(c: c.call(), currentId)
+            let timer = DisposableTimer(dueTime) { [weak self] in
+                await self?.propagate(c: c.call(), currentId)
             }
+            timerSerialDisposable.replace(timer)?.dispose()
         case .error:
             value = nil
             await forwardOn(event, c.call())
@@ -85,7 +80,7 @@ private final actor DebounceSink<Observer: ObserverType>:
         if baseSink.disposed {
             return
         }
-        
+
         let originalValue = value
 
         if let value = originalValue, id == currentId {
@@ -121,5 +116,29 @@ private final class Debounce<Element: Sendable>: Producer<Element> {
         let sink = DebounceSink(parent: self, observer: observer)
         await sink.run(c.call(), source)
         return sink
+    }
+}
+
+final class DisposableTimer: @unchecked Sendable {
+    typealias Handler = @Sendable () async -> Void
+
+    var task: Task<Void, Never>?
+    var disposed = false
+
+    init(_ timeInterval: RxTimeInterval, _ propagateAndDispose: @escaping Handler) {
+        task = Task {
+            do {
+                try await Task.sleep(nanoseconds: timeInterval.nanoseconds)
+            } catch {
+                return
+            }
+            await propagateAndDispose()
+        }
+    }
+
+    func dispose() {
+        rxAssert(!disposed)
+        task?.cancel()
+        task = nil
     }
 }
