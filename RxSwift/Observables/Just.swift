@@ -28,7 +28,7 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to send the single element on.
      - returns: An observable sequence containing the single specified element.
      */
-    static func just(_ element: Element, scheduler: AsyncScheduler) async -> Observable<Element> {
+    static func just(_ element: Element, scheduler: AsyncScheduler) -> Observable<Element> {
         JustScheduled(element: element, scheduler: scheduler)
     }
 }
@@ -55,10 +55,10 @@ private final actor JustScheduledSink<Observer: SyncObserverType>: AsynchronousD
         scheduler.perform(locking(disposedFlag), c.call()) { [observer] c in
             await observer.on(.next(element), c.call())
             await observer.on(.completed, c.call())
+            await self.dispose()
         }
-        dispose()
     }
-    
+
     func perform<R>(_ work: () -> R) -> R {
         work()
     }
@@ -89,8 +89,9 @@ private final class Just<Element: Sendable>: Observable<Element> {
         self.element = element
         super.init()
     }
-    
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any Disposable where Element == Observer.Element, Observer : ObserverType {
+
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any Disposable
+        where Element == Observer.Element, Observer: ObserverType {
         await observer.on(.next(element), c.call())
         await observer.on(.completed, c.call())
         return Disposables.create()
