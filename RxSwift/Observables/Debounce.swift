@@ -57,7 +57,7 @@ private final actor DebounceSink<Observer: ObserverType>:
 
             let dueTime = parent.dueTime
 
-            let timer = DisposableTimer(dueTime) { [weak self] in
+            let timer = DisposableTimer(dueTime) { [weak self] _ in
                 await self?.propagate(c: c.call(), currentId)
             }
             timerSerialDisposable.replace(timer)?.dispose()
