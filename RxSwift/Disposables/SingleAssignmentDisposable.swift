@@ -47,7 +47,7 @@ public final class SingleAssignmentDisposable: @unchecked Sendable {
         }
 
         if (previousState & DisposeState.disposed.rawValue) != 0 {
-            
+
             self.disposable = nil
             return disposable
         }
@@ -73,8 +73,6 @@ public final class SingleAssignmentDisposable: @unchecked Sendable {
     }
 
     deinit {
-
         SynchronousDisposeBaseDeinit()
     }
-
 }

@@ -98,3 +98,15 @@ private final actor AnonymousAsynchronousDisposable: AsynchronousCancelable, Asy
         SynchronousDisposeBaseDeinit()
     }
 }
+
+//struct DisposeAction: Disposable {
+//    let work: @Sendable () async -> Void
+//    
+//    init(work: @Sendable @escaping () async -> Void) {
+//        self.work = work
+//    }
+//    
+//    func dispose() async {
+//        await work()
+//    }
+//}

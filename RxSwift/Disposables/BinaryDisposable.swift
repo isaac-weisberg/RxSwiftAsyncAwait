@@ -7,12 +7,12 @@
 //
 
 /// Represents two disposable resources that are disposed together.
-private final actor BinaryDisposable: AsynchronousCancelable {
+final class BinaryDisposable {
     private let disposed: NonAtomicInt
 
     // state
-    private var disposable1: AsynchronousDisposable?
-    private var disposable2: AsynchronousDisposable?
+    private let disposable1: SingleAssignmentDisposable
+    private let disposable2: SingleAssignmentDisposable
 
     /// - returns: Was resource disposed.
     func isDisposed() -> Bool {
@@ -23,7 +23,7 @@ private final actor BinaryDisposable: AsynchronousCancelable {
     ///
     /// - parameter disposable1: First disposable
     /// - parameter disposable2: Second disposable
-    init(_ disposable1: AsynchronousDisposable, _ disposable2: AsynchronousDisposable) {
+    init(_ disposable1: SingleAssignmentDisposable, _ disposable2: SingleAssignmentDisposable) {
         disposed = NonAtomicInt(0)
         self.disposable1 = disposable1
         self.disposable2 = disposable2
@@ -33,26 +33,48 @@ private final actor BinaryDisposable: AsynchronousCancelable {
     /// Calls the disposal action if and only if the current instance hasn't been disposed yet.
     ///
     /// After invoking disposal action, disposal action will be dereferenced.
-    func dispose() async {
+    func dispose() -> Dispose2Action? {
         if fetchOr(disposed, 1) == 0 {
-            await disposable1?.dispose()
-            await disposable2?.dispose()
-            disposable1 = nil
-            disposable2 = nil
+            let disposable1 = self.disposable1.dispose()
+            let disposable2 = self.disposable2.dispose()
+            
+            return Dispose2Action(disposable1: disposable1, disposable2: disposable2)
         }
+        return nil
     }
 
     deinit {
         SynchronousDisposeBaseDeinit()
     }
 }
+//
+//public extension Disposables {
+//    /// Creates a disposable with the given disposables.
+//    static func create(
+//        _ disposable1: AsynchronousDisposable,
+//        _ disposable2: AsynchronousDisposable
+//    ) -> AsynchronousCancelable {
+//        BinaryDisposable(disposable1, disposable2)
+//    }
+//}
 
-public extension Disposables {
-    /// Creates a disposable with the given disposables.
-    static func create(
-        _ disposable1: AsynchronousDisposable,
-        _ disposable2: AsynchronousDisposable
-    ) -> AsynchronousCancelable {
-        BinaryDisposable(disposable1, disposable2)
+struct Dispose2Action {
+    let disposable1: Disposable?
+    let disposable2: Disposable?
+    
+    init?(disposable1: Disposable?, disposable2: Disposable?) {
+        if disposable1 == nil, disposable2 == nil {
+            return nil
+        }
+        self.disposable1 = disposable1
+        self.disposable2 = disposable2
+    }
+    
+    func dispose() async {
+        async let disposed1: ()? = disposable1?.dispose()
+        async let disposed2: ()? = disposable2?.dispose()
+        
+        await disposed1
+        await disposed2
     }
 }

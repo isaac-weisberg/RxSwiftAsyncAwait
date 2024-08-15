@@ -6,14 +6,14 @@
 //  Copyright © 2017 Krunoslav Zaher. All rights reserved.
 //
 
-private final actor AsMaybeSink<Observer: ObserverType>: Sink, ObserverType {
+private final actor AsMaybeSink<Observer: ObserverType>: SinkOverSingleSubscription, ObserverType {
     typealias Element = Observer.Element
 
     private var element: Event<Element>?
-    let baseSink: BaseSink<Observer>
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
     init(observer: Observer) async {
-        baseSink = BaseSink(observer: observer)
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
@@ -36,14 +36,18 @@ private final actor AsMaybeSink<Observer: ObserverType>: Sink, ObserverType {
             await dispose()
         }
     }
+
+    func dispose() async {
+        await baseSink.setDisposed()?.dispose()
+    }
 }
 
-final class AsMaybe<Element>: Producer<Element> {
+final class AsMaybe<Element: Sendable>: Producer<Element> {
     private let source: Observable<Element>
 
-    init(source: Observable<Element>) async {
+    init(source: Observable<Element>) {
         self.source = source
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(
@@ -52,7 +56,7 @@ final class AsMaybe<Element>: Producer<Element> {
     )
         async -> AsynchronousDisposable where Observer.Element == Element {
         let sink = await AsMaybeSink(observer: observer)
-        let subscription = await source.subscribe(c.call(), sink)
+        await sink.run(c.call(), source)
         return sink
     }
 }
