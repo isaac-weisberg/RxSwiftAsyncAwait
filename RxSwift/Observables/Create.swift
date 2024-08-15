@@ -30,40 +30,32 @@ private final actor AnonymousObservableSink<
     typealias SubscribeHandler = AnonymousObservable<Element>.SubscribeHandler
 
     // state
-    private let isStopped: NonAtomicInt
-    private var innerDisposable: AsynchronousDisposable?
+    private let innerDisposable = SingleAssignmentDisposable()
     private let observer: Observer
 
     init(observer: Observer) {
-        isStopped = NonAtomicInt(0)
         self.observer = observer
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
+        if innerDisposable.isDisposed {
+            return
+        }
         switch event {
         case .next:
-            if load(isStopped) == 1 {
-                return
-            }
             await observer.on(event, c.call())
         case .error, .completed:
-            if fetchOr(isStopped, 1) == 0 {
-                await observer.on(event, c.call())
-                await dispose()
-            }
+            await observer.on(event, c.call())
+            await dispose()
         }
     }
 
     func dispose() async {
-        if fetchOr(isStopped, 1) == 0 {
-            let innerDisposable = innerDisposable
-            self.innerDisposable = nil
-            await innerDisposable?.dispose()
-        }
+        await innerDisposable.dispose()?.dispose()
     }
 
     func run(_ subscribeHandler: SubscribeHandler, _ c: C) async {
-        innerDisposable = await subscribeHandler(c.call(), AnyAsyncObserver(self))
+        await innerDisposable.setDisposable(subscribeHandler(c.call(), AnyAsyncObserver(self)))?.dispose()
     }
 }
 
@@ -83,8 +75,4 @@ private final class AnonymousObservable<Element: Sendable>: Observable<Element> 
         await sink.run(subscribeHandler, c.call())
         return sink
     }
-}
-
-func scope<R>(_ work: () async -> R) async -> R {
-    await work()
 }
