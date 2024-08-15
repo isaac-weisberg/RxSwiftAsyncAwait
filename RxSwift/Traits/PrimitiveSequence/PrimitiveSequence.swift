@@ -58,7 +58,7 @@ public extension PrimitiveSequence {
      - parameter observableFactory: Observable factory function to invoke for each observer that subscribes to the resulting sequence.
      - returns: An observable sequence whose observers trigger an invocation of the given observable factory function.
      */
-    static func deferred(_ observableFactory: @escaping () async throws -> PrimitiveSequence<Trait, Element>) async
+    static func deferred(_ observableFactory: @escaping () async throws -> PrimitiveSequence<Trait, Element>)
         -> PrimitiveSequence<Trait, Element> {
         PrimitiveSequence(raw: Observable.deferred {
             try await observableFactory().asObservable()

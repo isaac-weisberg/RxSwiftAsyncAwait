@@ -335,7 +335,7 @@ final actor TotalFlatMapSink<
                 switch mode {
                 case .flatMap, .flatMapFirst, .mergeArray, .flatMapLatest:
                     queuedDerivedSubscriptions = nil
-                case .flatMapLimited(let mergeLimited):
+                case .flatMapLimited:
                     queuedDerivedSubscriptions = DerivedSequenceQueue(capacity: 2)
                 }
 
