@@ -63,7 +63,7 @@ final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
         self.resultSelector = resultSelector
         values = [SourceElement?](repeating: nil, count: parentCount)
         isDone = [Bool](repeating: false, count: parentCount)
-        subscriptions = Array(repeating: SingleAssignmentDisposable(), count: parentCount)
+        subscriptions = (0 ..< parentCount).map { _ in SingleAssignmentDisposable() }
 
         self.observer = observer
     }

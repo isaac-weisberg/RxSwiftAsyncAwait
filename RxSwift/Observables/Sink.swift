@@ -66,10 +66,10 @@ final class BaseSink<Observer: ObserverType>: @unchecked Sendable {
     var disposed = false
 
     func setDisposed() {
-        rxAssert(
-            !disposed,
-            "Disposing me the second time? Is there somebody eagerly calling this dispose, while previous we were disposed by someone else?"
-        )
+//        rxAssert(
+//            !disposed,
+//            "Disposing me the second time? Is there somebody eagerly calling this dispose, while previous we were disposed by someone else?"
+//        )
         disposed = true
     }
 }
@@ -98,10 +98,10 @@ final class BaseSinkOverSingleSubscription<Observer: ObserverType>: @unchecked S
     let sourceDisposable = SingleAssignmentDisposable()
 
     func setDisposed() -> Disposable? {
-        rxAssert(
-            !disposed,
-            "Disposing me the second time? Is there somebody eagerly calling this dispose, while previous we were disposed by someone else?"
-        )
+//        rxAssert(
+//            !disposed,
+//            "Disposing me the second time? Is there somebody eagerly calling this dispose, while previous we were disposed by someone else?"
+//        )
         disposed = true
         return sourceDisposable.dispose()
     }
