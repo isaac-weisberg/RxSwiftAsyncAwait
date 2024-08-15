@@ -28,17 +28,17 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to send the single element on.
      - returns: An observable sequence containing the single specified element.
      */
-    static func just(_ element: Element, scheduler: ActorScheduler) async -> Observable<Element> {
+    static func just(_ element: Element, scheduler: AsyncScheduler) async -> Observable<Element> {
         JustScheduled(element: element, scheduler: scheduler)
     }
 }
 
-private final actor JustScheduledSink<Observer: SyncObserverType>: AsynchronousDisposable {
+private final actor JustScheduledSink<Observer: SyncObserverType>: AsynchronousDisposable, ActorLock {
     typealias Parent = JustScheduled<Observer.Element>
 
     private let parent: Parent
     private let observer: Observer
-    var disposed = false
+    private let disposedFlag = UnsynchronizedDisposedFlag()
 
     init(parent: Parent, observer: Observer) {
         self.parent = parent
@@ -46,30 +46,29 @@ private final actor JustScheduledSink<Observer: SyncObserverType>: AsynchronousD
     }
 
     func dispose() async {
-        if !disposed {
-            disposed = true
-        }
+        disposedFlag.setDisposed()
     }
 
     func run(_ c: C) async {
         let scheduler = parent.scheduler
         let element = parent.element
-        if disposed {
-            return
-        }
-        await scheduler.perform(c.call()) { [observer] c in
+        await scheduler.perform(locking(disposedFlag), c.call()) { [observer] c in
             await observer.on(.next(element), c.call())
             await observer.on(.completed, c.call())
         }
         await dispose()
     }
+    
+    func perform<R>(_ work: () -> R) -> R {
+        work()
+    }
 }
 
 private final class JustScheduled<Element: Sendable>: Observable<Element>, @unchecked Sendable {
-    fileprivate let scheduler: ActorScheduler
+    fileprivate let scheduler: AsyncScheduler
     fileprivate let element: Element
 
-    init(element: Element, scheduler: ActorScheduler) {
+    init(element: Element, scheduler: AsyncScheduler) {
         self.scheduler = scheduler
         self.element = element
         super.init()
@@ -81,7 +80,6 @@ private final class JustScheduled<Element: Sendable>: Observable<Element>, @unch
         await sink.run(c.call())
         return sink
     }
-
 }
 
 private final class Just<Element: Sendable>: Observable<Element> {

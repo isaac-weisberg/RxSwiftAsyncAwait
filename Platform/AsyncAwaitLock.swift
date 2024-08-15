@@ -18,7 +18,13 @@ extension ActorLock {
     }
 }
 
-final class ActorLocked<Value: Sendable>: @unchecked Sendable {
+extension ActorLock {
+    func locking<Value>(_ value: Value) -> ActorLocked<Value> {
+        ActorLocked(value, self)
+    }
+}
+
+public final class ActorLocked<Value: Sendable>: @unchecked Sendable {
     var value: Value
     let actor: ActorLock
     

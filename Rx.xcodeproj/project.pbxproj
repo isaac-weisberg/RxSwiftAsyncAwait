@@ -81,7 +81,7 @@
 		A2FD4E9E225D050B00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
 		A2FD4E9F225D050B00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
 		A4687D032C43DD8600FF1DEE /* Binder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4687D022C43DD8600FF1DEE /* Binder.swift */; };
-		A4A342CC2C615DA100C5E965 /* ActorScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4A342CB2C615DA100C5E965 /* ActorScheduler.swift */; };
+		A4A342CC2C615DA100C5E965 /* AsyncScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4A342CB2C615DA100C5E965 /* AsyncScheduler.swift */; };
 		A4B9B2A42C43DF5C007CF0AC /* AsyncAwaitLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B9B2A32C43DF5C007CF0AC /* AsyncAwaitLock.swift */; };
 		A4B9B2A52C43DF5C007CF0AC /* AsyncAwaitLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B9B2A32C43DF5C007CF0AC /* AsyncAwaitLock.swift */; };
 		A4B9B2A62C43DF5C007CF0AC /* AsyncAwaitLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B9B2A32C43DF5C007CF0AC /* AsyncAwaitLock.swift */; };
@@ -759,7 +759,7 @@
 		A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Observable+RelayBindTests.swift"; sourceTree = "<group>"; };
 		A2FD4EA4225D0A8100288525 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A4687D022C43DD8600FF1DEE /* Binder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Binder.swift; sourceTree = "<group>"; };
-		A4A342CB2C615DA100C5E965 /* ActorScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActorScheduler.swift; sourceTree = "<group>"; };
+		A4A342CB2C615DA100C5E965 /* AsyncScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncScheduler.swift; sourceTree = "<group>"; };
 		A4B9B2A32C43DF5C007CF0AC /* AsyncAwaitLock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AsyncAwaitLock.swift; sourceTree = "<group>"; };
 		A4D3BE302C43C79800E6D717 /* AsyncAwaitLock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AsyncAwaitLock.swift; sourceTree = "<group>"; };
 		A4EF0BE72C4114D9009EE9DE /* AsyncAwaitLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncAwaitLock.swift; sourceTree = "<group>"; };
@@ -1400,7 +1400,7 @@
 				C8FA89131C30405400CD3A17 /* VirtualTimeScheduler.swift */,
 				C8FA89161C30409900CD3A17 /* HistoricalScheduler.swift */,
 				C8FA891B1C30412A00CD3A17 /* HistoricalSchedulerTimeConverter.swift */,
-				A4A342CB2C615DA100C5E965 /* ActorScheduler.swift */,
+				A4A342CB2C615DA100C5E965 /* AsyncScheduler.swift */,
 			);
 			path = Schedulers;
 			sourceTree = "<group>";
@@ -2765,7 +2765,7 @@
 				C8093D691B8A72BE0088E94D /* AnyObserver.swift in Sources */,
 				C8B144FB1BD2D44500267DCE /* ConcurrentMainScheduler.swift in Sources */,
 				C820A9181EB4DA5A00D431BC /* AsMaybe.swift in Sources */,
-				A4A342CC2C615DA100C5E965 /* ActorScheduler.swift in Sources */,
+				A4A342CC2C615DA100C5E965 /* AsyncScheduler.swift in Sources */,
 				0BA949671E224B7E0036DD06 /* AsyncSubject.swift in Sources */,
 				C8E390631F379041004FC993 /* Enumerated.swift in Sources */,
 				C820A8CC1EB4DA5A00D431BC /* Optional.swift in Sources */,

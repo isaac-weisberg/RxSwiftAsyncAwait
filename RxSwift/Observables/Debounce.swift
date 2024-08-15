@@ -18,59 +18,54 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to run the throttle timers on.
      - returns: The throttled sequence.
      */
-    func debounce(_ dueTime: RxTimeInterval, scheduler: SchedulerType) async
+    func debounce(_ dueTime: RxTimeInterval)
         -> Observable<Element> {
-        await Debounce(source: asObservable(), dueTime: dueTime, scheduler: scheduler)
+        Debounce(source: asObservable(), dueTime: dueTime)
     }
 }
 
 private final actor DebounceSink<Observer: ObserverType>:
-    Sink,
-    ObserverType,
-    AsynchronousOnType {
+    SinkOverSingleSubscription,
+    ObserverType {
     typealias Element = Observer.Element
     typealias ParentType = Debounce<Element>
 
-    let baseSink: BaseSink<Observer>
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
     private let parent: ParentType
 
     // state
     private var id = 0 as UInt64
     private var value: Element?
+    private var timerTask: Task<Void, Never>?
 
-    let cancellable: SerialDisposable
-
-    init(parent: ParentType, observer: Observer) async {
-        cancellable = await SerialDisposable()
+    init(parent: ParentType, observer: Observer) {
         self.parent = parent
 
-        baseSink = BaseSink(observer: observer)
-    }
-
-    func run(_ c: C) async -> Disposable {
-        let subscription = await parent.source.subscribe(c.call(), self)
-
-        return await Disposables.create(subscription, cancellable)
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await AsynchronousOn(event, c.call())
-    }
-
-    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
+        if baseSink.disposed {
+            return
+        }
         switch event {
         case .next(let element):
             id = id &+ 1
             let currentId = id
             value = element
 
-            let scheduler = parent.scheduler
             let dueTime = parent.dueTime
 
-            let d = await SingleAssignmentDisposable()
-            await cancellable.setDisposable(d)
-            await d.setDisposable(scheduler.scheduleRelative(currentId, c.call(), dueTime: dueTime, action: propagate))
+            timerTask = Task {
+                do {
+                    try await Task.sleep(nanoseconds: dueTime.nanoseconds)
+                } catch {
+                    return
+                }
+
+                await self.propagate(c: c.call(), currentId)
+            }
         case .error:
             value = nil
             await forwardOn(event, c.call())
@@ -85,28 +80,36 @@ private final actor DebounceSink<Observer: ObserverType>:
         }
     }
 
-    func propagate(c: C, _ currentId: UInt64) async -> Disposable {
+    func propagate(c: C, _ currentId: UInt64) async {
+        if baseSink.disposed {
+            return
+        }
+        
         let originalValue = value
 
         if let value = originalValue, id == currentId {
             self.value = nil
             await forwardOn(.next(value), c.call())
         }
+    }
 
-        return Disposables.create()
+    func dispose() async {
+        let disposable = baseSink.setDisposed()
+        timerTask?.cancel()
+        timerTask = nil
+
+        await disposable?.dispose()
     }
 }
 
-private final class Debounce<Element>: Producer<Element> {
+private final class Debounce<Element: Sendable>: Producer<Element> {
     fileprivate let source: Observable<Element>
     fileprivate let dueTime: RxTimeInterval
-    fileprivate let scheduler: SchedulerType
 
-    init(source: Observable<Element>, dueTime: RxTimeInterval, scheduler: SchedulerType) async {
+    init(source: Observable<Element>, dueTime: RxTimeInterval) {
         self.source = source
         self.dueTime = dueTime
-        self.scheduler = scheduler
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(
@@ -114,8 +117,8 @@ private final class Debounce<Element>: Producer<Element> {
         _ observer: Observer
     )
         async -> AsynchronousDisposable where Observer.Element == Element {
-        let sink = await DebounceSink(parent: self, observer: observer)
-        let subscription = await sink.run(c.call())
+        let sink = DebounceSink(parent: self, observer: observer)
+        await sink.run(c.call(), source)
         return sink
     }
 }

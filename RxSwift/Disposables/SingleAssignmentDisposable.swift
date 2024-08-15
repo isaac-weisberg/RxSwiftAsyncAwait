@@ -6,6 +6,19 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
+public final class UnsynchronizedDisposedFlag: @unchecked Sendable {
+    private var _disposed: Bool = false
+    var disposed: Bool {
+        _disposed
+    }
+    
+    func setDisposed() {
+        _disposed = true
+    }
+}
+
+public typealias DisposedFlag = ActorLocked<UnsynchronizedDisposedFlag>
+
 /**
  Represents a disposable resource which only allows a single assignment of its underlying disposable resource.
 

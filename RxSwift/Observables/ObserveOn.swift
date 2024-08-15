@@ -1,16 +1,14 @@
-public extension SubscribeToAsyncCallType {
-    func observe<Scheduler: ActorScheduler>(on scheduler: Scheduler) -> ObserveOn<Scheduler, Self> {
-        ObserveOn(scheduler: scheduler, source: self)
+public extension ObservableConvertibleType {
+    func observe<Scheduler: AsyncScheduler>(on scheduler: Scheduler) -> ObserveOn<Element, Scheduler> {
+        ObserveOn(scheduler: scheduler, source: asObservable())
     }
 }
 
-public final class ObserveOn<Scheduler: ActorScheduler, Source: SubscribeToAsyncCallType>: SubscribeToAsyncCallType {
-    public typealias Element = Source.Element
-
+public final class ObserveOn<Element: Sendable, Scheduler: AsyncScheduler> {
     let scheduler: Scheduler
-    let source: Source
+    let source: Observable<Element>
 
-    init(scheduler: Scheduler, source: Source) {
+    init(scheduler: Scheduler, source: Observable<Element>) {
         self.scheduler = scheduler
         self.source = source
     }
@@ -18,8 +16,7 @@ public final class ObserveOn<Scheduler: ActorScheduler, Source: SubscribeToAsync
     public func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
-        let disposable = await source.subscribe(c.call(), sink)
-        await sink.setInnerSyncDisposable(disposable)
+        await sink.run(c.call(), source)
         return sink
     }
 }
@@ -107,53 +104,43 @@ public final class ObserveOn<Scheduler: ActorScheduler, Source: SubscribeToAsync
 // }
 
 final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
-    AsynchronousDisposable, Sendable {
+    AsynchronousDisposable, ActorLock {
 
     public typealias Element = Observer.Element
 
-    let scheduler: ActorScheduler
+    let scheduler: AsyncScheduler
     let observer: Observer
-    private var innerSyncDisposable: AsynchronousDisposable?
-    var disposed = false
+    private let sourceSubscription = SingleAssignmentDisposable()
+    private let disposedFlag = UnsynchronizedDisposedFlag()
 
-    init(scheduler: ActorScheduler, observer: Observer) {
+    init(scheduler: AsyncScheduler, observer: Observer) {
         self.scheduler = scheduler
         self.observer = observer
     }
 
-    func isDisposed() async -> Bool {
-        disposed
-    }
-
-    public func dispose() async {
-        if !disposed {
-            disposed = true
-
-            let innerSyncDisposable = innerSyncDisposable
-            self.innerSyncDisposable = nil
-            await innerSyncDisposable?.dispose()
-        }
-    }
-
     public func on(_ event: Event<Element>, _ c: C) async {
-        if disposed {
+        if sourceSubscription.isDisposed {
             return
         }
-
-        await scheduler.perform(c.call()) { [self] c in
+        
+        await scheduler.perform(locking(disposedFlag), c.call(), { [observer] c in
             await observer.on(event, c.call())
-        }
+        })
     }
 
-    func setInnerSyncDisposable(_ disposable: AsynchronousDisposable) async {
-        if disposed {
-            await disposable.dispose()
-            return
-        }
-
-        innerSyncDisposable = disposable
+    
+    func run(_ c: C, _ source: Observable<Element>) async {
+        await sourceSubscription.setDisposable(source.subscribe(c.call(), self))?.dispose()
+    }
+    
+    public func dispose() async {
+        disposedFlag.setDisposed()
+        await sourceSubscription.dispose()?.dispose()
     }
 
+    func perform<R>(_ work: () -> R) -> R {
+        work()
+    }
 }
 
 ////

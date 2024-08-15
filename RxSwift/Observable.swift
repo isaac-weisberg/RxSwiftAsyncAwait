@@ -114,9 +114,9 @@ public class Observable<Element: Sendable>: ObservableType, @unchecked Sendable 
 //    }
 //}
 
-public protocol SubscribeCallType: Sendable {
-    associatedtype Element: Sendable
-}
+//public protocol SubscribeCallType: Sendable {
+//    associatedtype Element: Sendable
+//}
 
 // public enum AnySubscribeCall<Element: Sendable>: Sendable {
 //    case sync(@Sendable (C, AnySyncObserver<Element>) async -> AnyDisposable)
@@ -129,12 +129,12 @@ public protocol SubscribeCallType: Sendable {
 // }
 //
 
-public protocol SubscribeToAsyncCallType: Sendable /* : SubscribeCallType */ {
-    associatedtype Element
-    @Sendable
-    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
-        where Observer.Element == Element
-}
+//public protocol SubscribeToAsyncCallType: Sendable /* : SubscribeCallType */ {
+//    associatedtype Element
+//    @Sendable
+//    func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+//        where Observer.Element == Element
+//}
 
 //
 // extension SubscribeToAsyncCallType {

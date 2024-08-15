@@ -28,12 +28,12 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to send the optional element on.
      - returns: An observable sequence containing the wrapped value or not from given optional.
      */
-    static func from<Scheduler: ActorScheduler>(optional: Element?, scheduler: Scheduler) -> Observable<Element> {
+    static func from<Scheduler: AsyncScheduler>(optional: Element?, scheduler: Scheduler) -> Observable<Element> {
         ObservableOptionalScheduled(optional: optional, scheduler: scheduler)
     }
 }
 
-private final actor ObservableOptionalScheduledSink<Observer: ObserverType, Scheduler: ActorScheduler>: Sink {
+private final actor ObservableOptionalScheduledSink<Observer: ObserverType, Scheduler: AsyncScheduler>: Sink {
     typealias Element = Observer.Element
     typealias Parent = ObservableOptionalScheduled<Element, Scheduler>
 
@@ -74,7 +74,7 @@ private final actor ObservableOptionalScheduledSink<Observer: ObserverType, Sche
     }
 }
 
-private final class ObservableOptionalScheduled<Element: Sendable, Scheduler: ActorScheduler>: Producer<Element> {
+private final class ObservableOptionalScheduled<Element: Sendable, Scheduler: AsyncScheduler>: Producer<Element> {
     fileprivate let optional: Element?
     fileprivate let scheduler: Scheduler
 
