@@ -1,14 +1,9 @@
-
-// public protocol Actor: AnyObject, Sendable {
-//    func perform(_ c: C, _ work: (C) -> Void) async -> Void
-// }
-
 public protocol AsyncScheduler: Sendable {
     func perform(
-        _ cancel: DisposedFlag,
+        _ actorLockedDisposable: ActorLocked<SingleAssignmentSyncDisposable>,
         _ c: C,
         _ work: @Sendable @escaping (C) async -> Void
-    ) async -> Void
+    )
 }
 
 public final class SerialNonrecursiveScheduler: AsyncScheduler {
@@ -19,50 +14,48 @@ public final class SerialNonrecursiveScheduler: AsyncScheduler {
     }
 
     public func perform(
-        _ cancel: DisposedFlag,
+        _ actorLockedDisposable: ActorLocked<SingleAssignmentSyncDisposable>,
         _ c: C,
         _ work: @Sendable @escaping (C) async -> Void
-    )
-        async {
-        await lock.performLocked(c.call()) { @Sendable c in
-            if await cancel.perform({ $0.disposed }) {
-                return
+    ) {
+        let task = Task {
+            await lock.performLocked(c.call()) { @Sendable c in
+                if await actorLockedDisposable.perform({ $0.isDisposed }) {
+                    return
+                }
+                await work(c.call())
             }
-            await work(c.call())
         }
+
+        let theDisposable = DisposeAction {
+            task.cancel()
+        }
+
+        actorLockedDisposable.value.setDisposable(theDisposable)?.dispose()
     }
 }
 
 public final class ConcurrentAsyncScheduler: AsyncScheduler {
+    public static let instance = ConcurrentAsyncScheduler()
+    
     public func perform(
-        _ cancel: DisposedFlag,
+        _ actorLockedDisposable: ActorLocked<SingleAssignmentSyncDisposable>,
         _ c: C,
         _ work: @Sendable @escaping (C) async -> Void
     )
-        async {
-        _ = Task {
-            if await cancel.perform({ $0.disposed }) {
+        {
+        let task = Task {
+            if await actorLockedDisposable.perform({ $0.isDisposed }) {
                 return
             }
             await work(c.call())
         }
-        return ()
-    }
-}
-
-public final class ImmediateAsyncScheduler: AsyncScheduler {
-    static let instance = ImmediateAsyncScheduler()
-
-    public func perform(
-        _ cancel: DisposedFlag,
-        _ c: C,
-        _ work: @Sendable @escaping (C) async -> Void
-    )
-        async {
-        if await cancel.perform({ $0.disposed }) {
-            return
-        }
-        await work(c.call())
+            
+            let disposable = DisposeAction {
+                task.cancel()
+            }
+            actorLockedDisposable.value.setDisposable(disposable)?.dispose()
+            
     }
 }
 

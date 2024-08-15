@@ -6,32 +6,33 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-public final class UnsynchronizedDisposedFlag: @unchecked Sendable {
-    private var _disposed: Bool = false
-    var disposed: Bool {
-        _disposed
+public struct DisposeAction: @unchecked Sendable {
+    typealias DisposeAction = @Sendable () -> Void
+
+    private var work: DisposeAction
+
+    init(_ work: @escaping DisposeAction) {
+        self.work = work
     }
-    
-    func setDisposed() {
-        _disposed = true
+
+    func dispose() {
+        work()
     }
 }
-
-public typealias DisposedFlag = ActorLocked<UnsynchronizedDisposedFlag>
 
 /**
  Represents a disposable resource which only allows a single assignment of its underlying disposable resource.
 
  If an underlying disposable resource has already been set, future attempts to set the underlying disposable resource will throw an exception.
  */
-public final class SingleAssignmentDisposable: @unchecked Sendable {
 
-    private struct DisposeState: OptionSet {
-        let rawValue: Int32
+private struct DisposeState: OptionSet {
+    let rawValue: Int32
 
-        static let disposed = DisposeState(rawValue: 1 << 0)
-        static let disposableSet = DisposeState(rawValue: 1 << 1)
-    }
+    static let disposed = DisposeState(rawValue: 1 << 0)
+    static let disposableSet = DisposeState(rawValue: 1 << 1)
+}
+public final class SingleAssignmentDisposableContainer<Disposable>: @unchecked Sendable {
 
     // state
     private let state = NonAtomicInt(0)
@@ -89,3 +90,6 @@ public final class SingleAssignmentDisposable: @unchecked Sendable {
         SynchronousDisposeBaseDeinit()
     }
 }
+
+public typealias SingleAssignmentDisposable = SingleAssignmentDisposableContainer<Disposable>
+public typealias SingleAssignmentSyncDisposable = SingleAssignmentDisposableContainer<DisposeAction>

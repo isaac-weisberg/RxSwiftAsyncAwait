@@ -8,7 +8,7 @@
 
 import Foundation
 
-protocol ActorLock: Actor {
+public protocol ActorLock: Actor {
     func perform<R>(_ work: () -> R) -> R
 }
 
