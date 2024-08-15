@@ -14,10 +14,9 @@ public extension ObservableType where Element: Equatable {
 
      - returns: An observable sequence only containing the distinct contiguous elements, based on equality operator, from the source sequence.
      */
-    func distinctUntilChanged() async
-        -> Observable<Element>
-    {
-        await self.distinctUntilChanged({ $0 }, comparer: { $0 == $1 })
+    func distinctUntilChanged()
+        -> Observable<Element> {
+        distinctUntilChanged({ $0 }, comparer: { $0 == $1 })
     }
 }
 
@@ -30,10 +29,9 @@ public extension ObservableType {
      - parameter keySelector: A function to compute the comparison key for each element.
      - returns: An observable sequence only containing the distinct contiguous elements, based on a computed key value, from the source sequence.
      */
-    func distinctUntilChanged<Key: Equatable>(_ keySelector: @escaping (Element) throws -> Key) async
-        -> Observable<Element>
-    {
-        await self.distinctUntilChanged(keySelector, comparer: { $0 == $1 })
+    func distinctUntilChanged(_ keySelector: @escaping (Element) throws -> some Equatable)
+        -> Observable<Element> {
+        distinctUntilChanged(keySelector, comparer: { $0 == $1 })
     }
 
     /**
@@ -44,10 +42,9 @@ public extension ObservableType {
      - parameter comparer: Equality comparer for computed key values.
      - returns: An observable sequence only containing the distinct contiguous elements, based on `comparer`, from the source sequence.
      */
-    func distinctUntilChanged(_ comparer: @escaping (Element, Element) throws -> Bool) async
-        -> Observable<Element>
-    {
-        await self.distinctUntilChanged({ $0 }, comparer: comparer)
+    func distinctUntilChanged(_ comparer: @escaping (Element, Element) throws -> Bool)
+        -> Observable<Element> {
+        distinctUntilChanged({ $0 }, comparer: comparer)
     }
 
     /**
@@ -59,10 +56,11 @@ public extension ObservableType {
      - parameter comparer: Equality comparer for computed key values.
      - returns: An observable sequence only containing the distinct contiguous elements, based on a computed key value and the comparer, from the source sequence.
      */
-    func distinctUntilChanged<K>(_ keySelector: @escaping (Element) throws -> K, comparer: @escaping (K, K) throws -> Bool) async
-        -> Observable<Element>
-    {
-        return await DistinctUntilChanged(source: self.asObservable(), selector: keySelector, comparer: comparer)
+    func distinctUntilChanged<K>(
+        _ keySelector: @escaping (Element) throws -> K,
+        comparer: @escaping (K, K) throws -> Bool
+    ) -> Observable<Element> {
+        DistinctUntilChanged(source: asObservable(), selector: keySelector, comparer: comparer)
     }
 
     /**
@@ -72,55 +70,60 @@ public extension ObservableType {
 
      - returns: An observable sequence only containing the distinct contiguous elements, based on equality operator on the provided key path
      */
-    func distinctUntilChanged<Property: Equatable>(at keyPath: KeyPath<Element, Property>) async ->
-        Observable<Element>
-    {
-        await self.distinctUntilChanged { $0[keyPath: keyPath] == $1[keyPath: keyPath] }
+    func distinctUntilChanged(at keyPath: KeyPath<Element, some Equatable>) ->
+        Observable<Element> {
+        distinctUntilChanged { $0[keyPath: keyPath] == $1[keyPath: keyPath] }
     }
 }
 
-private final actor DistinctUntilChangedSink<Observer: ObserverType, Key>: Sink, ObserverType {
+private final actor DistinctUntilChangedSink<Observer: ObserverType, Key>: SinkOverSingleSubscription, ObserverType {
     typealias Element = Observer.Element
 
     private let parent: DistinctUntilChanged<Element, Key>
     private var currentKey: Key?
-    let baseSink: BaseSink<Observer>
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
-    init(parent: DistinctUntilChanged<Element, Key>, observer: Observer) async {
+    init(parent: DistinctUntilChanged<Element, Key>, observer: Observer) {
         self.parent = parent
-        self.baseSink = BaseSink(observer: observer)
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
+        if baseSink.disposed {
+            return
+        }
         switch event {
         case .next(let value):
             do {
-                let key = try self.parent.selector(value)
+                let key = try parent.selector(value)
                 var areEqual = false
-                if let currentKey = self.currentKey {
-                    areEqual = try self.parent.comparer(currentKey, key)
+                if let currentKey {
+                    areEqual = try parent.comparer(currentKey, key)
                 }
 
                 if areEqual {
                     return
                 }
 
-                self.currentKey = key
+                currentKey = key
 
-                await self.forwardOn(event, c.call())
-            }
-            catch {
-                await self.forwardOn(.error(error), c.call())
-                await self.dispose()
+                await forwardOn(event, c.call())
+            } catch {
+                await forwardOn(.error(error), c.call())
+                await dispose()
             }
         case .error, .completed:
-            await self.forwardOn(event, c.call())
-            await self.dispose()
+            await forwardOn(event, c.call())
+            await dispose()
         }
+    }
+
+    func dispose() async {
+        await baseSink.setDisposed()?.dispose()
     }
 }
 
-private final class DistinctUntilChanged<Element, Key>: Producer<Element> {
+private final class DistinctUntilChanged<Element: Sendable, Key>: Producer<Element> {
     typealias KeySelector = (Element) throws -> Key
     typealias EqualityComparer = (Key, Key) throws -> Bool
 
@@ -128,16 +131,17 @@ private final class DistinctUntilChanged<Element, Key>: Producer<Element> {
     fileprivate let selector: KeySelector
     fileprivate let comparer: EqualityComparer
 
-    init(source: Observable<Element>, selector: @escaping KeySelector, comparer: @escaping EqualityComparer) async {
+    init(source: Observable<Element>, selector: @escaping KeySelector, comparer: @escaping EqualityComparer) {
         self.source = source
         self.selector = selector
         self.comparer = comparer
-        await super.init()
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
-        let sink = await DistinctUntilChangedSink(parent: self, observer: observer)
-        let subscription = await self.source.subscribe(c.call(), sink)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element {
+        let sink = DistinctUntilChangedSink(parent: self, observer: observer)
+        await sink.run(c.call(), source)
         return sink
     }
 }
