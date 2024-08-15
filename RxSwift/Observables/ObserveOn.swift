@@ -111,19 +111,19 @@ final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
     let scheduler: AsyncScheduler
     let observer: Observer
     private let sourceSubscription = SingleAssignmentDisposable()
-    private let disposedFlag = UnsynchronizedDisposedFlag()
+    private let disposedFlag = SingleAssignmentSyncDisposable()
 
     init(scheduler: AsyncScheduler, observer: Observer) {
         self.scheduler = scheduler
         self.observer = observer
     }
 
-    public func on(_ event: Event<Element>, _ c: C) async {
+    public func on(_ event: Event<Element>, _ c: C) {
         if sourceSubscription.isDisposed {
             return
         }
         
-        await scheduler.perform(locking(disposedFlag), c.call(), { [observer] c in
+        scheduler.perform(locking(disposedFlag), c.call(), { [observer] c in
             await observer.on(event, c.call())
         })
     }
@@ -134,7 +134,7 @@ final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
     }
     
     public func dispose() async {
-        disposedFlag.setDisposed()
+        disposedFlag.dispose()?.dispose()
         await sourceSubscription.dispose()?.dispose()
     }
 

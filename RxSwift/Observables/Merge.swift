@@ -255,7 +255,7 @@ final actor TotalFlatMapSink<
                 case .neverUsed:
                     sourceIsDone = true
                 case .active(let disposableBox):
-                    rxAssert(!disposableBox.disposed) // when I dispose, I release the box
+                    rxAssert(!disposableBox.isDisposed) // when I dispose, I release the box
                     sourceIsDone = false
                 case .released:
                     sourceIsDone = true
@@ -537,7 +537,7 @@ final actor TotalFlatMapSink<
                     .inserting(DerivedSubscription(inner: disposable))
 
                 actions = disposeActions + subscribeAction
-                state = State(
+                newState = State(
                     stage: .running,
                     sourceSubscription: state.sourceSubscription,
                     derivedSubscriptions: derivedSubscriptions,

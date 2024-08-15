@@ -84,7 +84,7 @@ public final class TheActualAtomicInt<Value: FixedWidthInteger>: @unchecked Send
 
     func perform<R: Sendable>(_ c: C, _ work: @Sendable @escaping (C, inout Value) -> R) async -> R {
         await lock.performLocked(c) { c in
-            work(c, value)
+            work(c, &self.value)
         }
     }
 }

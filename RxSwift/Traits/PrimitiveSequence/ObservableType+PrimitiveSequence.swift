@@ -1,55 +1,55 @@
+////
+////  ObservableType+PrimitiveSequence.swift
+////  RxSwift
+////
+////  Created by Krunoslav Zaher on 9/17/17.
+////  Copyright © 2017 Krunoslav Zaher. All rights reserved.
+////
 //
-//  ObservableType+PrimitiveSequence.swift
-//  RxSwift
+//extension ObservableType {
+//    /**
+//     The `asSingle` operator throws a `RxError.noElements` or `RxError.moreThanOneElement`
+//     if the source Observable does not emit exactly one element before successfully completing.
 //
-//  Created by Krunoslav Zaher on 9/17/17.
-//  Copyright © 2017 Krunoslav Zaher. All rights reserved.
+//     - seealso: [single operator on reactivex.io](http://reactivex.io/documentation/operators/first.html)
 //
-
-extension ObservableType {
-    /**
-     The `asSingle` operator throws a `RxError.noElements` or `RxError.moreThanOneElement`
-     if the source Observable does not emit exactly one element before successfully completing.
-
-     - seealso: [single operator on reactivex.io](http://reactivex.io/documentation/operators/first.html)
-
-     - returns: An observable sequence that emits a single element when the source Observable has completed, or throws an exception if more (or none) of them are emitted.
-     */
-    public func asSingle() async -> Single<Element> {
-        await PrimitiveSequence(raw: AsSingle(source: self.asObservable()))
-    }
-    
-    /**
-     The `first` operator emits only the very first item emitted by this Observable,
-     or nil if this Observable completes without emitting anything.
-     
-     - seealso: [single operator on reactivex.io](http://reactivex.io/documentation/operators/first.html)
-     
-     - returns: An observable sequence that emits a single element or nil if the source observable sequence completes without emitting any items.
-     */
-    public func first() async -> Single<Element?> {
-        await PrimitiveSequence(raw: First(source: self.asObservable()))
-    }
-
-    /**
-     The `asMaybe` operator throws a `RxError.moreThanOneElement`
-     if the source Observable does not emit at most one element before successfully completing.
-
-     - seealso: [single operator on reactivex.io](http://reactivex.io/documentation/operators/first.html)
-
-     - returns: An observable sequence that emits a single element, completes when the source Observable has completed, or throws an exception if more of them are emitted.
-     */
-    public func asMaybe() async -> Maybe<Element> {
-        await PrimitiveSequence(raw: AsMaybe(source: self.asObservable()))
-    }
-}
-
-extension ObservableType where Element == Never {
-    /**
-     - returns: An observable sequence that completes.
-     */
-    public func asCompletable() async
-        -> Completable {
-            return await PrimitiveSequence(raw: self.asObservable())
-    }
-}
+//     - returns: An observable sequence that emits a single element when the source Observable has completed, or throws an exception if more (or none) of them are emitted.
+//     */
+//    public func asSingle() async -> Single<Element> {
+//        await PrimitiveSequence(raw: AsSingle(source: self.asObservable()))
+//    }
+//    
+//    /**
+//     The `first` operator emits only the very first item emitted by this Observable,
+//     or nil if this Observable completes without emitting anything.
+//     
+//     - seealso: [single operator on reactivex.io](http://reactivex.io/documentation/operators/first.html)
+//     
+//     - returns: An observable sequence that emits a single element or nil if the source observable sequence completes without emitting any items.
+//     */
+//    public func first() async -> Single<Element?> {
+//        await PrimitiveSequence(raw: First(source: self.asObservable()))
+//    }
+//
+//    /**
+//     The `asMaybe` operator throws a `RxError.moreThanOneElement`
+//     if the source Observable does not emit at most one element before successfully completing.
+//
+//     - seealso: [single operator on reactivex.io](http://reactivex.io/documentation/operators/first.html)
+//
+//     - returns: An observable sequence that emits a single element, completes when the source Observable has completed, or throws an exception if more of them are emitted.
+//     */
+//    public func asMaybe() async -> Maybe<Element> {
+//        await PrimitiveSequence(raw: AsMaybe(source: self.asObservable()))
+//    }
+//}
+//
+//extension ObservableType where Element == Never {
+//    /**
+//     - returns: An observable sequence that completes.
+//     */
+//    public func asCompletable() async
+//        -> Completable {
+//            return await PrimitiveSequence(raw: self.asObservable())
+//    }
+//}
