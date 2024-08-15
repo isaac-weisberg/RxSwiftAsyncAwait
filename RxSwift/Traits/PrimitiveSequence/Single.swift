@@ -27,9 +27,9 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(subscribe: @escaping (@escaping SingleObserver) async -> Disposable) -> Single<Element> {
+    static func create(subscribe: @escaping (C, @escaping SingleObserver) async -> Disposable) -> Single<Element> {
         let source = Observable<Element>.create { c, observer in
-            await subscribe { event, c in
+            await subscribe(c.call()) { event, c in
                 switch event {
                 case .success(let element):
                     await observer.on(.next(element), c.call())
