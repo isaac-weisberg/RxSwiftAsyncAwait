@@ -161,39 +161,38 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
         onDisposed: (@Sendable () -> Void)? = nil
     )
         async -> Disposable {
-            fatalError() // fuc kyou
-//        #if DEBUG
-//            let callStack = Hooks.recordCallStackOnError ? Thread.callStackSymbols : []
-//        #else
-//            let callStack = [String]()
-//        #endif
-//
-//        let disposable: Disposable
-//        if let onDisposed {
-//            disposable = Disposables.create(with: onDisposed)
-//        } else {
-//            disposable = Disposables.create()
-//        }
-//
-//        let observer: SingleObserver = { event, _ in
-//            switch event {
-//            case .success(let element):
-//                onSuccess?(element)
-//                await disposable.dispose()
-//            case .failure(let error):
-//                if let onFailure {
-//                    onFailure(error)
-//                } else {
-//                    await Hooks.getDefaultErrorHandler()(callStack, error)
-//                }
-//                await disposable.dispose()
-//            }
-//        }
-//
-//        return await Disposables.create(
-//            primitiveSequence.subscribe(c.call(), observer),
-//            disposable
-//        )
+        #if DEBUG
+            let callStack = Hooks.recordCallStackOnError ? Thread.callStackSymbols : []
+        #else
+            let callStack = [String]()
+        #endif
+
+        let disposable: Disposable
+        if let onDisposed {
+            disposable = Disposables.create(with: onDisposed)
+        } else {
+            disposable = Disposables.create()
+        }
+
+        let observer: SingleObserver = { event, _ in
+            switch event {
+            case .success(let element):
+                onSuccess?(element)
+                await disposable.dispose()
+            case .failure(let error):
+                if let onFailure {
+                    onFailure(error)
+                } else {
+                    await Hooks.getDefaultErrorHandler()(callStack, error)
+                }
+                await disposable.dispose()
+            }
+        }
+
+        return await Disposables.create(
+            primitiveSequence.subscribe(c.call(), observer),
+            disposable
+        )
     }
 }
 

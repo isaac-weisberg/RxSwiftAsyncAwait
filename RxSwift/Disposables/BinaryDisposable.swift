@@ -47,16 +47,57 @@ final class BinaryDisposable {
         SynchronousDisposeBaseDeinit()
     }
 }
-//
-//public extension Disposables {
-//    /// Creates a disposable with the given disposables.
-//    static func create(
-//        _ disposable1: AsynchronousDisposable,
-//        _ disposable2: AsynchronousDisposable
-//    ) -> AsynchronousCancelable {
-//        BinaryDisposable(disposable1, disposable2)
-//    }
-//}
+
+final class BinaryDisposableClassic: AsynchronousCancelable {
+    private let disposed: NonAtomicInt
+
+    // state
+    private let disposable1: Disposable
+    private let disposable2: Disposable
+
+    /// - returns: Was resource disposed.
+    func isDisposed() -> Bool {
+        isFlagSet(disposed, 1)
+    }
+
+    /// Constructs new binary disposable from two disposables.
+    ///
+    /// - parameter disposable1: First disposable
+    /// - parameter disposable2: Second disposable
+    init(_ disposable1: Disposable, _ disposable2: Disposable) {
+        disposed = NonAtomicInt(0)
+        self.disposable1 = disposable1
+        self.disposable2 = disposable2
+        SynchronousDisposeBaseInit()
+    }
+
+    /// Calls the disposal action if and only if the current instance hasn't been disposed yet.
+    ///
+    /// After invoking disposal action, disposal action will be dereferenced.
+    func dispose() async {
+        if fetchOr(disposed, 1) == 0 {
+            async let disposable1: () = self.disposable1.dispose()
+            async let disposable2: () = self.disposable2.dispose()
+            
+            await disposable1
+            await disposable2
+        }
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
+    }
+}
+
+public extension Disposables {
+    /// Creates a disposable with the given disposables.
+    static func create(
+        _ disposable1: AsynchronousDisposable,
+        _ disposable2: AsynchronousDisposable
+    ) -> AsynchronousCancelable {
+        BinaryDisposableClassic(disposable1, disposable2)
+    }
+}
 
 struct Dispose2Action {
     let disposable1: Disposable?
