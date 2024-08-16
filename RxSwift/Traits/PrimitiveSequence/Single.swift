@@ -27,7 +27,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(subscribe: @Sendable @escaping (C, @escaping SingleObserver) async -> Disposable) -> Single<Element> {
+    static func create(subscribe: @Sendable @escaping (C, @escaping SingleObserver) async -> Disposable)
+        -> Single<Element> {
         let source = Observable<Element>.create { c, observer in
             await subscribe(c.call()) { event, c in
                 switch event {
@@ -49,7 +50,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
     func subscribe(_ c: C, _ observer: @escaping SingleObserver) async -> Disposable {
-        return await primitiveSequence.asObservable().subscribe(c.call()) { event, c in
+        await primitiveSequence.asObservable().subscribe(c.call()) { event, c in
 
             switch event {
             case .next(let element):
@@ -79,8 +80,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
     func subscribe<Object: AnyObject & Sendable>(
         _ c: C,
         with object: Object,
-        onSuccess: ((Object, Element) -> Void)? = nil,
-        onFailure: ((Object, Swift.Error) -> Void)? = nil,
+        onSuccess: (@Sendable (Object, Element) -> Void)? = nil,
+        onFailure: (@Sendable (Object, Swift.Error) -> Void)? = nil,
         onDisposed: (@Sendable (Object) -> Void)? = nil
     )
         async -> Disposable {
@@ -112,8 +113,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      */
     #if VICIOUS_TRACING
         func subscribe(
-            onSuccess: ((Element) -> Void)? = nil,
-            onFailure: ((Swift.Error) -> Void)? = nil,
+            onSuccess: (@Sendable (Element) -> Void)? = nil,
+            onFailure: (@Sendable (Swift.Error) -> Void)? = nil,
             onDisposed: (@Sendable () -> Void)? = nil,
             _ file: StaticString = #file,
             _ function: StaticString = #function,
@@ -287,7 +288,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: An observable sequence whose elements are the result of invoking the transform function on each element of source.
 
      */
-    func map<Result>(_ transform: @Sendable @escaping (Element) throws -> Result)
+    func map<Result: Sendable>(_ transform: @Sendable @escaping (Element) throws -> Result)
         -> Single<Result> {
         Single(raw: primitiveSequence.source.map(transform))
     }
@@ -312,7 +313,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-    func flatMap<Result>(_ selector: @Sendable @escaping (Element) throws -> Single<Result>)
+    func flatMap<Result: Sendable>(_ selector: @Sendable @escaping (Element) throws -> Single<Result>)
         -> Single<Result> {
         Single<Result>(raw: primitiveSequence.source.flatMap(selector))
     }
@@ -338,10 +339,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-//    func flatMapCompletable(_ selector: @escaping (Element) async throws -> Completable) async
-//        -> Completable {
-//        await Completable(raw: primitiveSequence.source.flatMap(selector))
-//    }
+    func flatMapCompletable(_ selector: @Sendable @escaping (Element) throws -> Completable)
+        -> Completable {
+        Completable(raw: primitiveSequence.source.flatMap(selector))
+    }
 
     /**
      Merges the specified observable sequences into one observable sequence by using the selector function whenever all of the observable sequences have produced an element at a corresponding index.
@@ -406,7 +407,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
     /// one exists.
     ///
     /// - returns: Completable trait that represents `self`.
-//    func asCompletable() async -> Completable {
-//        await primitiveSequence.source.ignoreElements().asCompletable()
-//    }
+    func asCompletable() -> Completable {
+        primitiveSequence.source.ignoreElements().asCompletable()
+    }
 }

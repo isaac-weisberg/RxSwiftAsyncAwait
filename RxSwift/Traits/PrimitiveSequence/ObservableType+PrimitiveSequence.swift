@@ -48,8 +48,8 @@ public extension ObservableType where Element == Never {
     /**
      - returns: An observable sequence that completes.
      */
-//    func asCompletable()
-//        -> Completable {
-//        PrimitiveSequence(raw: asObservable())
-//    }
+    func asCompletable()
+        -> Completable {
+        PrimitiveSequence(raw: asObservable())
+    }
 }
