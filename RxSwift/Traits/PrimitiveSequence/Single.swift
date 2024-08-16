@@ -17,7 +17,7 @@ public typealias Single<Element> = PrimitiveSequence<SingleTrait, Element>
 public typealias SingleEvent<Element> = Result<Element, Swift.Error>
 
 public extension PrimitiveSequenceType where Trait == SingleTrait {
-    typealias SingleObserver = (SingleEvent<Element>, C) async -> Void
+    typealias SingleObserver = @Sendable (SingleEvent<Element>, C) async -> Void
 
     /**
      Creates an observable sequence from a specified subscribe method implementation.
@@ -27,7 +27,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(subscribe: @escaping (C, @escaping SingleObserver) async -> Disposable) -> Single<Element> {
+    static func create(subscribe: @Sendable @escaping (C, @escaping SingleObserver) async -> Disposable) -> Single<Element> {
         let source = Observable<Element>.create { c, observer in
             await subscribe(c.call()) { event, c in
                 switch event {
@@ -49,14 +49,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
     func subscribe(_ c: C, _ observer: @escaping SingleObserver) async -> Disposable {
-        var stopped = false
         return await primitiveSequence.asObservable().subscribe(c.call()) { event, c in
-            if stopped { return }
-            stopped = true
 
             switch event {
             case .next(let element):
-
                 await observer(.success(element), c.call())
             case .error(let error):
                 await observer(.failure(error), c.call())
@@ -80,12 +76,12 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe<Object: AnyObject>(
+    func subscribe<Object: AnyObject & Sendable>(
         _ c: C,
         with object: Object,
         onSuccess: ((Object, Element) -> Void)? = nil,
         onFailure: ((Object, Swift.Error) -> Void)? = nil,
-        onDisposed: ((Object) -> Void)? = nil
+        onDisposed: (@Sendable (Object) -> Void)? = nil
     )
         async -> Disposable {
         await subscribe(
@@ -140,8 +136,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
 
     func subscribe(
         _ c: C,
-        onSuccess: ((Element) -> Void)? = nil,
-        onFailure: ((Swift.Error) -> Void)? = nil,
+        onSuccess: (@Sendable (Element) -> Void)? = nil,
+        onFailure: (@Sendable (Swift.Error) -> Void)? = nil,
         onDisposed: (@Sendable () -> Void)? = nil
     )
         async -> Disposable {

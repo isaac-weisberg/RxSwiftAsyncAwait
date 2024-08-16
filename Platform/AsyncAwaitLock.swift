@@ -61,8 +61,8 @@ public final actor ActualNonRecursiveLock {
     }
 
     #if VICIOUS_TRACING
-        public func performLocked<R>(
-            _ work: @escaping () async -> R,
+    public func performLocked<R: Sendable>(
+            _ work: @Sendable @escaping () async -> R,
             _ file: StaticString = #file,
             _ function: StaticString = #function,
             _ line: UInt = #line
@@ -133,28 +133,6 @@ public final actor ActualNonRecursiveLock {
 //    }
 
     public struct C: Sendable {
-        public static func with<R>(
-            _ file: StaticString = #file,
-            _ function: StaticString = #function,
-            _ line: UInt = #line,
-            _ work: @escaping (C) async -> R
-        )
-            async -> R {
-            let c = C(file, function, line)
-            return await work(c)
-        }
-
-        static func withNoLock<R>(
-            _ file: StaticString = #file,
-            _ function: StaticString = #function,
-            _ line: UInt = #line,
-            _ work: @escaping (C) async -> R
-        )
-            async -> R {
-            let c = C(file, function, line)
-            return await work(c)
-        }
-
         struct Entry {
             let file: StaticString
             let function: StaticString

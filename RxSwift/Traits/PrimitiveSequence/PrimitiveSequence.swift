@@ -23,7 +23,7 @@ public protocol PrimitiveSequenceType {
     associatedtype Trait
 
     /// Sequence element type
-    associatedtype Element
+    associatedtype Element: Sendable
 
     // Converts `self` to primitive sequence.
     ///

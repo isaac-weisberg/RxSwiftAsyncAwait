@@ -11,22 +11,22 @@ import RxSwift
 /// PublishRelay is a wrapper for `PublishSubject`.
 ///
 /// Unlike `PublishSubject` it can't terminate with error or completed.
-public final class PublishRelay<Element>: ObservableType {
+public final class PublishRelay<Element: Sendable>: ObservableType {
     private let subject: PublishSubject<Element>
     
     /// Accepts `event` and emits it to subscribers
-    public func accept(_ event: Element) async {
-        await self.subject.onNext(event)
+    public func accept(_ event: Element, _ c: C) async {
+        await self.subject.onNext(event, c.call())
     }
     
     /// Initializes with internal empty subject.
-    public init() async {
-        self.subject = await PublishSubject()
+    public init() {
+        self.subject = PublishSubject()
     }
 
     /// Subscribes observer
-    public func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
-        await self.subject.subscribe(observer)
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await self.subject.subscribe(c.call(), observer)
     }
     
     /// - returns: Canonical interface for push style sequence
@@ -37,7 +37,7 @@ public final class PublishRelay<Element>: ObservableType {
     /// Convert to an `Infallible`
     ///
     /// - returns: `Infallible<Element>`
-    public func asInfallible() async -> Infallible<Element> {
-        await asInfallible(onErrorFallbackTo: .empty())
-    }
+//    public func asInfallible() async -> Infallible<Element> {
+//        await asInfallible(onErrorFallbackTo: .empty())
+//    }
 }

@@ -17,7 +17,7 @@ public extension ObservableType {
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe(_ c: C, _ on: @escaping (Event<Element>, C) async -> Void) async -> AsynchronousDisposable {
+    func subscribe(_ c: C, _ on: @Sendable @escaping (Event<Element>, C) async -> Void) async -> AsynchronousDisposable {
         let observer = AnyObserver<Element>(eventHandler: { e, c in
             await on(e, c.call())
         })
@@ -39,13 +39,13 @@ public extension ObservableType {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe<Object: AnyObject>(
+    func subscribe<Object: AnyObject & Sendable>(
         _ c: C,
         with object: Object,
-        onNext: ((Object, Element) -> Void)? = nil,
-        onError: ((Object, Swift.Error) -> Void)? = nil,
-        onCompleted: ((Object) -> Void)? = nil,
-        onDisposed: ((Object) -> Void)? = nil
+        onNext: (@Sendable (Object, Element) -> Void)? = nil,
+        onError: (@Sendable (Object, Swift.Error) -> Void)? = nil,
+        onCompleted: (@Sendable (Object) -> Void)? = nil,
+        onDisposed: (@Sendable (Object) -> Void)? = nil
     )
         async -> AsynchronousDisposable {
         await subscribe(
@@ -161,13 +161,6 @@ public extension Hooks {
     typealias CustomCaptureSubscriptionCallstack = () -> [String]
 
     private static let lock = ActualNonRecursiveLock()
-
-    // call me manually plz
-    static func initialize() async {
-        #if TRACE_RESOURCES
-            await Resources.initialize()
-        #endif
-    }
 
     private static var _defaultErrorHandler: DefaultErrorHandler = { subscriptionCallStack, error in
         #if DEBUG
