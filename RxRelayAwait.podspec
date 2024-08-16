@@ -1,13 +1,18 @@
 Pod::Spec.new do |s|
-  s.name             = "RxSwiftAwait"
+  s.name             = "RxRelayAwait"
   s.version          = "0.0.1"
-  s.summary          = "RxSwift is a Swift implementation of Reactive Extensions"
+  s.summary          = "Relays for RxSwift - PublishRelay, BehaviorRelay and ReplayRelay"
   s.description      = <<-DESC
-  RxSwift except no locks, full structured concurrency
+Relays for RxSwiftAwait - PublishRelay, BehaviorRelay and ReplayRelay
+
+* PublishRelay
+* BehaviorRelay
+* ReplayRelay
+* Binding overloads
                         DESC
   s.homepage         = "https://github.com/isaac-weisberg/RxSwiftAwait"
   s.license          = 'MIT'
-  s.author           = {
+  s.author           = { 
     "Krunoslav Zaher" => "krunoslav.zaher@gmail.com",
     'Shai "freak4pc" Mishali' => "freak4pc@gmail.com",
     'Isaac "The Dad" Weisberg' => "net.caroline.weisberg@gmail.com"
@@ -16,14 +21,14 @@ Pod::Spec.new do |s|
 
   s.requires_arc          = true
 
-  s.ios.deployment_target = '13.0'
+  s.ios.deployment_target = '9.0'
   # s.osx.deployment_target = '10.10'
   # s.watchos.deployment_target = '3.0'
   # s.tvos.deployment_target = '9.0'
 
-  s.source_files          = 'RxSwift/**/*.swift', 'Platform/**/*.swift'
-  s.exclude_files         = 'RxSwift/Platform/**/*.swift'
+  s.source_files          = 'RxRelay/**/*.{swift,h,m}'
 
+  s.dependency 'RxSwiftAwait', '6.7.1'
   s.swift_version = '5.1'
 
   s.pod_target_xcconfig = { 'APPLICATION_EXTENSION_API_ONLY' => 'YES' }
