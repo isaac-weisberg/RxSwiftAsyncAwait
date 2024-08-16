@@ -274,16 +274,16 @@ extension Reactive where Base: UICollectionView {
     ///     collectionView.rx.modelSelected(MyModel.self)
     ///        .map { ...
     /// ```
-    public func modelSelected<T>(_ modelType: T.Type) -> ControlEvent<T> {
-        let source: Observable<T> = itemSelected.flatMap { [weak view = self.base as UICollectionView] indexPath -> Observable<T> in
+    public func modelSelected<T>(_ modelType: T.Type) async -> ControlEvent<T> {
+        let source: Observable<T> = await itemSelected.flatMap { [weak view = self.base as UICollectionView] indexPath -> Observable<T> in
             guard let view = view else {
-                return Observable.empty()
+                return await Observable.empty()
             }
 
-            return Observable.just(try view.rx.model(at: indexPath))
+            return await Observable.just(try view.rx.model(at: indexPath))
         }
         
-        return ControlEvent(events: source)
+        return await ControlEvent(events: source)
     }
 
     /// Reactive wrapper for `delegate` message `collectionView(_:didSelectItemAtIndexPath:)`.
@@ -295,16 +295,16 @@ extension Reactive where Base: UICollectionView {
     ///     collectionView.rx.modelDeselected(MyModel.self)
     ///        .map { ...
     /// ```
-    public func modelDeselected<T>(_ modelType: T.Type) -> ControlEvent<T> {
-        let source: Observable<T> = itemDeselected.flatMap { [weak view = self.base as UICollectionView] indexPath -> Observable<T> in
+    public func modelDeselected<T>(_ modelType: T.Type) async -> ControlEvent<T> {
+        let source: Observable<T> = await itemDeselected.flatMap { [weak view = self.base as UICollectionView] indexPath -> Observable<T> in
             guard let view = view else {
-                return Observable.empty()
+                return await Observable.empty()
             }
 
-            return Observable.just(try view.rx.model(at: indexPath))
+            return await Observable.just(try view.rx.model(at: indexPath))
         }
 
-        return ControlEvent(events: source)
+        return await ControlEvent(events: source)
     }
     
     /// Synchronous helper method for retrieving a model at indexPath through a reactive data source

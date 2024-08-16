@@ -14,10 +14,10 @@ class ObservableShareReplayScopeTests : RxTest {
 }
 
 extension ObservableShareReplayScopeTests {
-    func test_testDefaultArguments() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_testDefaultArguments() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(220, 2),
             .next(230, 3),
@@ -37,18 +37,18 @@ extension ObservableShareReplayScopeTests {
 
         var ys: Observable<Int>! = nil
 
-        scheduler.scheduleAt(Defaults.created) { ys = xs.share() }
+        await scheduler.scheduleAt(Defaults.created) { ys = await xs.share() }
 
-        scheduler.scheduleAt(200) { subscription1 = ys.subscribe(res1) }
-        scheduler.scheduleAt(300) { subscription2 = ys.subscribe(res2) }
+        await scheduler.scheduleAt(200) { subscription1 = await ys.subscribe(res1) }
+        await scheduler.scheduleAt(300) { subscription2 = await ys.subscribe(res2) }
 
-        scheduler.scheduleAt(350) { subscription1.dispose() }
-        scheduler.scheduleAt(400) { subscription2.dispose() }
+        await scheduler.scheduleAt(350) { await subscription1.dispose() }
+        await scheduler.scheduleAt(400) { await subscription2.dispose() }
 
-        scheduler.scheduleAt(500) { subscription3 = ys.subscribe(res3) }
-        scheduler.scheduleAt(600) { subscription3.dispose() }
+        await scheduler.scheduleAt(500) { subscription3 = await ys.subscribe(res3) }
+        await scheduler.scheduleAt(600) { await subscription3.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
 
         XCTAssertEqual(res1.events, [
             .next(210, 1),
@@ -71,11 +71,11 @@ extension ObservableShareReplayScopeTests {
     }
 
 
-    func test_forever_receivesCorrectElements() {
+    func test_forever_receivesCorrectElements() async {
         for i in 0 ..< 5 {
-            let scheduler = TestScheduler(initialClock: 0)
+            let scheduler = await TestScheduler(initialClock: 0)
 
-            let xs = scheduler.createHotObservable([
+            let xs = await scheduler.createHotObservable([
                     .next(210, 1),
                     .next(220, 2),
                     .next(230, 3),
@@ -95,18 +95,18 @@ extension ObservableShareReplayScopeTests {
 
             var ys: Observable<Int>! = nil
 
-            scheduler.scheduleAt(Defaults.created) { ys = xs.share(replay: i, scope: .forever) }
+            await scheduler.scheduleAt(Defaults.created) { ys = await xs.share(replay: i, scope: .forever) }
 
-            scheduler.scheduleAt(200) { subscription1 = ys.subscribe(res1) }
-            scheduler.scheduleAt(300) { subscription2 = ys.subscribe(res2) }
+            await scheduler.scheduleAt(200) { subscription1 = await ys.subscribe(res1) }
+            await scheduler.scheduleAt(300) { subscription2 = await ys.subscribe(res2) }
 
-            scheduler.scheduleAt(350) { subscription1.dispose() }
-            scheduler.scheduleAt(400) { subscription2.dispose() }
+            await scheduler.scheduleAt(350) { await subscription1.dispose() }
+            await scheduler.scheduleAt(400) { await subscription2.dispose() }
 
-            scheduler.scheduleAt(500) { subscription3 = ys.subscribe(res3) }
-            scheduler.scheduleAt(600) { subscription3.dispose() }
+            await scheduler.scheduleAt(500) { subscription3 = await ys.subscribe(res3) }
+            await scheduler.scheduleAt(600) { await subscription3.dispose() }
 
-            scheduler.start()
+            await scheduler.start()
 
             XCTAssertEqual(res1.events, [
                 .next(210, 1),
@@ -130,11 +130,11 @@ extension ObservableShareReplayScopeTests {
         }
     }
 
-    func test_whileConnected_receivesCorrectElements() {
+    func test_whileConnected_receivesCorrectElements() async {
         for i in 0 ..< 5 {
-            let scheduler = TestScheduler(initialClock: 0)
+            let scheduler = await TestScheduler(initialClock: 0)
 
-            let xs = scheduler.createHotObservable([
+            let xs = await scheduler.createHotObservable([
                 .next(210, 1),
                 .next(220, 2),
                 .next(230, 3),
@@ -154,18 +154,18 @@ extension ObservableShareReplayScopeTests {
 
             var ys: Observable<Int>! = nil
 
-            scheduler.scheduleAt(Defaults.created) { ys = xs.share(replay: i, scope: .whileConnected) }
+            await scheduler.scheduleAt(Defaults.created) { ys = await xs.share(replay: i, scope: .whileConnected) }
 
-            scheduler.scheduleAt(200) { subscription1 = ys.subscribe(res1) }
-            scheduler.scheduleAt(300) { subscription2 = ys.subscribe(res2) }
+            await scheduler.scheduleAt(200) { subscription1 = await ys.subscribe(res1) }
+            await scheduler.scheduleAt(300) { subscription2 = await ys.subscribe(res2) }
 
-            scheduler.scheduleAt(350) { subscription1.dispose() }
-            scheduler.scheduleAt(400) { subscription2.dispose() }
+            await scheduler.scheduleAt(350) { await subscription1.dispose() }
+            await scheduler.scheduleAt(400) { await subscription2.dispose() }
 
-            scheduler.scheduleAt(500) { subscription3 = ys.subscribe(res3) }
-            scheduler.scheduleAt(600) { subscription3.dispose() }
+            await scheduler.scheduleAt(500) { subscription3 = await ys.subscribe(res3) }
+            await scheduler.scheduleAt(600) { await subscription3.dispose() }
 
-            scheduler.start()
+            await scheduler.start()
 
             XCTAssertEqual(res1.events, [
                 .next(210, 1),
@@ -188,11 +188,11 @@ extension ObservableShareReplayScopeTests {
         }
     }
 
-    func test_forever_error() {
+    func test_forever_error() async {
         for i in 0 ..< 5 {
-            let scheduler = TestScheduler(initialClock: 0)
+            let scheduler = await TestScheduler(initialClock: 0)
 
-            let xs = scheduler.createHotObservable([
+            let xs = await scheduler.createHotObservable([
                 .next(210, 1),
                 .next(220, 2),
                 .next(230, 3),
@@ -216,36 +216,36 @@ extension ObservableShareReplayScopeTests {
 
             var ys: Observable<Int>! = nil
 
-            scheduler.scheduleAt(Defaults.created) { ys = xs.share(replay: i, scope: .forever) }
+            await scheduler.scheduleAt(Defaults.created) { ys = await xs.share(replay: i, scope: .forever) }
 
-            scheduler.scheduleAt(200) {
-                subscription1 = ys.subscribe { event in
+            await scheduler.scheduleAt(200) {
+                subscription1 = await ys.subscribe { event in
                     res1.on(event)
                     switch event {
-                    case .error: subscription1 = ys.subscribe(res1_)
-                    case .completed: subscription1 = ys.subscribe(res1_)
+                    case .error: subscription1 = await ys.subscribe(res1_)
+                    case .completed: subscription1 = await ys.subscribe(res1_)
                     case .next: break
                     }
                 }
             }
-            scheduler.scheduleAt(300) {
-                subscription2 = ys.subscribe { event in
+            await scheduler.scheduleAt(300) {
+                subscription2 = await ys.subscribe { event in
                     res2.on(event)
                     switch event {
-                    case .error: subscription2 = ys.subscribe(res2_)
-                    case .completed: subscription2 = ys.subscribe(res2_)
+                    case .error: subscription2 = await ys.subscribe(res2_)
+                    case .completed: subscription2 = await ys.subscribe(res2_)
                     case .next: break
                     }
                 }
             }
 
-            scheduler.scheduleAt(350) { subscription1.dispose() }
-            scheduler.scheduleAt(400) { subscription2.dispose() }
+            await scheduler.scheduleAt(350) { await subscription1.dispose() }
+            await scheduler.scheduleAt(400) { await subscription2.dispose() }
 
-            scheduler.scheduleAt(500) { subscription3 = ys.subscribe(res3) }
-            scheduler.scheduleAt(600) { subscription3.dispose() }
+            await scheduler.scheduleAt(500) { subscription3 = await ys.subscribe(res3) }
+            await scheduler.scheduleAt(600) { await subscription3.dispose() }
 
-            scheduler.start()
+            await scheduler.start()
 
             XCTAssertEqual(res1.events, [
                 .next(210, 1),
@@ -276,11 +276,11 @@ extension ObservableShareReplayScopeTests {
         }
     }
 
-    func test_whileConnected_error() {
+    func test_whileConnected_error() async {
         for i in 0 ..< 5 {
-            let scheduler = TestScheduler(initialClock: 0)
+            let scheduler = await TestScheduler(initialClock: 0)
 
-            let xs = scheduler.createHotObservable([
+            let xs = await scheduler.createHotObservable([
                 .next(210, 1),
                 .next(220, 2),
                 .next(230, 3),
@@ -304,36 +304,36 @@ extension ObservableShareReplayScopeTests {
 
             var ys: Observable<Int>! = nil
 
-            scheduler.scheduleAt(Defaults.created) { ys = xs.share(replay: i, scope: .whileConnected) }
+            await scheduler.scheduleAt(Defaults.created) { ys = await xs.share(replay: i, scope: .whileConnected) }
 
-            scheduler.scheduleAt(200) {
-                subscription1 = ys.subscribe { event in
+            await scheduler.scheduleAt(200) {
+                subscription1 = await ys.subscribe { event in
                     res1.on(event)
                     switch event {
-                    case .error: subscription1 = ys.subscribe(res1_)
-                    case .completed: subscription1 = ys.subscribe(res1_)
+                    case .error: subscription1 = await ys.subscribe(res1_)
+                    case .completed: subscription1 = await ys.subscribe(res1_)
                     case .next: break
                     }
                 }
             }
-            scheduler.scheduleAt(300) {
-                subscription2 = ys.subscribe { event in
+            await scheduler.scheduleAt(300) {
+                subscription2 = await ys.subscribe { event in
                     res2.on(event)
                     switch event {
-                    case .error: subscription2 = ys.subscribe(res2_)
-                    case .completed: subscription2 = ys.subscribe(res2_)
+                    case .error: subscription2 = await ys.subscribe(res2_)
+                    case .completed: subscription2 = await ys.subscribe(res2_)
                     case .next: break
                     }
                 }
             }
 
-            scheduler.scheduleAt(350) { subscription1.dispose() }
-            scheduler.scheduleAt(400) { subscription2.dispose() }
+            await scheduler.scheduleAt(350) { await subscription1.dispose() }
+            await scheduler.scheduleAt(400) { await subscription2.dispose() }
 
-            scheduler.scheduleAt(500) { subscription3 = ys.subscribe(res3) }
-            scheduler.scheduleAt(600) { subscription3.dispose() }
+            await scheduler.scheduleAt(500) { subscription3 = await ys.subscribe(res3) }
+            await scheduler.scheduleAt(600) { await subscription3.dispose() }
 
-            scheduler.start()
+            await scheduler.start()
 
             XCTAssertEqual(res1.events, [
                 .next(210, 1),
@@ -361,11 +361,11 @@ extension ObservableShareReplayScopeTests {
         }
     }
 
-    func test_forever_completed() {
+    func test_forever_completed() async {
         for i in 0 ..< 5 {
-            let scheduler = TestScheduler(initialClock: 0)
+            let scheduler = await TestScheduler(initialClock: 0)
 
-            let xs = scheduler.createHotObservable([
+            let xs = await scheduler.createHotObservable([
                 .next(210, 1),
                 .next(220, 2),
                 .next(230, 3),
@@ -389,36 +389,36 @@ extension ObservableShareReplayScopeTests {
 
             var ys: Observable<Int>! = nil
 
-            scheduler.scheduleAt(Defaults.created) { ys = xs.share(replay: i, scope: .forever) }
+            await scheduler.scheduleAt(Defaults.created) { ys = await xs.share(replay: i, scope: .forever) }
 
-            scheduler.scheduleAt(200) {
-                subscription1 = ys.subscribe { event in
+            await scheduler.scheduleAt(200) {
+                subscription1 = await ys.subscribe { event in
                     res1.on(event)
                     switch event {
-                    case .error: subscription1 = ys.subscribe(res1_)
-                    case .completed: subscription1 = ys.subscribe(res1_)
+                    case .error: subscription1 = await ys.subscribe(res1_)
+                    case .completed: subscription1 = await ys.subscribe(res1_)
                     case .next: break
                     }
                 }
             }
-            scheduler.scheduleAt(300) {
-                subscription2 = ys.subscribe { event in
+            await scheduler.scheduleAt(300) {
+                subscription2 = await ys.subscribe { event in
                     res2.on(event)
                     switch event {
-                    case .error: subscription2 = ys.subscribe(res2_)
-                    case .completed: subscription2 = ys.subscribe(res2_)
+                    case .error: subscription2 = await ys.subscribe(res2_)
+                    case .completed: subscription2 = await ys.subscribe(res2_)
                     case .next: break
                     }
                 }
             }
 
-            scheduler.scheduleAt(350) { subscription1.dispose() }
-            scheduler.scheduleAt(400) { subscription2.dispose() }
+            await scheduler.scheduleAt(350) { await subscription1.dispose() }
+            await scheduler.scheduleAt(400) { await subscription2.dispose() }
 
-            scheduler.scheduleAt(500) { subscription3 = ys.subscribe(res3) }
-            scheduler.scheduleAt(600) { subscription3.dispose() }
+            await scheduler.scheduleAt(500) { subscription3 = await ys.subscribe(res3) }
+            await scheduler.scheduleAt(600) { await subscription3.dispose() }
 
-            scheduler.start()
+            await scheduler.start()
 
             XCTAssertEqual(res1.events, [
                 .next(210, 1),
@@ -449,11 +449,11 @@ extension ObservableShareReplayScopeTests {
         }
     }
 
-    func test_whileConnected_completed() {
+    func test_whileConnected_completed() async {
         for i in 0 ..< 5 {
-            let scheduler = TestScheduler(initialClock: 0)
+            let scheduler = await TestScheduler(initialClock: 0)
 
-            let xs = scheduler.createHotObservable([
+            let xs = await scheduler.createHotObservable([
                 .next(210, 1),
                 .next(220, 2),
                 .next(230, 3),
@@ -477,36 +477,36 @@ extension ObservableShareReplayScopeTests {
 
             var ys: Observable<Int>! = nil
 
-            scheduler.scheduleAt(Defaults.created) { ys = xs.share(replay: i, scope: .whileConnected) }
+            await scheduler.scheduleAt(Defaults.created) { ys = await xs.share(replay: i, scope: .whileConnected) }
 
-            scheduler.scheduleAt(200) {
-                subscription1 = ys.subscribe { event in
+            await scheduler.scheduleAt(200) {
+                subscription1 = await ys.subscribe { event in
                     res1.on(event)
                     switch event {
-                    case .error: subscription1 = ys.subscribe(res1_)
-                    case .completed: subscription1 = ys.subscribe(res1_)
+                    case .error: subscription1 = await ys.subscribe(res1_)
+                    case .completed: subscription1 = await ys.subscribe(res1_)
                     case .next: break
                     }
                 }
             }
-            scheduler.scheduleAt(300) {
-                subscription2 = ys.subscribe { event in
+            await scheduler.scheduleAt(300) {
+                subscription2 = await ys.subscribe { event in
                     res2.on(event)
                     switch event {
-                    case .error: subscription2 = ys.subscribe(res2_)
-                    case .completed: subscription2 = ys.subscribe(res2_)
+                    case .error: subscription2 = await ys.subscribe(res2_)
+                    case .completed: subscription2 = await ys.subscribe(res2_)
                     case .next: break
                     }
                 }
             }
 
-            scheduler.scheduleAt(350) { subscription1.dispose() }
-            scheduler.scheduleAt(400) { subscription2.dispose() }
+            await scheduler.scheduleAt(350) { await subscription1.dispose() }
+            await scheduler.scheduleAt(400) { await subscription2.dispose() }
 
-            scheduler.scheduleAt(500) { subscription3 = ys.subscribe(res3) }
-            scheduler.scheduleAt(600) { subscription3.dispose() }
+            await scheduler.scheduleAt(500) { subscription3 = await ys.subscribe(res3) }
+            await scheduler.scheduleAt(600) { await subscription3.dispose() }
 
-            scheduler.start()
+            await scheduler.start()
 
             XCTAssertEqual(res1.events, [
                 .next(210, 1),
@@ -535,17 +535,17 @@ extension ObservableShareReplayScopeTests {
     }
 
     #if TRACE_RESOURCES
-        func testReleasesResourcesOnComplete() {
+    func testReleasesResourcesOnComplete() async {
             for i in 0 ..< 5 {
-                _ = Observable<Int>.just(1).share(replay: i, scope: .forever).subscribe()
-                _ = Observable<Int>.just(1).share(replay: i, scope: .whileConnected).subscribe()
+                _ = await Observable<Int>.just(1).share(replay: i, scope: .forever).subscribe()
+                _ = await Observable<Int>.just(1).share(replay: i, scope: .whileConnected).subscribe()
             }
         }
 
-        func testReleasesResourcesOnError() {
+    func testReleasesResourcesOnError() async {
             for i in 0 ..< 5 {
-                _ = Observable<Int>.error(testError).share(replay: i, scope: .forever).subscribe()
-                _ = Observable<Int>.error(testError).share(replay: i, scope: .whileConnected).subscribe()
+                _ = await Observable<Int>.error(testError).share(replay: i, scope: .forever).subscribe()
+                _ = await Observable<Int>.error(testError).share(replay: i, scope: .whileConnected).subscribe()
             }
         }
     #endif

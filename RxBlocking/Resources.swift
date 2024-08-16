@@ -10,20 +10,20 @@ import RxSwift
 
 #if TRACE_RESOURCES
     struct Resources {
-        static func incrementTotal() -> Int32 {
-            return RxSwift.Resources.incrementTotal()
+        static func incrementTotal() async -> Int32 {
+            return await RxSwift.Resources.incrementTotal()
         }
 
-        static func decrementTotal() -> Int32 {
-            return RxSwift.Resources.decrementTotal()
+        static func decrementTotal() async -> Int32 {
+            return await RxSwift.Resources.decrementTotal()
         }
 
-        static var numberOfSerialDispatchQueueObservables: Int32 {
-            return RxSwift.Resources.numberOfSerialDispatchQueueObservables
+        static func numberOfSerialDispatchQueueObservables() async -> Int32 {
+            return await RxSwift.Resources.numberOfSerialDispatchQueueObservables()
         }
 
-        static var total: Int32 {
-            return RxSwift.Resources.total
+        static func total() async -> Int32 {
+            return await RxSwift.Resources.total()
         }
     }
 #endif

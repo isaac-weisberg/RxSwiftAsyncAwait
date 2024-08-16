@@ -16,11 +16,11 @@ class ObservableTimerTest : RxTest {
 }
 
 extension ObservableTimerTest {
-    func testTimer_Basic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimer_Basic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Observable<Int>.timer(.seconds(100), scheduler: scheduler)
+        let res = await scheduler.start {
+            await Observable<Int>.timer(.seconds(100), scheduler: scheduler)
         }
 
         let correct = Recorded.events(
@@ -33,10 +33,10 @@ extension ObservableTimerTest {
 
     #if TRACE_RESOURCES
     
-        func testTimerReleasesResourcesOnComplete() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.timer(.seconds(100), scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testTimerReleasesResourcesOnComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.timer(.seconds(100), scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
 
     #endif
@@ -45,11 +45,11 @@ extension ObservableTimerTest {
 
 extension ObservableTimerTest {
 
-    func testInterval_TimeSpan_Basic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testInterval_TimeSpan_Basic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Observable<Int64>.interval(.seconds(100), scheduler: scheduler)
+        let res = await scheduler.start {
+            await Observable<Int64>.interval(.seconds(100), scheduler: scheduler)
         }
 
         let correct = Recorded.events(
@@ -65,11 +65,11 @@ extension ObservableTimerTest {
         XCTAssertEqual(res.events, correct)
     }
 
-    func testInterval_TimeSpan_Zero() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testInterval_TimeSpan_Zero() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start(disposed: 210) {
-            Observable<Int64>.interval(.seconds(0), scheduler: scheduler)
+        let res = await scheduler.start(disposed: 210) {
+            await Observable<Int64>.interval(.seconds(0), scheduler: scheduler)
         }
 
         let correct = Recorded.events(
@@ -87,14 +87,14 @@ extension ObservableTimerTest {
         XCTAssertEqual(res.events, correct)
     }
 
-    func testInterval_TimeSpan_Zero_DefaultScheduler() {
+    func testInterval_TimeSpan_Zero_DefaultScheduler() async {
         let scheduler = SerialDispatchQueueScheduler(qos: .default)
 
         let observer = PrimitiveMockObserver<Int64>()
 
         let expectCompleted = expectation(description: "It will complete")
 
-        let d = Observable<Int64>
+        let d = await Observable<Int64>
             .interval(.seconds(0), scheduler: scheduler)
             .take(while: { $0 < 10 })
             .subscribe(
@@ -110,29 +110,29 @@ extension ObservableTimerTest {
             d.dispose()
         }
 
-        waitForExpectations(timeout: 1.0) { e in
+        await waitForExpectations(timeout: 1.0) { e in
             XCTAssert(e == nil, "Did not complete")
         }
 
         let cleanResources = expectation(description: "Clean resources")
 
-        _ = scheduler.schedule(()) { _ in
+        _ = await scheduler.schedule(()) { _ in
             cleanResources.fulfill()
             return Disposables.create()
         }
 
-        waitForExpectations(timeout: 1.0) { e in
+        await waitForExpectations(timeout: 1.0) { e in
             XCTAssert(e == nil, "Did not clean up")
         }
 
         XCTAssertTrue(observer.events.count == 10)
     }
 
-    func testInterval_TimeSpan_Disposed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testInterval_TimeSpan_Disposed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Observable<Int64>.interval(.seconds(1000), scheduler: scheduler)
+        let res = await scheduler.start {
+            await Observable<Int64>.interval(.seconds(1000), scheduler: scheduler)
         }
 
         let correct: [Recorded<Event<Int64>>] = [
@@ -143,12 +143,12 @@ extension ObservableTimerTest {
 
     }
 
-    func test_IntervalWithRealScheduler() {
+    func test_IntervalWithRealScheduler() async {
         let scheduler = ConcurrentDispatchQueueScheduler(qos: .default)
 
         let start = Date()
 
-        let a = try! Observable<Int64>.interval(.seconds(1), scheduler: scheduler)
+        let a = try! await Observable<Int64>.interval(.seconds(1), scheduler: scheduler)
             .take(2)
             .toBlocking()
             .toArray()

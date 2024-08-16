@@ -13,15 +13,15 @@ final class TestConnectableObservable<Subject: SubjectType> : ConnectableObserva
 
     let o: ConnectableObservable<Subject.Element>
     
-    init(o: Observable<Subject.Element>, s: Subject) {
-        self.o = o.multicast(s)
+    init(o: Observable<Subject.Element>, s: Subject) async {
+        self.o = await o.multicast(s)
     }
     
-    func connect() -> Disposable {
-        self.o.connect()
+    func connect() async -> Disposable {
+        await self.o.connect()
     }
     
-    func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        self.o.subscribe(observer)
+    func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
+        await self.o.subscribe(observer)
     }
 }

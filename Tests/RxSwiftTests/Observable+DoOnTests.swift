@@ -14,10 +14,10 @@ class ObservableDoOnTest : RxTest {
 }
 
 extension ObservableDoOnTest {
-    func testDoOn_shouldSeeAllValues() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOn_shouldSeeAllValues() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -28,7 +28,7 @@ extension ObservableDoOnTest {
 
         var i = 0
         var sum = 2 + 3 + 4 + 5
-        let res = scheduler.start { xs.do(onNext: { element in
+        let res = await scheduler.start { await xs.do(onNext: { element in
                 i += 1
                 sum -= element
             })
@@ -53,10 +53,10 @@ extension ObservableDoOnTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDoOn_plainAction() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOn_plainAction() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -66,7 +66,7 @@ extension ObservableDoOnTest {
             ])
 
         var i = 0
-        let res = scheduler.start { xs.do(onNext: { _ in
+        let res = await scheduler.start { await xs.do(onNext: { _ in
                 i += 1
             })
         }
@@ -89,10 +89,10 @@ extension ObservableDoOnTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDoOn_nextCompleted() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOn_nextCompleted() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -104,7 +104,7 @@ extension ObservableDoOnTest {
         var i = 0
         var sum = 2 + 3 + 4 + 5
         var completedEvaluation = false
-        let res = scheduler.start { xs.do(onNext: { value in
+        let res = await scheduler.start { await xs.do(onNext: { value in
                 i += 1
                 sum -= value
             }, onCompleted: {
@@ -132,17 +132,17 @@ extension ObservableDoOnTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDoOn_completedNever() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOn_completedNever() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         let recordedEvents: [Recorded<Event<Int>>] = [
         ]
 
-        let xs = scheduler.createHotObservable(recordedEvents)
+        let xs = await scheduler.createHotObservable(recordedEvents)
 
         var i = 0
         var completedEvaluation = false
-        let res = scheduler.start { xs.do(onNext: { _ in
+        let res = await scheduler.start { await xs.do(onNext: { _ in
                 i += 1
             }, onCompleted: {
                 completedEvaluation = true
@@ -163,10 +163,10 @@ extension ObservableDoOnTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDoOn_nextError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOn_nextError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -178,7 +178,7 @@ extension ObservableDoOnTest {
         var i = 0
         var sum = 2 + 3 + 4 + 5
         var sawError = false
-        let res = scheduler.start { xs.do(onNext: { value in
+        let res = await scheduler.start { await xs.do(onNext: { value in
                 i += 1
                 sum -= value
             }, onError: { _ in
@@ -206,10 +206,10 @@ extension ObservableDoOnTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDoOn_nextErrorNot() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOn_nextErrorNot() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -221,7 +221,7 @@ extension ObservableDoOnTest {
         var i = 0
         var sum = 2 + 3 + 4 + 5
         var sawError = false
-        let res = scheduler.start { xs.do(onNext: { value in
+        let res = await scheduler.start { await xs.do(onNext: { value in
                 i += 1
                 sum -= value
             }, onError: { _ in
@@ -249,10 +249,10 @@ extension ObservableDoOnTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDoOnNext_normal() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOnNext_normal() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -263,7 +263,7 @@ extension ObservableDoOnTest {
 
         var numberOfTimesInvoked = 0
 
-        let res = scheduler.start { xs.do(onNext: { _ in
+        let res = await scheduler.start { await xs.do(onNext: { _ in
                 numberOfTimesInvoked += 1
             })
         }
@@ -286,10 +286,10 @@ extension ObservableDoOnTest {
         XCTAssertEqual(numberOfTimesInvoked, 4)
     }
 
-    func testDoOnNext_throws() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOnNext_throws() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -300,7 +300,7 @@ extension ObservableDoOnTest {
 
         var numberOfTimesInvoked = 0
 
-        let res = scheduler.start { xs.do(onNext: { _ in
+        let res = await scheduler.start { await xs.do(onNext: { _ in
                 if numberOfTimesInvoked > 2 {
                     throw testError
                 }
@@ -325,10 +325,10 @@ extension ObservableDoOnTest {
         XCTAssertEqual(numberOfTimesInvoked, 3)
     }
 
-    func testDoOnError_normal() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOnError_normal() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .error(250, testError)
@@ -337,7 +337,7 @@ extension ObservableDoOnTest {
         var recordedError: Swift.Error!
         var numberOfTimesInvoked = 0
 
-        let res = scheduler.start { xs.do(onError: { error in
+        let res = await scheduler.start { await xs.do(onError: { error in
                 recordedError = error
                 numberOfTimesInvoked += 1
             })
@@ -359,16 +359,16 @@ extension ObservableDoOnTest {
         XCTAssertEqual(numberOfTimesInvoked, 1)
     }
 
-    func testDoOnError_throws() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOnError_throws() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .error(250, testError)
             ])
 
-        let res = scheduler.start { xs.do(onError: { _ in
+        let res = await scheduler.start { await xs.do(onError: { _ in
                 throw testError1
             })
         }
@@ -386,10 +386,10 @@ extension ObservableDoOnTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testDoOnCompleted_normal() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOnCompleted_normal() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -400,7 +400,7 @@ extension ObservableDoOnTest {
 
         var didComplete = false
 
-        let res = scheduler.start { xs.do(onCompleted: {
+        let res = await scheduler.start { await xs.do(onCompleted: {
                 didComplete = true
             })
         }
@@ -423,10 +423,10 @@ extension ObservableDoOnTest {
         XCTAssertEqual(didComplete, true)
     }
 
-    func testDoOnCompleted_throws() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDoOnCompleted_throws() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -435,7 +435,7 @@ extension ObservableDoOnTest {
             .completed(250)
             ])
 
-        let res = scheduler.start { xs.do(onCompleted: {
+        let res = await scheduler.start { await xs.do(onCompleted: {
                 throw testError
             })
         }
@@ -467,19 +467,19 @@ extension ObservableDoOnTest {
         case doOnDispose
     }
 
-    func testDoOnOrder_Completed_Async() {
+    func testDoOnOrder_Completed_Async() async {
         var events = [DoOnEvent]()
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        _ = scheduler.start {
-            Observable<Int>.create { observer in
+        _ = await scheduler.start {
+            await Observable<Int>.create { observer in
                     events.append(.sourceSubscribe)
-                    scheduler.scheduleAt(300) {
-                        observer.on(.next(0))
-                        observer.on(.completed)
+                await scheduler.scheduleAt(300) {
+                    await observer.on(.next(0))
+                    await observer.on(.completed)
                     }
-                    return Disposables.create {
+                return await Disposables.create {
                         events.append(.sourceDispose)
                     }
                 }
@@ -496,17 +496,17 @@ extension ObservableDoOnTest {
         XCTAssertEqual(events, [.doOnSubscribe, .sourceSubscribe, .doOnSubscribed, .doOnNext, .doOnCompleted, .sourceDispose, .doOnDispose])
     }
 
-    func testDoOnOrder_Completed_Sync() {
+    func testDoOnOrder_Completed_Sync() async {
         var events = [DoOnEvent]()
 
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        _ = scheduler.start {
-            Observable<Int>.create { observer in
+        _ = await scheduler.start {
+            await Observable<Int>.create { observer in
                     events.append(.sourceSubscribe)
-                    observer.on(.next(0))
-                    observer.on(.completed)
-                    return Disposables.create {
+                await observer.on(.next(0))
+                await observer.on(.completed)
+                return await Disposables.create {
                         events.append(.sourceDispose)
                     }
                 }
@@ -523,14 +523,14 @@ extension ObservableDoOnTest {
         XCTAssertEqual(events, [.doOnSubscribe, .sourceSubscribe, .doOnNext, .doOnCompleted, .sourceDispose, .doOnSubscribed, .doOnDispose])
     }
 
-    func testDoOnOrder_Error() {
+    func testDoOnOrder_Error() async {
         var events = [DoOnEvent]()
 
-        _ = Observable<Int>.create { observer in
+        _ = await Observable<Int>.create { observer in
                 events.append(.sourceSubscribe)
-                observer.on(.next(0))
-                observer.on(.error(testError))
-                return Disposables.create {
+            await observer.on(.next(0))
+            await observer.on(.error(testError))
+            return await Disposables.create {
                     events.append(.sourceDispose)
                 }
             }
@@ -547,13 +547,13 @@ extension ObservableDoOnTest {
         XCTAssertEqual(events, [.doOnSubscribe, .sourceSubscribe, .doOnNext, .doOnError, .sourceDispose, .doOnSubscribed, .doOnDispose])
     }
 
-    func testDoOnOrder_Dispose() {
+    func testDoOnOrder_Dispose() async {
         var events = [DoOnEvent]()
 
-        Observable<Int>.create { observer in
+        await await Observable<Int>.create { observer in
                 events.append(.sourceSubscribe)
-                observer.on(.next(0))
-                return Disposables.create {
+            await observer.on(.next(0))
+            return await Disposables.create {
                     events.append(.sourceDispose)
                 }
             }
@@ -571,12 +571,12 @@ extension ObservableDoOnTest {
     }
 
     #if TRACE_RESOURCES
-        func testDoReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).do().subscribe()
+    func testDoReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).do().subscribe()
         }
 
-        func testDoReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).do().subscribe()
+    func testDoReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).do().subscribe()
         }
     #endif
 }

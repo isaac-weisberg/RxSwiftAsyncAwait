@@ -14,11 +14,11 @@ class ObservableRangeTest : RxTest {
 }
 
 extension ObservableRangeTest {
-    func testRange_Boundaries() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRange_Boundaries() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Observable.range(start: Int.max, count: 1, scheduler: scheduler)
+        let res = await scheduler.start {
+            await Observable.range(start: Int.max, count: 1, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -27,11 +27,11 @@ extension ObservableRangeTest {
             ])
     }
 
-    func testRange_ZeroCount() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRange_ZeroCount() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start {
-            Observable.range(start: 0, count: 0, scheduler: scheduler)
+        let res = await scheduler.start {
+            await Observable.range(start: 0, count: 0, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -39,11 +39,11 @@ extension ObservableRangeTest {
             ])
     }
 
-    func testRange_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRange_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start(disposed: 204) {
-            Observable.range(start: -10, count: 5, scheduler: scheduler)
+        let res = await scheduler.start(disposed: 204) {
+            await Observable.range(start: -10, count: 5, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -54,14 +54,14 @@ extension ObservableRangeTest {
     }
 
     #if TRACE_RESOURCES
-        func testRangeSchedulerReleasesResourcesOnComplete() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.range(start: 0, count: 1, scheduler: testScheduler).subscribe()
-            testScheduler.start()
+    func testRangeSchedulerReleasesResourcesOnComplete() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.range(start: 0, count: 1, scheduler: testScheduler).subscribe()
+        await testScheduler.start()
         }
 
-        func testRangeReleasesResourcesOnComplete() {
-            _ = Observable<Int>.range(start: 0, count: 1).subscribe()
+    func testRangeReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.range(start: 0, count: 1).subscribe()
         }
     #endif
 }

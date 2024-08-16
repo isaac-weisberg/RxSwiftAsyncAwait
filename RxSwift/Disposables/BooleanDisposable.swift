@@ -7,23 +7,23 @@
 //
 
 /// Represents a disposable resource that can be checked for disposal status.
-public final class BooleanDisposable : Cancelable {
-
-    internal static let BooleanDisposableTrue = BooleanDisposable(isDisposed: true)
-    private let disposed: AtomicInt
+public final actor BooleanDisposable: AsynchronousCancelable {
+    static let BooleanDisposableTrue = BooleanDisposable(isDisposed: true)
+    
+    private let disposed: NonAtomicInt
     
     /// Initializes a new instance of the `BooleanDisposable` class
     public init() {
-        disposed = AtomicInt(0)
+        self.disposed = NonAtomicInt(0)
     }
     
     /// Initializes a new instance of the `BooleanDisposable` class with given value
     public init(isDisposed: Bool) {
-        self.disposed = AtomicInt(isDisposed ? 1 : 0)
+        self.disposed = NonAtomicInt(isDisposed ? 1 : 0)
     }
     
     /// - returns: Was resource disposed.
-    public var isDisposed: Bool {
+    public func isDisposed() -> Bool {
         isFlagSet(self.disposed, 1)
     }
     

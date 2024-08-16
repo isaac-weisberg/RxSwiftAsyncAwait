@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
+public extension ObservableType {
     // MARK: create
 
     /**
@@ -17,62 +17,62 @@ extension ObservableType {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    public static func create(_ subscribe: @escaping (AnyObserver<Element>) -> Disposable) -> Observable<Element> {
+    static func create(_ subscribe: @Sendable @escaping (C, AnyAsyncObserver<Element>) async -> AsynchronousDisposable)
+        -> Observable<Element> {
         AnonymousObservable(subscribe)
     }
 }
 
-final private class AnonymousObservableSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
-    typealias Element = Observer.Element 
-    typealias Parent = AnonymousObservable<Element>
+private final actor AnonymousObservableSink<
+    Observer: AsyncObserverType
+>: AsyncObserverType, AsynchronousDisposable {
+    typealias Element = Observer.Element
+    typealias SubscribeHandler = AnonymousObservable<Element>.SubscribeHandler
 
     // state
-    private let isStopped = AtomicInt(0)
+    private let innerDisposable = SingleAssignmentDisposable()
+    private let observer: Observer
 
-    #if DEBUG
-        private let synchronizationTracker = SynchronizationTracker()
-    #endif
-
-    override init(observer: Observer, cancel: Cancelable) {
-        super.init(observer: observer, cancel: cancel)
+    init(observer: Observer) {
+        self.observer = observer
     }
 
-    func on(_ event: Event<Element>) {
-        #if DEBUG
-            self.synchronizationTracker.register(synchronizationErrorMessage: .default)
-            defer { self.synchronizationTracker.unregister() }
-        #endif
+    func on(_ event: Event<Element>, _ c: C) async {
+        if innerDisposable.isDisposed {
+            return
+        }
         switch event {
         case .next:
-            if load(self.isStopped) == 1 {
-                return
-            }
-            self.forwardOn(event)
+            await observer.on(event, c.call())
         case .error, .completed:
-            if fetchOr(self.isStopped, 1) == 0 {
-                self.forwardOn(event)
-                self.dispose()
-            }
+            await observer.on(event, c.call())
+            await dispose()
         }
     }
 
-    func run(_ parent: Parent) -> Disposable {
-        parent.subscribeHandler(AnyObserver(self))
+    func dispose() async {
+        await innerDisposable.dispose()?.dispose()
+    }
+
+    func run(_ subscribeHandler: SubscribeHandler, _ c: C) async {
+        await innerDisposable.setDisposable(subscribeHandler(c.call(), AnyAsyncObserver(self)))?.dispose()
     }
 }
 
-final private class AnonymousObservable<Element>: Producer<Element> {
-    typealias SubscribeHandler = (AnyObserver<Element>) -> Disposable
+private final class AnonymousObservable<Element: Sendable>: Observable<Element> {
+    typealias SubscribeHandler = @Sendable (C, AnyAsyncObserver<Element>) async -> AsynchronousDisposable
 
     let subscribeHandler: SubscribeHandler
 
     init(_ subscribeHandler: @escaping SubscribeHandler) {
         self.subscribeHandler = subscribeHandler
+        ObservableInit()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        let sink = AnonymousObservableSink(observer: observer, cancel: cancel)
-        let subscription = sink.run(self)
-        return (sink: sink, subscription: subscription)
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any Disposable
+        where Element == Observer.Element, Observer: ObserverType {
+        let sink = AnonymousObservableSink(observer: observer)
+        await sink.run(subscribeHandler, c.call())
+        return sink
     }
 }

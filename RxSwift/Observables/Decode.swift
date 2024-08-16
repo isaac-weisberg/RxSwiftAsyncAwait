@@ -20,7 +20,7 @@ public extension ObservableType where Element == Data {
   func decode<Item: Decodable,
               Decoder: DataDecoder>(type: Item.Type,
                                     decoder: Decoder) -> Observable<Item> {
-    map { try decoder.decode(type, from: $0) }
+      map { try decoder.decode(type, from: $0) }
   }
 }
 

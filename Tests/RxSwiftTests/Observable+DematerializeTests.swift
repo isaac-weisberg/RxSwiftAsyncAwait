@@ -14,10 +14,10 @@ class ObservableDematerializeTest : RxTest {
 }
 
 extension ObservableDematerializeTest {
-    func testDematerialize_Range1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDematerialize_Range1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, Event.next(41)),
             .next(210, Event.next(42)),
             .next(220, Event.next(43)),
@@ -25,8 +25,8 @@ extension ObservableDematerializeTest {
             .completed(251),
         ])
         
-        let res = scheduler.start {
-            xs.dematerialize()
+        let res = await scheduler.start {
+            await xs.dematerialize()
         }
         
         
@@ -41,10 +41,10 @@ extension ObservableDematerializeTest {
         
     }
     
-    func testDematerialize_Range2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDematerialize_Range2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, Event.next(41)),
             .next(210, Event.next(42)),
             .next(220, Event.next(43)),
@@ -52,8 +52,8 @@ extension ObservableDematerializeTest {
             .next(231, Event.completed),
             ])
         
-        let res = scheduler.start {
-            xs.dematerialize()
+        let res = await scheduler.start {
+            await xs.dematerialize()
         }
         
         XCTAssertEqual(res.events, [
@@ -68,11 +68,11 @@ extension ObservableDematerializeTest {
         
     }
     
-    func testDematerialize_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDematerialize_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
     
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
                 .next(150, Event.next(41)),
                 .next(210, Event.next(42)),
                 .next(220, Event.next(43)),
@@ -80,8 +80,8 @@ extension ObservableDematerializeTest {
                 .error(231, TestError.dummyError),
             ])
         
-        let res = scheduler.start {
-            xs.dematerialize()
+        let res = await scheduler.start {
+            await xs.dematerialize()
         }
         
         XCTAssertEqual(res.events, [
@@ -95,11 +95,11 @@ extension ObservableDematerializeTest {
             ])
     }
     
-    func testDematerialize_Error2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDematerialize_Error2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, Event.next(41)),
             .next(210, Event.next(42)),
             .next(220, Event.next(43)),
@@ -107,8 +107,8 @@ extension ObservableDematerializeTest {
             .next(231, Event.error(TestError.dummyError))
             ])
         
-        let res = scheduler.start {
-            xs.dematerialize()
+        let res = await scheduler.start {
+            await xs.dematerialize()
         }
         
         XCTAssertEqual(res.events, [
@@ -122,28 +122,28 @@ extension ObservableDematerializeTest {
             ])
     }
     
-    func testMaterialize_Dematerialize_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMaterialize_Dematerialize_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = Observable<Int>.never()
+        let xs = await Observable<Int>.never()
         
-        let res = scheduler.start {
-            xs.materialize().dematerialize()
+        let res = await scheduler.start {
+            await xs.materialize().dematerialize()
         }
         
         XCTAssertEqual(res.events, [])
     }
     
-    func testMaterialize_Dematerialize_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMaterialize_Dematerialize_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            xs.materialize().dematerialize()
+        let res = await scheduler.start {
+            await xs.materialize().dematerialize()
         }
         
         XCTAssertEqual(res.events, [
@@ -155,17 +155,17 @@ extension ObservableDematerializeTest {
             ])
     }
     
-    func testMaterialize_Dematerialize_Return() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMaterialize_Dematerialize_Return() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            xs.materialize().dematerialize()
+        let res = await scheduler.start {
+            await xs.materialize().dematerialize()
         }
         
         XCTAssertEqual(res.events, [
@@ -178,17 +178,17 @@ extension ObservableDematerializeTest {
             ])
     }
     
-    func testMaterialize_Dematerialize_Throw() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMaterialize_Dematerialize_Throw() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         let dummyError = TestError.dummyError
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .error(250, dummyError)
         ])
         
-        let res = scheduler.start {
-            xs.materialize().dematerialize()
+        let res = await scheduler.start {
+            await xs.materialize().dematerialize()
         }
         
         XCTAssertEqual(res.events, [
@@ -201,16 +201,16 @@ extension ObservableDematerializeTest {
     }
     
     #if TRACE_RESOURCES
-        func testDematerializeReleasesResourcesOnComplete1() {
-            _ = Observable.just(Event.next(1)).dematerialize().subscribe()
+    func testDematerializeReleasesResourcesOnComplete1() async {
+        _ = await Observable.just(Event.next(1)).dematerialize().subscribe()
         }
         
-        func testDematerializeReleasesResourcesOnComplete2() {
-            _ = Observable<Event<Int>>.empty().dematerialize().subscribe()
+    func testDematerializeReleasesResourcesOnComplete2() async {
+        _ = await Observable<Event<Int>>.empty().dematerialize().subscribe()
         }
         
-        func testDematerializeReleasesResourcesOnError() {
-            _ = Observable<Event<Int>>.error(testError).dematerialize().subscribe()
+    func testDematerializeReleasesResourcesOnError() async {
+        _ = await Observable<Event<Int>>.error(testError).dematerialize().subscribe()
         }
     #endif
 }

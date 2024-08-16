@@ -14,10 +14,10 @@ class ObservableSkipUntilTest : RxTest {
 }
 
 extension ObservableSkipUntilTest {
-    func testSkipUntil_SomeData_Next() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_SomeData_Next() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -26,14 +26,14 @@ extension ObservableSkipUntilTest {
             .completed(250)
         ])
         
-        let r = scheduler.createHotObservable([
+        let r = await scheduler.createHotObservable([
             .next(150, 1),
             .next(225, 99),
             .completed(230)
         ])
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
     
         XCTAssertEqual(res.events, [
@@ -51,10 +51,10 @@ extension ObservableSkipUntilTest {
         ])
     }
     
-    func testSkipUntil_SomeData_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_SomeData_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -63,13 +63,13 @@ extension ObservableSkipUntilTest {
             .completed(250)
         ])
         
-        let r = scheduler.createHotObservable([
+        let r = await scheduler.createHotObservable([
             .next(150, 1),
             .error(225, testError)
         ])
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
     
         XCTAssertEqual(res.events, [
@@ -85,24 +85,24 @@ extension ObservableSkipUntilTest {
         ])
     }
     
-    func testSkipUntil_Error_SomeData() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_Error_SomeData() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .error(220, testError)
  
         ])
         
-        let r = scheduler.createHotObservable([
+        let r = await scheduler.createHotObservable([
             .next(150, 1),
             .next(230, 2),
             .completed(250)
         ])
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
         
         XCTAssertEqual(res.events, [
@@ -118,10 +118,10 @@ extension ObservableSkipUntilTest {
         ])
     }
     
-    func testSkipUntil_SomeData_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_SomeData_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -130,13 +130,13 @@ extension ObservableSkipUntilTest {
             .completed(250)
         ])
         
-        let r = scheduler.createHotObservable([
+        let r = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(225)
         ])
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
         
         XCTAssertEqual(res.events, [
@@ -151,21 +151,21 @@ extension ObservableSkipUntilTest {
         ])
     }
     
-    func testSkipUntil_Never_Next() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_Never_Next() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1)
         ])
         
-        let r = scheduler.createHotObservable([
+        let r = await scheduler.createHotObservable([
             .next(150, 1),
             .next(225, 2), //!
             .completed(250)
         ])
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
         
         XCTAssertEqual(res.events, [
@@ -180,20 +180,20 @@ extension ObservableSkipUntilTest {
         ])
     }
     
-    func testSkipUntil_Never_Error1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_Never_Error1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1)
         ])
         
-        let r = scheduler.createHotObservable([
+        let r = await scheduler.createHotObservable([
             .next(150, 1),
             .error(225, testError)
         ])
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
         
         XCTAssertEqual(res.events, [
@@ -209,10 +209,10 @@ extension ObservableSkipUntilTest {
         ])
     }
     
-    func testSkipUntil_SomeData_Error2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_SomeData_Error2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -221,13 +221,13 @@ extension ObservableSkipUntilTest {
             .completed(250)
         ])
         
-        let r = scheduler.createHotObservable([
+        let r = await scheduler.createHotObservable([
             .next(150, 1),
             .error(300, testError)
         ])
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
         
         XCTAssertEqual(res.events, [
@@ -242,10 +242,10 @@ extension ObservableSkipUntilTest {
         ])
     }
     
-    func testSkipUntil_SomeData_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_SomeData_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -254,12 +254,12 @@ extension ObservableSkipUntilTest {
             .completed(250)
         ])
         
-        let r = scheduler.createHotObservable([
+        let r = await scheduler.createHotObservable([
             .next(150, 1),
         ])
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
         
         XCTAssertEqual(res.events, [
@@ -274,20 +274,20 @@ extension ObservableSkipUntilTest {
         ])
     }
     
-    func testSkipUntil_Never_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_Never_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1),
         ])
         
-        let r = scheduler.createHotObservable([
+        let r = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(225)
         ])
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
         
         XCTAssertEqual(res.events, [
@@ -302,19 +302,19 @@ extension ObservableSkipUntilTest {
         ])
     }
     
-    func testSkipUntil_Never_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_Never_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1),
         ])
         
-        let r = scheduler.createHotObservable([
+        let r = await scheduler.createHotObservable([
             .next(150, 1),
         ])
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
         
         XCTAssertEqual(res.events, [
@@ -329,12 +329,12 @@ extension ObservableSkipUntilTest {
         ])
     }
     
-    func testSkipUntil_HasCompletedCausesDisposal() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testSkipUntil_HasCompletedCausesDisposal() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var isDisposed = false
         
-        let l = scheduler.createHotObservable([
+        let l = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -343,14 +343,14 @@ extension ObservableSkipUntilTest {
             .completed(250)
         ])
         
-        let r: Observable<Int> = Observable.create { _ in
-            return Disposables.create {
+        let r: Observable<Int> = await Observable.create { _ in
+            return await Disposables.create {
                 isDisposed = true
             }
         }
         
-        let res = scheduler.start {
-            l.skip(until: r)
+        let res = await scheduler.start {
+            await l.skip(until: r)
         }
         
         XCTAssertEqual(res.events, [
@@ -360,28 +360,28 @@ extension ObservableSkipUntilTest {
     }
 
     #if TRACE_RESOURCES
-        func testSkipUntilReleasesResourcesOnComplete1() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).delay(.seconds(20), scheduler: scheduler).skip(until: Observable<Int>.just(1)).subscribe()
-            scheduler.start()
+    func testSkipUntilReleasesResourcesOnComplete1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).delay(.seconds(20), scheduler: scheduler).skip(until: Observable<Int>.just(1)).subscribe()
+        await scheduler.start()
         }
 
-        func testSkipUntilReleasesResourcesOnComplete2() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).skip(until: Observable<Int>.just(1).delay(.seconds(20), scheduler: scheduler)).subscribe()
-            scheduler.start()
+    func testSkipUntilReleasesResourcesOnComplete2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).skip(until: Observable<Int>.just(1).delay(.seconds(20), scheduler: scheduler)).subscribe()
+        await scheduler.start()
         }
 
-        func testSkipUntilReleasesResourcesOnError1() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.never().timeout(.seconds(20), scheduler: scheduler).skip(until: Observable<Int>.just(1)).subscribe()
-            scheduler.start()
+    func testSkipUntilReleasesResourcesOnError1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.never().timeout(.seconds(20), scheduler: scheduler).skip(until: Observable<Int>.just(1)).subscribe()
+        await scheduler.start()
         }
 
-        func testSkipUntilReleasesResourcesOnError2() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).skip(until: Observable<Int>.never().timeout(.seconds(20), scheduler: scheduler)).subscribe()
-            scheduler.start()
+    func testSkipUntilReleasesResourcesOnError2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).skip(until: Observable<Int>.never().timeout(.seconds(20), scheduler: scheduler)).subscribe()
+        await scheduler.start()
         }
     #endif
 }

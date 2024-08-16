@@ -7,94 +7,72 @@
 //
 
 /**
-In case nobody holds this lock, the work will be queued and executed immediately
-on thread that is requesting lock.
+ In case nobody holds this lock, the work will be queued and executed immediately
+ on thread that is requesting lock.
 
-In case there is somebody currently holding that lock, action will be enqueued.
-When owned of the lock finishes with it's processing, it will also execute
-and pending work.
+ In case there is somebody currently holding that lock, action will be enqueued.
+ When owned of the lock finishes with it's processing, it will also execute
+ and pending work.
 
-That means that enqueued work could possibly be executed later on a different thread.
-*/
-final class AsyncLock<I: InvocableType>
-    : Disposable
-    , Lock
-    , SynchronizedDisposeType {
+ That means that enqueued work could possibly be executed later on a different thread.
+ */
+final actor AsyncLock<I: InvocableType>: Disposable {
     typealias Action = () -> Void
-    
-    private var _lock = SpinLock()
-    
+
     private var queue: Queue<I> = Queue(capacity: 0)
 
-    private var isExecuting: Bool = false
-    private var hasFaulted: Bool = false
+    private var isExecuting = false
+    private var hasFaulted = false
 
-    // lock {
-    func lock() {
-        self._lock.lock()
-    }
-
-    func unlock() {
-        self._lock.unlock()
-    }
-    // }
+    init() {}
 
     private func enqueue(_ action: I) -> I? {
-        self.lock(); defer { self.unlock() }
-        if self.hasFaulted {
+        if hasFaulted {
             return nil
         }
-        
-        if self.isExecuting {
-            self.queue.enqueue(action)
+
+        if isExecuting {
+            queue.enqueue(action)
             return nil
         }
-        
-        self.isExecuting = true
-        
+
+        isExecuting = true
+
         return action
     }
 
     private func dequeue() -> I? {
-        self.lock(); defer { self.unlock() }
-        if !self.queue.isEmpty {
-            return self.queue.dequeue()
-        }
-        else {
-            self.isExecuting = false
+        if !queue.isEmpty {
+            return queue.dequeue()
+        } else {
+            isExecuting = false
             return nil
         }
     }
 
-    func invoke(_ action: I) {
-        let firstEnqueuedAction = self.enqueue(action)
-        
-        if let firstEnqueuedAction = firstEnqueuedAction {
-            firstEnqueuedAction.invoke()
-        }
-        else {
+    func invoke(_ c: C, _ action: I) async {
+        let firstEnqueuedAction = enqueue(action)
+
+        if let firstEnqueuedAction {
+            await firstEnqueuedAction.invoke(c.call())
+        } else {
             // action is enqueued, it's somebody else's concern now
             return
         }
-        
-        while true {
-            let nextAction = self.dequeue()
 
-            if let nextAction = nextAction {
-                nextAction.invoke()
-            }
-            else {
+        while true {
+            let nextAction = dequeue()
+
+            if let nextAction {
+                await nextAction.invoke(c.call())
+            } else {
                 return
             }
         }
     }
-    
-    func dispose() {
-        self.synchronizedDispose()
-    }
 
-    func synchronized_dispose() {
-        self.queue = Queue(capacity: 0)
-        self.hasFaulted = true
+    func dispose() async {
+        queue = Queue(capacity: 0)
+        hasFaulted = true
     }
 }

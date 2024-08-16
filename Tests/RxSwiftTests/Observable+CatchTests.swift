@@ -14,27 +14,27 @@ class ObservableCatchTest : RxTest {
 }
 
 extension ObservableCatchTest {
-    func testCatch_ErrorSpecific_Caught() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCatch_ErrorSpecific_Caught() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let o1 = scheduler.createHotObservable([
+        let o1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
             .error(230, testError)
         ])
         
-        let o2 = scheduler.createHotObservable([
+        let o2 = await scheduler.createHotObservable([
             .next(240, 4),
             .completed(250)
         ])
         
         var handlerCalled: Int?
         
-        let res = scheduler.start {
-            o1.catch { _ in
+        let res = await scheduler.start {
+            await o1.catch { _ in
                 handlerCalled = scheduler.clock
-                return o2.asObservable()
+                return await o2.asObservable()
             }
         }
         
@@ -56,10 +56,10 @@ extension ObservableCatchTest {
         ])
     }
     
-    func testCatch_HandlerThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCatch_HandlerThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let o1 = scheduler.createHotObservable([
+        let o1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
@@ -68,8 +68,8 @@ extension ObservableCatchTest {
         
         var handlerCalled: Int?
         
-        let res = scheduler.start {
-            o1.catch { _ in
+        let res = await scheduler.start {
+            await o1.catch { _ in
                 handlerCalled = scheduler.clock
                 throw testError1
             }
@@ -89,39 +89,39 @@ extension ObservableCatchTest {
     }
 
     #if TRACE_RESOURCES
-        func testCatchReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).catch { _ in Observable<Int>.just(1) }.subscribe()
+    func testCatchReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).catch { _ in await Observable<Int>.just(1) }.subscribe()
         }
 
-        func tesCatch1ReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).catch { _ in Observable<Int>.just(1) }.subscribe()
+    func tesCatch1ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).catch { _ in await Observable<Int>.just(1) }.subscribe()
         }
 
-        func tesCatch2ReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).catch { _ in Observable<Int>.error(testError) }.subscribe()
+    func tesCatch2ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).catch { _ in await Observable<Int>.error(testError) }.subscribe()
         }
     #endif
 }
 
 // catch enumerable
 extension ObservableCatchTest {
-    func testCatchSequenceOf_IEofIO() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCatchSequenceOf_IEofIO() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createColdObservable([
+        let xs1 = await scheduler.createColdObservable([
             .next(10, 1),
             .next(20, 2),
             .next(30, 3),
             .error(40, testError)
         ])
         
-        let xs2 = scheduler.createColdObservable([
+        let xs2 = await scheduler.createColdObservable([
             .next(10, 4),
             .next(20, 5),
             .error(30, testError)
         ])
         
-        let xs3 = scheduler.createColdObservable([
+        let xs3 = await scheduler.createColdObservable([
             .next(10, 6),
             .next(20, 7),
             .next(30, 8),
@@ -129,8 +129,8 @@ extension ObservableCatchTest {
             .completed(50)
         ])
         
-        let res = scheduler.start {
-            Observable.catch(sequence: [xs1.asObservable(), xs2.asObservable(), xs3.asObservable()])
+        let res = await scheduler.start {
+            await Observable.catch(sequence: [xs1.asObservable(), xs2.asObservable(), xs3.asObservable()])
         }
         
         XCTAssertEqual(res.events, [
@@ -159,23 +159,23 @@ extension ObservableCatchTest {
             ])
     }
     
-    func testCatchAnySequence_NoErrors() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCatchAnySequence_NoErrors() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
             .completed(230)
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(240, 4),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            Observable.catch(sequence: [xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.catch(sequence: [xs1, xs2].map { await $0.asObservable() })
         }
         
         XCTAssertEqual(res.events, [
@@ -192,20 +192,20 @@ extension ObservableCatchTest {
             ])
     }
 
-    func testCatchAnySequence_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCatchAnySequence_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(240, 4),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            Observable.catch(sequence: [xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.catch(sequence: [xs1, xs2].map { await $0.asObservable() })
         }
         
         XCTAssertEqual(res.events, [
@@ -219,21 +219,21 @@ extension ObservableCatchTest {
             ])
     }
     
-    func testCatchAnySequence_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCatchAnySequence_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(230)
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(240, 4),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            Observable.catch(sequence: [xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.catch(sequence: [xs1, xs2].map { await $0.asObservable() })
         }
         
         XCTAssertEqual(res.events, [
@@ -248,23 +248,23 @@ extension ObservableCatchTest {
             ])
     }
     
-    func testCatchSequenceOf_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCatchSequenceOf_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
             .error(230, testError)
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(240, 4),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            Observable.catch(sequence: [xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.catch(sequence: [xs1, xs2].map { await $0.asObservable() })
         }
         
         XCTAssertEqual(res.events, [
@@ -283,22 +283,22 @@ extension ObservableCatchTest {
             ])
     }
     
-    func testCatchSequenceOf_ErrorNever() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCatchSequenceOf_ErrorNever() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
             .error(230, testError)
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             ])
         
-        let res = scheduler.start {
-            Observable.catch(sequence: [xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.catch(sequence: [xs1, xs2].map { await $0.asObservable() })
         }
         
         XCTAssertEqual(res.events, [
@@ -315,23 +315,23 @@ extension ObservableCatchTest {
             ])
     }
     
-    func testCatchSequenceOf_ErrorError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCatchSequenceOf_ErrorError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
             .error(230, testError)
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .error(250, testError)
             ])
         
-        let res = scheduler.start {
-            Observable.catch(sequence: [xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.catch(sequence: [xs1, xs2].map { await $0.asObservable() })
         }
         
         XCTAssertEqual(res.events, [
@@ -349,27 +349,27 @@ extension ObservableCatchTest {
             ])
     }
     
-    func testCatchSequenceOf_Multiple() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testCatchSequenceOf_Multiple() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .error(215, testError)
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(220, 3),
             .error(225, testError)
             ])
         
-        let xs3 = scheduler.createHotObservable([
+        let xs3 = await scheduler.createHotObservable([
             .next(230, 4),
             .completed(235)
             ])
         
-        let res = scheduler.start {
-            Observable.catch(sequence: [xs1.asObservable(), xs2.asObservable(), xs3.asObservable()])
+        let res = await scheduler.start {
+            await Observable.catch(sequence: [xs1.asObservable(), xs2.asObservable(), xs3.asObservable()])
         }
         
         XCTAssertEqual(res.events, [
@@ -393,25 +393,25 @@ extension ObservableCatchTest {
     }
 
     #if TRACE_RESOURCES
-        func testCatchSequenceReleasesResourcesOnComplete() {
-            _ = Observable.catch(sequence: [Observable<Int>.just(1)]).subscribe()
+    func testCatchSequenceReleasesResourcesOnComplete() async {
+        _ = await Observable.catch(sequence: [Observable<Int>.just(1)]).subscribe()
         }
     #endif
 }
 
 extension ObservableCatchTest {
-    func testRetry_Basic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRetry_Basic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(100, 1),
             .next(150, 2),
             .next(200, 3),
             .completed(250)
             ])
 
-        let res = scheduler.start {
-            xs.retry()
+        let res = await scheduler.start {
+            await xs.retry()
         }
 
         XCTAssertEqual(res.events, [
@@ -426,17 +426,17 @@ extension ObservableCatchTest {
             ])
     }
 
-    func testRetry_Infinite() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRetry_Infinite() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(100, 1),
             .next(150, 2),
             .next(200, 3),
             ])
 
-        let res = scheduler.start {
-            xs.retry()
+        let res = await scheduler.start {
+            await xs.retry()
         }
 
         XCTAssertEqual(res.events, [
@@ -450,18 +450,18 @@ extension ObservableCatchTest {
             ])
     }
 
-    func testRetry_Observable_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRetry_Observable_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(100, 1),
             .next(150, 2),
             .next(200, 3),
             .error(250, testError),
             ])
 
-        let res = scheduler.start(disposed: 1100) {
-            xs.retry()
+        let res = await scheduler.start(disposed: 1100) {
+            await xs.retry()
         }
 
         XCTAssertEqual(res.events, [
@@ -485,18 +485,18 @@ extension ObservableCatchTest {
             ])
     }
 
-    func testRetryCount_Basic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRetryCount_Basic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(5, 1),
             .next(10, 2),
             .next(15, 3),
             .error(20, testError)
             ])
 
-        let res = scheduler.start {
-            xs.retry(3)
+        let res = await scheduler.start {
+            await xs.retry(3)
         }
 
         XCTAssertEqual(res.events, [
@@ -519,18 +519,18 @@ extension ObservableCatchTest {
             ])
     }
 
-    func testRetryCount_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRetryCount_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(5, 1),
             .next(10, 2),
             .next(15, 3),
             .error(20, testError)
             ])
 
-        let res = scheduler.start(disposed: 231) {
-            xs.retry(3)
+        let res = await scheduler.start(disposed: 231) {
+            await xs.retry(3)
         }
 
         XCTAssertEqual(res.events, [
@@ -547,18 +547,18 @@ extension ObservableCatchTest {
             ])
     }
 
-    func testRetryCount_Infinite() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRetryCount_Infinite() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(5, 1),
             .next(10, 2),
             .next(15, 3),
             .error(20, testError)
             ])
 
-        let res = scheduler.start(disposed: 231) {
-            xs.retry(3)
+        let res = await scheduler.start(disposed: 231) {
+            await xs.retry(3)
         }
 
         XCTAssertEqual(res.events, [
@@ -575,18 +575,18 @@ extension ObservableCatchTest {
             ])
     }
 
-    func testRetryCount_Completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRetryCount_Completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(100, 1),
             .next(150, 2),
             .next(200, 3),
             .completed(250)
             ])
 
-        let res = scheduler.start {
-            xs.retry(3)
+        let res = await scheduler.start {
+            await xs.retry(3)
         }
 
         XCTAssertEqual(res.events, [
@@ -601,37 +601,37 @@ extension ObservableCatchTest {
             ])
     }
 
-    func testRetry_tailRecursiveOptimizationsTest() {
+    func testRetry_tailRecursiveOptimizationsTest() async {
         var count = 1
-        let sequenceSendingImmediateError: Observable<Int> = Observable.create { observer in
-            observer.on(.next(0))
-            observer.on(.next(1))
-            observer.on(.next(2))
+        let sequenceSendingImmediateError: Observable<Int> = await Observable.create { observer in
+            await observer.on(.next(0))
+            await observer.on(.next(1))
+            await observer.on(.next(2))
             if count < 2 {
-                observer.on(.error(testError))
+                await observer.on(.error(testError))
                 count += 1
             }
-            observer.on(.next(3))
-            observer.on(.next(4))
-            observer.on(.next(5))
-            observer.on(.completed)
+            await observer.on(.next(3))
+            await observer.on(.next(4))
+            await observer.on(.next(5))
+            await observer.on(.completed)
 
             return Disposables.create()
         }
 
-        _ = sequenceSendingImmediateError
+        _ = await sequenceSendingImmediateError
             .retry()
             .subscribe { _ in
             }
     }
 
     #if TRACE_RESOURCES
-        func testRetryReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).retry().subscribe()
+    func testRetryReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).retry().subscribe()
         }
 
-        func testRetryReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).retry(1).subscribe()
+    func testRetryReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).retry(1).subscribe()
         }
     #endif
 }

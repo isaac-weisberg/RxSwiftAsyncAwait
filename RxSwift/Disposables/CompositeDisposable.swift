@@ -7,141 +7,196 @@
 //
 
 /// Represents a group of disposable resources that are disposed together.
-public final class CompositeDisposable : DisposeBase, Cancelable {
+public final class UnsynchronizedCompositeDisposable: @unchecked Sendable {
     /// Key used to remove disposable from composite disposable
-    public struct DisposeKey {
+    public struct DisposeKey: Sendable {
         fileprivate let key: BagKey
         fileprivate init(key: BagKey) {
             self.key = key
         }
     }
 
-    private var lock = SpinLock()
-    
     // state
-    private var disposables: Bag<Disposable>? = Bag()
+    private var disposables: Bag<AsynchronousDisposable>? = Bag()
 
-    public var isDisposed: Bool {
-        self.lock.performLocked { self.disposables == nil }
+    public func isDisposed() -> Bool {
+        disposables == nil
     }
-    
-    public override init() {
-    }
-    
+
     /// Initializes a new instance of composite disposable with the specified number of disposables.
-    public init(_ disposable1: Disposable, _ disposable2: Disposable) {
+    public init(_ disposable1: AsynchronousDisposable, _ disposable2: AsynchronousDisposable) {
         // This overload is here to make sure we are using optimized version up to 4 arguments.
-        _ = self.disposables!.insert(disposable1)
-        _ = self.disposables!.insert(disposable2)
+        _ = disposables!.insert(disposable1)
+        _ = disposables!.insert(disposable2)
+
+        SynchronousDisposeBaseInit()
     }
-    
+
     /// Initializes a new instance of composite disposable with the specified number of disposables.
-    public init(_ disposable1: Disposable, _ disposable2: Disposable, _ disposable3: Disposable) {
+    public init(
+        _ disposable1: AsynchronousDisposable,
+        _ disposable2: AsynchronousDisposable,
+        _ disposable3: AsynchronousDisposable
+    ) {
         // This overload is here to make sure we are using optimized version up to 4 arguments.
-        _ = self.disposables!.insert(disposable1)
-        _ = self.disposables!.insert(disposable2)
-        _ = self.disposables!.insert(disposable3)
+        _ = disposables!.insert(disposable1)
+        _ = disposables!.insert(disposable2)
+        _ = disposables!.insert(disposable3)
+        SynchronousDisposeBaseInit()
     }
-    
+
     /// Initializes a new instance of composite disposable with the specified number of disposables.
-    public init(_ disposable1: Disposable, _ disposable2: Disposable, _ disposable3: Disposable, _ disposable4: Disposable, _ disposables: Disposable...) {
+    public init(
+        _ disposable1: AsynchronousDisposable,
+        _ disposable2: AsynchronousDisposable,
+        _ disposable3: AsynchronousDisposable,
+        _ disposable4: AsynchronousDisposable,
+        _ disposables: AsynchronousDisposable...
+    ) {
         // This overload is here to make sure we are using optimized version up to 4 arguments.
         _ = self.disposables!.insert(disposable1)
         _ = self.disposables!.insert(disposable2)
         _ = self.disposables!.insert(disposable3)
         _ = self.disposables!.insert(disposable4)
-        
+
         for disposable in disposables {
             _ = self.disposables!.insert(disposable)
         }
+        SynchronousDisposeBaseInit()
     }
-    
+
     /// Initializes a new instance of composite disposable with the specified number of disposables.
-    public init(disposables: [Disposable]) {
+    public init(disposables: [AsynchronousDisposable]) {
         for disposable in disposables {
             _ = self.disposables!.insert(disposable)
         }
+        SynchronousDisposeBaseInit()
     }
 
     /**
      Adds a disposable to the CompositeDisposable or disposes the disposable if the CompositeDisposable is disposed.
-     
+
      - parameter disposable: Disposable to add.
      - returns: Key that can be used to remove disposable from composite disposable. In case dispose bag was already
      disposed `nil` will be returned.
      */
-    public func insert(_ disposable: Disposable) -> DisposeKey? {
-        let key = self._insert(disposable)
-        
+    public func insert(_ disposable: AsynchronousDisposable) async -> DisposeKey? {
+        let key = _insert(disposable)
+
         if key == nil {
-            disposable.dispose()
+            await disposable.dispose()
         }
-        
+
         return key
     }
     
-    private func _insert(_ disposable: Disposable) -> DisposeKey? {
-        self.lock.performLocked {
-            let bagKey = self.disposables?.insert(disposable)
-            return bagKey.map(DisposeKey.init)
+    public func insertUnchecked(_ disposable: AsynchronousDisposable) -> DisposeKey {
+        let key = _insert(disposable)
+
+        guard let key else {
+            fatalError()
         }
+
+        return key
     }
-    
+
+    private func _insert(_ disposable: AsynchronousDisposable) -> DisposeKey? {
+        let bagKey = disposables?.insert(disposable)
+        return bagKey.map(DisposeKey.init)
+    }
+
     /// - returns: Gets the number of disposables contained in the `CompositeDisposable`.
-    public var count: Int {
-        self.lock.performLocked { self.disposables?.count ?? 0 }
+    public func count() -> Int {
+        disposables?.count ?? 0
     }
-    
+
     /// Removes and disposes the disposable identified by `disposeKey` from the CompositeDisposable.
     ///
     /// - parameter disposeKey: Key used to identify disposable to be removed.
-    public func remove(for disposeKey: DisposeKey) {
-        self._remove(for: disposeKey)?.dispose()
+    public func removeDisposing(for disposeKey: DisposeKey) async {
+        await _remove(for: disposeKey)?.dispose()
     }
-    
-    private func _remove(for disposeKey: DisposeKey) -> Disposable? {
-        self.lock.performLocked { self.disposables?.removeKey(disposeKey.key) }
+    /// Removes and disposes the disposable identified by `disposeKey` from the CompositeDisposable.
+    ///
+    /// - parameter disposeKey: Key used to identify disposable to be removed.
+    public func removeReturning(for disposeKey: DisposeKey) -> Disposable? {
+        return _remove(for: disposeKey)
     }
-    
+
+    private func _remove(for disposeKey: DisposeKey) -> AsynchronousDisposable? {
+        disposables?.removeKey(disposeKey.key)
+    }
+
     /// Disposes all disposables in the group and removes them from the group.
-    public func dispose() {
-        if let disposables = self._dispose() {
-            disposeAll(in: disposables)
+    public func dispose() async {
+        if let disposables = _dispose() {
+            await disposeAll(in: disposables)
         }
     }
 
-    private func _dispose() -> Bag<Disposable>? {
-        self.lock.performLocked {
-            let current = self.disposables
-            self.disposables = nil
-            return current
-        }
+    private func _dispose() -> Bag<AsynchronousDisposable>? {
+        let current = disposables
+        disposables = nil
+        return current
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
     }
 }
 
-extension Disposables {
+public typealias CompositeDisposable = UnsynchronizedCompositeDisposable
+
+actor ActorCompositeDisposable: AsynchronousCancelable {
+    let disposable: CompositeDisposable
+
+    init(_ disposable: CompositeDisposable) {
+        self.disposable = disposable
+    }
+
+    public func isDisposed() async -> Bool {
+        disposable.isDisposed()
+    }
+
+    public func dispose() async {
+        await disposable.dispose()
+    }
+}
+
+public extension Disposables {
+    /// Creates a disposable with the given disposables.
+    static func create(
+        _ disposable1: AsynchronousDisposable,
+        _ disposable2: AsynchronousDisposable,
+        _ disposable3: AsynchronousDisposable
+    )
+        -> AsynchronousCancelable {
+        ActorCompositeDisposable(CompositeDisposable(disposable1, disposable2, disposable3))
+    }
 
     /// Creates a disposable with the given disposables.
-    public static func create(_ disposable1: Disposable, _ disposable2: Disposable, _ disposable3: Disposable) -> Cancelable {
-        CompositeDisposable(disposable1, disposable2, disposable3)
-    }
-    
-    /// Creates a disposable with the given disposables.
-    public static func create(_ disposable1: Disposable, _ disposable2: Disposable, _ disposable3: Disposable, _ disposables: Disposable ...) -> Cancelable {
+    static func create(
+        _ disposable1: AsynchronousDisposable,
+        _ disposable2: AsynchronousDisposable,
+        _ disposable3: AsynchronousDisposable,
+        _ disposables: AsynchronousDisposable ...
+    )
+        -> AsynchronousCancelable {
         var disposables = disposables
         disposables.append(disposable1)
         disposables.append(disposable2)
         disposables.append(disposable3)
-        return CompositeDisposable(disposables: disposables)
+        return ActorCompositeDisposable(CompositeDisposable(disposables: disposables))
     }
-    
+
     /// Creates a disposable with the given disposables.
-    public static func create(_ disposables: [Disposable]) -> Cancelable {
+    static func create(_ disposables: [AsynchronousDisposable]) -> AsynchronousCancelable {
         switch disposables.count {
         case 2:
-            return Disposables.create(disposables[0], disposables[1])
+            fatalError()
+//            return BinaryDisposable(disposables[0], disposables[1])
         default:
-            return CompositeDisposable(disposables: disposables)
+            return ActorCompositeDisposable(CompositeDisposable(disposables: disposables))
         }
     }
 }

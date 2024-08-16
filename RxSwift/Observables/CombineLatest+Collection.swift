@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
+public extension ObservableType {
     /**
      Merges the specified observable sequences into one observable sequence by using the selector function whenever any of the observable sequences produces an element.
 
@@ -15,7 +15,11 @@ extension ObservableType {
      - parameter resultSelector: Function to invoke whenever any of the sources produces an element.
      - returns: An observable sequence containing the result of combining elements of the sources using the specified result selector function.
      */
-    public static func combineLatest<Collection: Swift.Collection>(_ collection: Collection, resultSelector: @escaping ([Collection.Element.Element]) throws -> Element) -> Observable<Element>
+    static func combineLatest<Collection: Swift.Collection & Sendable>(
+        _ collection: Collection,
+        resultSelector: @Sendable @escaping ([Collection.Element.Element]) throws -> Element
+    )
+        -> Observable<Element>
         where Collection.Element: ObservableType {
         CombineLatestCollectionType(sources: collection, resultSelector: resultSelector)
     }
@@ -27,21 +31,23 @@ extension ObservableType {
 
      - returns: An observable sequence containing the result of combining elements of the sources.
      */
-    public static func combineLatest<Collection: Swift.Collection>(_ collection: Collection) -> Observable<[Element]>
+    static func combineLatest<Collection: Swift.Collection & Sendable>(_ collection: Collection)
+        -> Observable<[Element]>
         where Collection.Element: ObservableType, Collection.Element.Element == Element {
         CombineLatestCollectionType(sources: collection, resultSelector: { $0 })
     }
 }
 
-final class CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observer: ObserverType>
-    : Sink<Observer> where Collection.Element: ObservableConvertibleType {
-    typealias Result = Observer.Element 
-    typealias Parent = CombineLatestCollectionType<Collection, Result>
+final actor CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observer: ObserverType>:
+    AsynchronousDisposable where Collection.Element: ObservableType {
+    typealias Result = Observer.Element
     typealias SourceElement = Collection.Element.Element
-    
-    let parent: Parent
-    
-    let lock = RecursiveLock()
+    typealias ResultSelector = ([SourceElement]) throws -> Observer.Element
+
+    let observer: Observer
+    let resultSelector: ResultSelector
+    let parentSources: Collection
+    let parentCount: Int
 
     // state
     var numberOfValues = 0
@@ -49,104 +55,120 @@ final class CombineLatestCollectionTypeSink<Collection: Swift.Collection, Observ
     var isDone: [Bool]
     var numberOfDone = 0
     var subscriptions: [SingleAssignmentDisposable]
-    
-    init(parent: Parent, observer: Observer, cancel: Cancelable) {
-        self.parent = parent
-        self.values = [SourceElement?](repeating: nil, count: parent.count)
-        self.isDone = [Bool](repeating: false, count: parent.count)
-        self.subscriptions = [SingleAssignmentDisposable]()
-        self.subscriptions.reserveCapacity(parent.count)
-        
-        for _ in 0 ..< parent.count {
-            self.subscriptions.append(SingleAssignmentDisposable())
-        }
-        
-        super.init(observer: observer, cancel: cancel)
+    var disposed = false
+
+    init(parentSources: Collection, resultSelector: @escaping ResultSelector, observer: Observer) {
+        self.parentSources = parentSources
+        parentCount = parentSources.count
+        self.resultSelector = resultSelector
+        values = [SourceElement?](repeating: nil, count: parentCount)
+        isDone = [Bool](repeating: false, count: parentCount)
+        subscriptions = (0 ..< parentCount).map { _ in SingleAssignmentDisposable() }
+
+        self.observer = observer
     }
-    
-    func on(_ event: Event<SourceElement>, atIndex: Int) {
-        self.lock.lock(); defer { self.lock.unlock() }
+
+    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
+        if !disposed {
+            await observer.on(event, c.call())
+        }
+    }
+
+    func dispose() async {
+        if !disposed {
+            disposed = true
+            var index = 0
+            while index < subscriptions.count {
+                let subscription = subscriptions[index]
+                await subscription.dispose()?.dispose()
+                index += 1
+            }
+        }
+    }
+
+    func on(_ c: C, _ event: Event<SourceElement>, atIndex: Int) async {
+        if disposed {
+            return
+        }
+
         switch event {
         case .next(let element):
-            if self.values[atIndex] == nil {
-                self.numberOfValues += 1
+            if values[atIndex] == nil {
+                numberOfValues += 1
             }
-            
-            self.values[atIndex] = element
-            
-            if self.numberOfValues < self.parent.count {
-                let numberOfOthersThatAreDone = self.numberOfDone - (self.isDone[atIndex] ? 1 : 0)
-                if numberOfOthersThatAreDone == self.parent.count - 1 {
-                    self.forwardOn(.completed)
-                    self.dispose()
+
+            values[atIndex] = element
+
+            if numberOfValues < parentCount {
+                let numberOfOthersThatAreDone = numberOfDone - (isDone[atIndex] ? 1 : 0)
+                if numberOfOthersThatAreDone == parentCount - 1 {
+                    await forwardOn(.completed, c.call())
+                    await dispose()
                 }
                 return
             }
-            
+
             do {
-                let result = try self.parent.resultSelector(self.values.map { $0! })
-                self.forwardOn(.next(result))
+                let result = try resultSelector(values.map { $0! })
+                await forwardOn(.next(result), c.call())
+            } catch {
+                await forwardOn(.error(error), c.call())
+                await dispose()
             }
-            catch let error {
-                self.forwardOn(.error(error))
-                self.dispose()
-            }
-            
+
         case .error(let error):
-            self.forwardOn(.error(error))
-            self.dispose()
+            await forwardOn(.error(error), c.call())
+            await dispose()
+
         case .completed:
-            if self.isDone[atIndex] {
+            if isDone[atIndex] {
                 return
             }
-            
-            self.isDone[atIndex] = true
-            self.numberOfDone += 1
-            
-            if self.numberOfDone == self.parent.count {
-                self.forwardOn(.completed)
-                self.dispose()
-            }
-            else {
-                self.subscriptions[atIndex].dispose()
+
+            isDone[atIndex] = true
+            numberOfDone += 1
+
+            if numberOfDone == parentCount {
+                await forwardOn(.completed, c.call())
+                await dispose()
+            } else {
+                await subscriptions[atIndex].dispose()?.dispose()
             }
         }
     }
-    
-    func run() -> Disposable {
-        var j = 0
-        for i in self.parent.sources {
-            let index = j
-            let source = i.asObservable()
-            let disposable = source.subscribe(AnyObserver { event in
-                self.on(event, atIndex: index)
-            })
 
-            self.subscriptions[j].setDisposable(disposable)
-            
+    func run(_ c: C) async {
+        var j = 0
+        for i in parentSources {
+            let index = j
+            let source = i
+            let disposable = await source.subscribe(c.call(), AnyAsyncObserver(eventHandler: { event, c in
+                await self.on(c.call(), event, atIndex: index)
+            }))
+
+            await subscriptions[j].setDisposable(disposable)?.dispose()
+
             j += 1
         }
 
-        if self.parent.sources.isEmpty {
+        if parentCount == 0 {
             do {
-                let result = try self.parent.resultSelector([])
-                self.forwardOn(.next(result))
-                self.forwardOn(.completed)
-                self.dispose()
-            }
-            catch let error {
-                self.forwardOn(.error(error))
-                self.dispose()
+                let result = try resultSelector([])
+                await forwardOn(.next(result), c.call())
+                await forwardOn(.completed, c.call())
+                await dispose()
+            } catch {
+                await forwardOn(.error(error), c.call())
+                await dispose()
             }
         }
-        
-        return Disposables.create(subscriptions)
     }
 }
 
-final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: Producer<Result> where Collection.Element: ObservableConvertibleType {
-    typealias ResultSelector = ([Collection.Element.Element]) throws -> Result
-    
+final class CombineLatestCollectionType<Collection: Swift.Collection & Sendable, Result: Sendable>: Observable<Result>
+    where Collection.Element: ObservableType {
+    typealias ResultSelector = @Sendable ([Collection.Element.Element]) throws -> Result
+
     let sources: Collection
     let resultSelector: ResultSelector
     let count: Int
@@ -154,12 +176,18 @@ final class CombineLatestCollectionType<Collection: Swift.Collection, Result>: P
     init(sources: Collection, resultSelector: @escaping ResultSelector) {
         self.sources = sources
         self.resultSelector = resultSelector
-        self.count = self.sources.count
+        count = self.sources.count
+        super.init()
     }
-    
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Result {
-        let sink = CombineLatestCollectionTypeSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
-        return (sink: sink, subscription: subscription)
+
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Result == Observer.Element, Observer: ObserverType {
+        let sink = CombineLatestCollectionTypeSink(
+            parentSources: sources,
+            resultSelector: resultSelector,
+            observer: observer
+        )
+        await sink.run(c.call())
+        return sink
     }
 }

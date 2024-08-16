@@ -30,9 +30,9 @@ public class TestScheduler : VirtualTimeScheduler<TestSchedulerVirtualTimeConver
      - parameter simulateProcessingDelay: When true, if something is scheduled right `now`, 
         it will be scheduled to `now + 1` in virtual time.
     */
-    public init(initialClock: TestTime, resolution: Double = 1.0, simulateProcessingDelay: Bool = true) {
+    public init(initialClock: TestTime, resolution: Double = 1.0, simulateProcessingDelay: Bool = true) async {
         self.simulateProcessingDelay = simulateProcessingDelay
-        super.init(initialClock: initialClock, converter: TestSchedulerVirtualTimeConverter(resolution: resolution))
+        await super.init(initialClock: initialClock, converter: TestSchedulerVirtualTimeConverter(resolution: resolution))
     }
 
     /**
@@ -41,8 +41,8 @@ public class TestScheduler : VirtualTimeScheduler<TestSchedulerVirtualTimeConver
     - parameter events: Events to surface through the created sequence at their specified absolute virtual times.
     - returns: Hot observable sequence that can be used to assert the timing of subscriptions and events.
     */
-    public func createHotObservable<Element>(_ events: [Recorded<Event<Element>>]) -> TestableObservable<Element> {
-        HotObservable(testScheduler: self as AnyObject as! TestScheduler, recordedEvents: events)
+    public func createHotObservable<Element>(_ events: [Recorded<Event<Element>>]) async -> TestableObservable<Element> {
+        await HotObservable(testScheduler: self as AnyObject as! TestScheduler, recordedEvents: events)
     }
 
     /**
@@ -51,8 +51,8 @@ public class TestScheduler : VirtualTimeScheduler<TestSchedulerVirtualTimeConver
      - parameter events: Events to surface through the created sequence at their specified virtual time offsets from the sequence subscription time.
      - returns: Cold observable sequence that can be used to assert the timing of subscriptions and events.
     */
-    public func createColdObservable<Element>(_ events: [Recorded<Event<Element>>]) -> TestableObservable<Element> {
-        ColdObservable(testScheduler: self as AnyObject as! TestScheduler, recordedEvents: events)
+    public func createColdObservable<Element>(_ events: [Recorded<Event<Element>>]) async -> TestableObservable<Element> {
+        await ColdObservable(testScheduler: self as AnyObject as! TestScheduler, recordedEvents: events)
     }
 
     /**
@@ -70,9 +70,9 @@ public class TestScheduler : VirtualTimeScheduler<TestSchedulerVirtualTimeConver
 
      - parameter time: Absolute virtual time at which to execute the action.
      */
-    public func scheduleAt(_ time: TestTime, action: @escaping () -> Void) {
-        _ = self.scheduleAbsoluteVirtual((), time: time, action: { _ -> Disposable in
-            action()
+    public func scheduleAt(_ time: TestTime, action: @escaping () async -> Void) async {
+        _ = await self.scheduleAbsoluteVirtual((), time: time, action: { _ -> Disposable in
+            await action()
             return Disposables.create()
         })
     }
@@ -93,28 +93,28 @@ public class TestScheduler : VirtualTimeScheduler<TestSchedulerVirtualTimeConver
     - parameter create: Factory method to create an observable convertible sequence.
     - returns: Observer with timestamped recordings of events that were received during the virtual time window when the subscription to the source sequence was active.
     */
-    public func start<Element, OutputSequence: ObservableConvertibleType>(created: TestTime, subscribed: TestTime, disposed: TestTime, create: @escaping () -> OutputSequence)
+    public func start<Element, OutputSequence: ObservableConvertibleType>(created: TestTime, subscribed: TestTime, disposed: TestTime, create: @escaping () async -> OutputSequence) async 
         -> TestableObserver<Element> where OutputSequence.Element == Element {
         var source: Observable<Element>?
         var subscription: Disposable?
         let observer = self.createObserver(Element.self)
         
-        _ = self.scheduleAbsoluteVirtual((), time: created) { _ in
-            source = create().asObservable()
+            _ = await self.scheduleAbsoluteVirtual((), time: created) { _ in
+            source = await create().asObservable()
             return Disposables.create()
         }
         
-        _ = self.scheduleAbsoluteVirtual((), time: subscribed) { _ in
-            subscription = source!.subscribe(observer)
+            _ = await self.scheduleAbsoluteVirtual((), time: subscribed) { _ in
+            subscription = await source!.subscribe(observer)
             return Disposables.create()
         }
         
-        _ = self.scheduleAbsoluteVirtual((), time: disposed) { _ in
-            subscription!.dispose()
+            _ = await self.scheduleAbsoluteVirtual((), time: disposed) { _ in
+            await subscription!.dispose()
             return Disposables.create()
         }
 
-        self.start()
+            await self.start()
         
         return observer
     }
@@ -130,9 +130,9 @@ public class TestScheduler : VirtualTimeScheduler<TestSchedulerVirtualTimeConver
      - parameter create: Factory method to create an observable convertible sequence.
      - returns: Observer with timestamped recordings of events that were received during the virtual time window when the subscription to the source sequence was active.
      */
-    public func start<Element, OutputSequence: ObservableConvertibleType>(disposed: TestTime, create: @escaping () -> OutputSequence)
+    public func start<Element, OutputSequence: ObservableConvertibleType>(disposed: TestTime, create: @escaping () async -> OutputSequence) async
         -> TestableObserver<Element> where OutputSequence.Element == Element {
-        self.start(created: Defaults.created, subscribed: Defaults.subscribed, disposed: disposed, create: create)
+            await self.start(created: Defaults.created, subscribed: Defaults.subscribed, disposed: disposed, create: create)
     }
 
     /**
@@ -146,9 +146,9 @@ public class TestScheduler : VirtualTimeScheduler<TestSchedulerVirtualTimeConver
      - parameter create: Factory method to create an observable convertible sequence.
      - returns: Observer with timestamped recordings of events that were received during the virtual time window when the subscription to the source sequence was active.
      */
-    public func start<Element, OutputSequence: ObservableConvertibleType>(_ create: @escaping () -> OutputSequence)
+    public func start<Element, OutputSequence: ObservableConvertibleType>(_ create: @escaping () async -> OutputSequence) async
         -> TestableObserver<Element> where OutputSequence.Element == Element {
-         self.start(created: Defaults.created, subscribed: Defaults.subscribed, disposed: Defaults.disposed, create: create)
+            await self.start(created: Defaults.created, subscribed: Defaults.subscribed, disposed: Defaults.disposed, create: create)
     }
 }
 

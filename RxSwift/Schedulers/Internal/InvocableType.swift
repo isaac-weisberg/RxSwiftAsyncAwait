@@ -6,12 +6,12 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-protocol InvocableType {
-    func invoke()
+protocol InvocableType: Sendable {
+    func invoke(_ c: C) async
 }
 
-protocol InvocableWithValueType {
-    associatedtype Value
+protocol InvocableWithValueType: Sendable {
+    associatedtype Value: Sendable
 
-    func invoke(_ value: Value)
+    func invoke(_ c: C, _ value: Value) async
 }

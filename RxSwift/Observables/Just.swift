@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
+public extension ObservableType {
     /**
      Returns an observable sequence that contains a single element.
 
@@ -15,7 +15,7 @@ extension ObservableType {
      - parameter element: Single element in the resulting observable sequence.
      - returns: An observable sequence containing the single specified element.
      */
-    public static func just(_ element: Element) -> Observable<Element> {
+    static func just(_ element: Element) -> Observable<Element> {
         Just(element: element)
     }
 
@@ -28,60 +28,72 @@ extension ObservableType {
      - parameter scheduler: Scheduler to send the single element on.
      - returns: An observable sequence containing the single specified element.
      */
-    public static func just(_ element: Element, scheduler: ImmediateSchedulerType) -> Observable<Element> {
+    static func just(_ element: Element, scheduler: AsyncScheduler) -> Observable<Element> {
         JustScheduled(element: element, scheduler: scheduler)
     }
 }
 
-final private class JustScheduledSink<Observer: ObserverType>: Sink<Observer> {
+private final actor JustScheduledSink<Observer: SyncObserverType>: AsynchronousDisposable, ActorLock {
     typealias Parent = JustScheduled<Observer.Element>
 
     private let parent: Parent
+    private let observer: Observer
+    private let disposedFlag = SingleAssignmentSyncDisposable()
 
-    init(parent: Parent, observer: Observer, cancel: Cancelable) {
+    init(parent: Parent, observer: Observer) {
         self.parent = parent
-        super.init(observer: observer, cancel: cancel)
+        self.observer = observer
     }
 
-    func run() -> Disposable {
-        let scheduler = self.parent.scheduler
-        return scheduler.schedule(self.parent.element) { element in
-            self.forwardOn(.next(element))
-            return scheduler.schedule(()) { _ in
-                self.forwardOn(.completed)
-                self.dispose()
-                return Disposables.create()
-            }
+    func dispose() {
+        disposedFlag.dispose()?.dispose()
+    }
+
+    func run(_ c: C) async {
+        let scheduler = parent.scheduler
+        let element = parent.element
+        scheduler.perform(locking(disposedFlag), c.call()) { [observer] c in
+            await observer.on(.next(element), c.call())
+            await observer.on(.completed, c.call())
+            await self.dispose()
         }
     }
+
+    func perform<R>(_ work: () -> R) -> R {
+        work()
+    }
 }
 
-final private class JustScheduled<Element>: Producer<Element> {
-    fileprivate let scheduler: ImmediateSchedulerType
+private final class JustScheduled<Element: Sendable>: Observable<Element>, @unchecked Sendable {
+    fileprivate let scheduler: AsyncScheduler
     fileprivate let element: Element
 
-    init(element: Element, scheduler: ImmediateSchedulerType) {
+    init(element: Element, scheduler: AsyncScheduler) {
         self.scheduler = scheduler
         self.element = element
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        let sink = JustScheduledSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
-        return (sink: sink, subscription: subscription)
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any Disposable
+        where Element == Observer.Element, Observer: ObserverType {
+        let sink = JustScheduledSink(parent: self, observer: observer)
+        await sink.run(c.call())
+        return sink
     }
 }
 
-final private class Just<Element>: Producer<Element> {
+private final class Just<Element: Sendable>: Observable<Element> {
     private let element: Element
-    
+
     init(element: Element) {
         self.element = element
+        super.init()
     }
-    
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        observer.on(.next(self.element))
-        observer.on(.completed)
+
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any Disposable
+        where Element == Observer.Element, Observer: ObserverType {
+        await observer.on(.next(element), c.call())
+        await observer.on(.completed, c.call())
         return Disposables.create()
     }
 }

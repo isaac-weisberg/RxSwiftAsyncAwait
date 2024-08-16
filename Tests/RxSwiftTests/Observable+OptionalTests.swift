@@ -14,10 +14,10 @@ class ObservableOptionalTest : RxTest {
 }
 
 extension ObservableOptionalTest {
-    func testFromOptionalSome_immediate() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let res = scheduler.start {
-            Observable.from(optional: Optional<Int>.some(5))
+    func testFromOptionalSome_immediate() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let res = await scheduler.start {
+            await Observable.from(optional: Optional<Int>.some(5))
         }
 
         XCTAssertEqual(res.events, [
@@ -26,10 +26,10 @@ extension ObservableOptionalTest {
             ])
     }
 
-    func testFromOptionalNone_immediate() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let res = scheduler.start {
-            Observable.from(optional: Optional<Int>.none)
+    func testFromOptionalNone_immediate() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let res = await scheduler.start {
+            await Observable.from(optional: Optional<Int>.none)
         }
 
         XCTAssertEqual(res.events, [
@@ -37,10 +37,10 @@ extension ObservableOptionalTest {
             ])
     }
 
-    func testFromOptionalSome_basic_testScheduler() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let res = scheduler.start {
-            Observable.from(optional: Optional<Int>.some(5), scheduler: scheduler)
+    func testFromOptionalSome_basic_testScheduler() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let res = await scheduler.start {
+            await Observable.from(optional: Optional<Int>.some(5), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -49,10 +49,10 @@ extension ObservableOptionalTest {
             ])
     }
 
-    func testFromOptionalNone_basic_testScheduler() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let res = scheduler.start {
-            Observable.from(optional: Optional<Int>.none, scheduler: scheduler)
+    func testFromOptionalNone_basic_testScheduler() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let res = await scheduler.start {
+            await Observable.from(optional: Optional<Int>.none, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -61,24 +61,24 @@ extension ObservableOptionalTest {
     }
 
     #if TRACE_RESOURCES
-        func testFromOptionalScheduler1ReleasesResourcesOnComplete() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.from(optional: 1 as Int?, scheduler: testScheduler).subscribe()
-            testScheduler.start()
+    func testFromOptionalScheduler1ReleasesResourcesOnComplete() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.from(optional: 1 as Int?, scheduler: testScheduler).subscribe()
+        await testScheduler.start()
         }
 
-        func testFromOptionalScheduler2ReleasesResourcesOnComplete() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.from(optional: nil as Int?, scheduler: testScheduler).subscribe()
-            testScheduler.start()
+    func testFromOptionalScheduler2ReleasesResourcesOnComplete() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.from(optional: nil as Int?, scheduler: testScheduler).subscribe()
+        await testScheduler.start()
         }
 
-        func testFromOptional1ReleasesResourcesOnComplete() {
-            _ = Observable<Int>.from(optional: 1 as Int?).subscribe()
+    func testFromOptional1ReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.from(optional: 1 as Int?).subscribe()
         }
 
-        func testFromOptional2ReleasesResourcesOnComplete() {
-            _ = Observable<Int>.from(optional: nil as Int?).subscribe()
+    func testFromOptional2ReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.from(optional: nil as Int?).subscribe()
         }
     #endif
 }

@@ -14,8 +14,8 @@ class ObservableUsingTest : RxTest {
 }
 
 extension ObservableUsingTest {
-    func testUsing_Complete() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testUsing_Complete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var disposeInvoked = 0
         var createInvoked = 0
@@ -24,19 +24,19 @@ extension ObservableUsingTest {
         var disposable: MockDisposable!
         var _d: MockDisposable!
 
-        let res = scheduler.start {
-            Observable.using({ () -> MockDisposable in
+        let res = await scheduler.start {
+            await Observable.using({ () -> MockDisposable in
                 disposeInvoked += 1
                 disposable = MockDisposable(scheduler: scheduler)
                 return disposable
             }, observableFactory: { d in
                 _d = d
                 createInvoked += 1
-                xs = scheduler.createColdObservable([
+                xs = await scheduler.createColdObservable([
                     .next(100, scheduler.clock),
                     .completed(200)
                     ])
-                return xs.asObservable()
+                return await xs.asObservable()
             }) as Observable<Int>
         }
 
@@ -60,8 +60,8 @@ extension ObservableUsingTest {
             ])
     }
 
-    func testUsing_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testUsing_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var disposeInvoked = 0
         var createInvoked = 0
@@ -70,19 +70,19 @@ extension ObservableUsingTest {
         var disposable: MockDisposable!
         var _d: MockDisposable!
 
-        let res = scheduler.start {
-            Observable.using({ () -> MockDisposable in
+        let res = await scheduler.start {
+            await Observable.using({ () -> MockDisposable in
                 disposeInvoked += 1
                 disposable = MockDisposable(scheduler: scheduler)
                 return disposable
             }, observableFactory: { d in
                 _d = d
                 createInvoked += 1
-                xs = scheduler.createColdObservable([
+                xs = await scheduler.createColdObservable([
                     .next(100, scheduler.clock),
                     .error(200, testError)
                     ])
-                return xs.asObservable()
+                return await xs.asObservable()
             }) as Observable<Int>
         }
 
@@ -106,8 +106,8 @@ extension ObservableUsingTest {
             ])
     }
 
-    func testUsing_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testUsing_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var disposeInvoked = 0
         var createInvoked = 0
@@ -116,19 +116,19 @@ extension ObservableUsingTest {
         var disposable: MockDisposable!
         var _d: MockDisposable!
 
-        let res = scheduler.start {
-            Observable.using({ () -> MockDisposable in
+        let res = await scheduler.start {
+            await Observable.using({ () -> MockDisposable in
                 disposeInvoked += 1
                 disposable = MockDisposable(scheduler: scheduler)
                 return disposable
             }, observableFactory: { d in
                 _d = d
                 createInvoked += 1
-                xs = scheduler.createColdObservable([
+                xs = await scheduler.createColdObservable([
                     .next(100, scheduler.clock),
                     .next(1000, scheduler.clock + 1)
                     ])
-                return xs.asObservable()
+                return await xs.asObservable()
             }) as Observable<Int>
         }
 
@@ -151,19 +151,19 @@ extension ObservableUsingTest {
             ])
     }
 
-    func testUsing_ThrowResourceSelector() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testUsing_ThrowResourceSelector() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var disposeInvoked = 0
         var createInvoked = 0
 
-        let res = scheduler.start {
-            Observable.using({ () -> MockDisposable in
+        let res = await scheduler.start {
+            await Observable.using({ () -> MockDisposable in
                 disposeInvoked += 1
                 throw testError
             }, observableFactory: { _ in
                 createInvoked += 1
-                return Observable.never()
+                return await Observable.never()
 
             }) as Observable<Int>
         }
@@ -176,15 +176,15 @@ extension ObservableUsingTest {
         XCTAssertEqual(1, disposeInvoked)
     }
 
-    func testUsing_ThrowResourceUsage() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testUsing_ThrowResourceUsage() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var disposeInvoked = 0
         var createInvoked = 0
         var disposable: MockDisposable!
 
-        let res = scheduler.start {
-            Observable.using({ () -> MockDisposable in
+        let res = await scheduler.start {
+            await Observable.using({ () -> MockDisposable in
                 disposeInvoked += 1
                 disposable = MockDisposable(scheduler: scheduler)
                 return disposable
@@ -209,14 +209,14 @@ extension ObservableUsingTest {
     }
 
     #if TRACE_RESOURCES
-        func testUsingReleasesResourcesOnComplete() {
-            let compositeDisposable = CompositeDisposable(disposables: [])
-            _ = Observable<Int>.using({ compositeDisposable } , observableFactory: { _ in Observable<Int>.just(1) }).subscribe()
+    func testUsingReleasesResourcesOnComplete() async {
+        let compositeDisposable = await CompositeDisposable(disposables: [])
+        _ = await Observable<Int>.using({ compositeDisposable } , observableFactory: { _ in await Observable<Int>.just(1) }).subscribe()
         }
 
-        func testUsingReleasesResourcesOnError() {
-            let compositeDisposable = CompositeDisposable(disposables: [])
-            _ = Observable<Int>.using({ compositeDisposable } , observableFactory: { _ in Observable<Int>.error(testError) }).subscribe()
+    func testUsingReleasesResourcesOnError() async {
+        let compositeDisposable = await CompositeDisposable(disposables: [])
+        _ = await Observable<Int>.using({ compositeDisposable } , observableFactory: { _ in await Observable<Int>.error(testError) }).subscribe()
         }
     #endif
 }

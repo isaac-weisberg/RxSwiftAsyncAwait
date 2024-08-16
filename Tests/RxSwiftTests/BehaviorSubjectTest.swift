@@ -12,10 +12,10 @@ import RxTest
 
 class BehaviorSubjectTest : RxTest {
     
-    func test_Infinite() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_Infinite() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 1),
             .next(110, 2),
             .next(220, 3),
@@ -42,20 +42,20 @@ class BehaviorSubjectTest : RxTest {
         let results3 = scheduler.createObserver(Int.self)
         var subscription3: Disposable! = nil
         
-        scheduler.scheduleAt(100) { subject = BehaviorSubject<Int>(value: 100) }
-        scheduler.scheduleAt(200) { subscription = xs.subscribe(subject) }
-        scheduler.scheduleAt(1000) { subscription.dispose() }
+        await scheduler.scheduleAt(100) { subject = await BehaviorSubject<Int>(value: 100) }
+        await scheduler.scheduleAt(200) { subscription = await xs.subscribe(subject) }
+        await scheduler.scheduleAt(1000) { await subscription.dispose() }
         
-        scheduler.scheduleAt(300) { subscription1 = subject.subscribe(results1) }
-        scheduler.scheduleAt(400) { subscription2 = subject.subscribe(results2) }
-        scheduler.scheduleAt(900) { subscription3 = subject.subscribe(results3) }
+        await scheduler.scheduleAt(300) { subscription1 = await subject.subscribe(results1) }
+        await scheduler.scheduleAt(400) { subscription2 = await subject.subscribe(results2) }
+        await scheduler.scheduleAt(900) { subscription3 = await subject.subscribe(results3) }
         
-        scheduler.scheduleAt(600) { subscription1.dispose() }
-        scheduler.scheduleAt(700) { subscription2.dispose() }
-        scheduler.scheduleAt(800) { subscription1.dispose() }
-        scheduler.scheduleAt(950) { subscription3.dispose() }
+        await scheduler.scheduleAt(600) { await subscription1.dispose() }
+        await scheduler.scheduleAt(700) { await subscription2.dispose() }
+        await scheduler.scheduleAt(800) { await subscription1.dispose() }
+        await scheduler.scheduleAt(950) { await subscription3.dispose() }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(results1.events, [
             .next(300, 4),
@@ -77,10 +77,10 @@ class BehaviorSubjectTest : RxTest {
         ])
     }
     
-    func test_Finite() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_Finite() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 1),
             .next(110, 2),
             .next(220, 3),
@@ -106,20 +106,20 @@ class BehaviorSubjectTest : RxTest {
         let results3 = scheduler.createObserver(Int.self)
         var subscription3: Disposable! = nil
         
-        scheduler.scheduleAt(100) { subject = BehaviorSubject<Int>(value: 100) }
-        scheduler.scheduleAt(200) { subscription = xs.subscribe(subject) }
-        scheduler.scheduleAt(1000) { subscription.dispose() }
+        await scheduler.scheduleAt(100) { subject = await BehaviorSubject<Int>(value: 100) }
+        await scheduler.scheduleAt(200) { subscription = await xs.subscribe(subject) }
+        await scheduler.scheduleAt(1000) { await subscription.dispose() }
         
-        scheduler.scheduleAt(300) { subscription1 = subject.subscribe(results1) }
-        scheduler.scheduleAt(400) { subscription2 = subject.subscribe(results2) }
-        scheduler.scheduleAt(900) { subscription3 = subject.subscribe(results3) }
+        await scheduler.scheduleAt(300) { subscription1 = await subject.subscribe(results1) }
+        await scheduler.scheduleAt(400) { subscription2 = await subject.subscribe(results2) }
+        await scheduler.scheduleAt(900) { subscription3 = await subject.subscribe(results3) }
         
-        scheduler.scheduleAt(600) { subscription1.dispose() }
-        scheduler.scheduleAt(700) { subscription2.dispose() }
-        scheduler.scheduleAt(800) { subscription1.dispose() }
-        scheduler.scheduleAt(950) { subscription3.dispose() }
+        await scheduler.scheduleAt(600) { await subscription1.dispose() }
+        await scheduler.scheduleAt(700) { await subscription2.dispose() }
+        await scheduler.scheduleAt(800) { await subscription1.dispose() }
+        await scheduler.scheduleAt(950) { await subscription3.dispose() }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(results1.events, [
             .next(300, 4),
@@ -140,10 +140,10 @@ class BehaviorSubjectTest : RxTest {
             ])
     }
     
-    func test_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 1),
             .next(110, 2),
             .next(220, 3),
@@ -169,20 +169,20 @@ class BehaviorSubjectTest : RxTest {
         let results3 = scheduler.createObserver(Int.self)
         var subscription3: Disposable! = nil
         
-        scheduler.scheduleAt(100) { subject = BehaviorSubject<Int>(value: 100) }
-        scheduler.scheduleAt(200) { subscription = xs.subscribe(subject) }
-        scheduler.scheduleAt(1000) { subscription.dispose() }
+        await scheduler.scheduleAt(100) { subject = await BehaviorSubject<Int>(value: 100) }
+        await scheduler.scheduleAt(200) { subscription = await xs.subscribe(subject) }
+        await scheduler.scheduleAt(1000) { await subscription.dispose() }
         
-        scheduler.scheduleAt(300) { subscription1 = subject.subscribe(results1) }
-        scheduler.scheduleAt(400) { subscription2 = subject.subscribe(results2) }
-        scheduler.scheduleAt(900) { subscription3 = subject.subscribe(results3) }
+        await scheduler.scheduleAt(300) { subscription1 = await subject.subscribe(results1) }
+        await scheduler.scheduleAt(400) { subscription2 = await subject.subscribe(results2) }
+        await scheduler.scheduleAt(900) { subscription3 = await subject.subscribe(results3) }
         
-        scheduler.scheduleAt(600) { subscription1.dispose() }
-        scheduler.scheduleAt(700) { subscription2.dispose() }
-        scheduler.scheduleAt(800) { subscription1.dispose() }
-        scheduler.scheduleAt(950) { subscription3.dispose() }
+        await scheduler.scheduleAt(600) { await subscription1.dispose() }
+        await scheduler.scheduleAt(700) { await subscription2.dispose() }
+        await scheduler.scheduleAt(800) { await subscription1.dispose() }
+        await scheduler.scheduleAt(950) { await subscription3.dispose() }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(results1.events, [
             .next(300, 4),
@@ -203,10 +203,10 @@ class BehaviorSubjectTest : RxTest {
             ])
     }
     
-    func test_Canceled() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_Canceled() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .completed(630),
             .next(640, 9),
             .completed(650),
@@ -225,20 +225,20 @@ class BehaviorSubjectTest : RxTest {
         let results3 = scheduler.createObserver(Int.self)
         var subscription3: Disposable! = nil
         
-        scheduler.scheduleAt(100) { subject = BehaviorSubject<Int>(value: 100) }
-        scheduler.scheduleAt(200) { subscription = xs.subscribe(subject) }
-        scheduler.scheduleAt(1000) { subscription.dispose() }
+        await scheduler.scheduleAt(100) { subject = await BehaviorSubject<Int>(value: 100) }
+        await scheduler.scheduleAt(200) { subscription = await xs.subscribe(subject) }
+        await scheduler.scheduleAt(1000) { await subscription.dispose() }
         
-        scheduler.scheduleAt(300) { subscription1 = subject.subscribe(results1) }
-        scheduler.scheduleAt(400) { subscription2 = subject.subscribe(results2) }
-        scheduler.scheduleAt(900) { subscription3 = subject.subscribe(results3) }
+        await scheduler.scheduleAt(300) { subscription1 = await subject.subscribe(results1) }
+        await scheduler.scheduleAt(400) { subscription2 = await subject.subscribe(results2) }
+        await scheduler.scheduleAt(900) { subscription3 = await subject.subscribe(results3) }
         
-        scheduler.scheduleAt(600) { subscription1.dispose() }
-        scheduler.scheduleAt(700) { subscription2.dispose() }
-        scheduler.scheduleAt(800) { subscription1.dispose() }
-        scheduler.scheduleAt(950) { subscription3.dispose() }
+        await scheduler.scheduleAt(600) { await subscription1.dispose() }
+        await scheduler.scheduleAt(700) { await subscription2.dispose() }
+        await scheduler.scheduleAt(800) { await subscription1.dispose() }
+        await scheduler.scheduleAt(950) { await subscription3.dispose() }
         
-        scheduler.start()
+        await scheduler.start()
         
         XCTAssertEqual(results1.events, [
             .next(300, 100),
@@ -254,37 +254,37 @@ class BehaviorSubjectTest : RxTest {
         ])
     }
 
-    func test_hasObserversNoObservers() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_hasObserversNoObservers() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var subject: BehaviorSubject<Int>! = nil
 
-        scheduler.scheduleAt(100) { subject = BehaviorSubject<Int>(value: 100) }
-        scheduler.scheduleAt(250) { XCTAssertFalse(subject.hasObservers) }
+        await scheduler.scheduleAt(100) { subject = await BehaviorSubject<Int>(value: 100) }
+        await scheduler.scheduleAt(250) { await assertFalse(await subject.hasObservers()) }
 
-        scheduler.start()
+        await scheduler.start()
     }
 
-    func test_hasObserversOneObserver() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_hasObserversOneObserver() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var subject: BehaviorSubject<Int>! = nil
 
         let results1 = scheduler.createObserver(Int.self)
         var subscription1: Disposable! = nil
 
-        scheduler.scheduleAt(100) { subject = BehaviorSubject<Int>(value: 100) }
-        scheduler.scheduleAt(250) { XCTAssertFalse(subject.hasObservers) }
-        scheduler.scheduleAt(300) { subscription1 = subject.subscribe(results1) }
-        scheduler.scheduleAt(350) { XCTAssertTrue(subject.hasObservers) }
-        scheduler.scheduleAt(400) { subscription1.dispose() }
-        scheduler.scheduleAt(450) { XCTAssertFalse(subject.hasObservers) }
+        await scheduler.scheduleAt(100) { subject = await BehaviorSubject<Int>(value: 100) }
+        await scheduler.scheduleAt(250) { await assertTrue(await subject.hasObservers()) }
+        await scheduler.scheduleAt(300) { subscription1 = await subject.subscribe(results1) }
+        await scheduler.scheduleAt(350) { await assertTrue(await subject.hasObservers()) }
+        await scheduler.scheduleAt(400) { await subscription1.dispose() }
+        await scheduler.scheduleAt(450) { await assertFalse(await subject.hasObservers()) }
 
-        scheduler.start()
+        await scheduler.start()
     }
 
-    func test_hasObserversManyObserver() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_hasObserversManyObserver() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var subject: BehaviorSubject<Int>! = nil
 
@@ -297,19 +297,19 @@ class BehaviorSubjectTest : RxTest {
         let results3 = scheduler.createObserver(Int.self)
         var subscription3: Disposable! = nil
 
-        scheduler.scheduleAt(100) { subject = BehaviorSubject<Int>(value: 100) }
-        scheduler.scheduleAt(250) { XCTAssertFalse(subject.hasObservers) }
-        scheduler.scheduleAt(300) { subscription1 = subject.subscribe(results1) }
-        scheduler.scheduleAt(301) { subscription2 = subject.subscribe(results2) }
-        scheduler.scheduleAt(302) { subscription3 = subject.subscribe(results3) }
-        scheduler.scheduleAt(350) { XCTAssertTrue(subject.hasObservers) }
-        scheduler.scheduleAt(400) { subscription1.dispose() }
-        scheduler.scheduleAt(405) { XCTAssertTrue(subject.hasObservers) }
-        scheduler.scheduleAt(410) { subscription2.dispose() }
-        scheduler.scheduleAt(415) { XCTAssertTrue(subject.hasObservers) }
-        scheduler.scheduleAt(420) { subscription3.dispose() }
-        scheduler.scheduleAt(450) { XCTAssertFalse(subject.hasObservers) }
+        await scheduler.scheduleAt(100) { subject = await BehaviorSubject<Int>(value: 100) }
+        await scheduler.scheduleAt(250) { await assertFalse(await subject.hasObservers()) }
+        await scheduler.scheduleAt(300) { subscription1 = await subject.subscribe(results1) }
+        await scheduler.scheduleAt(301) { subscription2 = await subject.subscribe(results2) }
+        await scheduler.scheduleAt(302) { subscription3 = await subject.subscribe(results3) }
+        await scheduler.scheduleAt(350) { await assertTrue(await subject.hasObservers()) }
+        await scheduler.scheduleAt(400) { await subscription1.dispose() }
+        await scheduler.scheduleAt(405) { await assertTrue(await subject.hasObservers()) }
+        await scheduler.scheduleAt(410) { await subscription2.dispose() }
+        await scheduler.scheduleAt(415) { await assertTrue(await subject.hasObservers()) }
+        await scheduler.scheduleAt(420) { await subscription3.dispose() }
+        await scheduler.scheduleAt(450) { await assertFalse(await subject.hasObservers()) }
 
-        scheduler.start()
+        await scheduler.start()
     }
 }

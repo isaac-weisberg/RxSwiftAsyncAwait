@@ -23,7 +23,6 @@
  `Binder`s are also automatically synthesized using `@dynamicMemberLookup` for writable reference properties of the reactive base.
  */
 
-@dynamicMemberLookup
 public struct Reactive<Base> {
     /// Base object to extend.
     public let base: Base
@@ -37,8 +36,9 @@ public struct Reactive<Base> {
 
     /// Automatically synthesized binder for a key path between the reactive
     /// base and one of its properties
-    public subscript<Property>(dynamicMember keyPath: ReferenceWritableKeyPath<Base, Property>) -> Binder<Property> where Base: AnyObject {
-        Binder(self.base) { base, value in
+    /// nevermind
+    public func binder<Property>(dynamicMember keyPath: ReferenceWritableKeyPath<Base, Property>) async -> Binder<Property> where Base: AnyObject {
+        await Binder(self.base) { base, value in
             base[keyPath: keyPath] = value
         }
     }

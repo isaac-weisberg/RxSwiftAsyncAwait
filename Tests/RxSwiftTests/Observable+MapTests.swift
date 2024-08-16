@@ -14,14 +14,14 @@ class ObservableMapTest : RxTest {
 }
 
 extension ObservableMapTest {
-    func testMap_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMap_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             ])
         
-        let res = scheduler.start { xs.map { $0 * 2 } }
+        let res = await scheduler.start { await xs.map { $0 * 2 } }
         
         let correctMessages: [Recorded<Event<Int>>] = [
         ]
@@ -34,15 +34,15 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
     
-    func testMap_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMap_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(300)
             ])
         
-        let res = scheduler.start { xs.map { $0 * 2 } }
+        let res = await scheduler.start { await xs.map { $0 * 2 } }
         
         let correctMessages = [
             Recorded.completed(300, Int.self)
@@ -56,10 +56,10 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
     
-    func testMap_Range() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMap_Range() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 0),
             .next(220, 1),
@@ -68,7 +68,7 @@ extension ObservableMapTest {
             .completed(300)
             ])
         
-        let res = scheduler.start { xs.map { $0 * 2 } }
+        let res = await scheduler.start { await xs.map { $0 * 2 } }
         
         let correctMessages = Recorded.events(
             .next(210, 0 * 2),
@@ -86,10 +86,10 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
     
-    func testMap_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMap_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 0),
             .next(220, 1),
@@ -98,7 +98,7 @@ extension ObservableMapTest {
             .error(300, testError)
             ])
         
-        let res = scheduler.start { xs.map { $0 * 2 } }
+        let res = await scheduler.start { await xs.map { $0 * 2 } }
         
         let correctMessages = Recorded.events(
             .next(210, 0 * 2),
@@ -116,10 +116,10 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
     
-    func testMap_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMap_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 0),
             .next(220, 1),
@@ -128,7 +128,7 @@ extension ObservableMapTest {
             .error(300, testError)
             ])
         
-        let res = scheduler.start(disposed: 290) { xs.map { $0 * 2 } }
+        let res = await scheduler.start(disposed: 290) { await xs.map { $0 * 2 } }
         
         let correctMessages = Recorded.events(
             .next(210, 0 * 2),
@@ -145,10 +145,10 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
     
-    func testMap_SelectorThrows() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMap_SelectorThrows() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 0),
             .next(220, 1),
@@ -157,7 +157,7 @@ extension ObservableMapTest {
             .error(300, testError)
             ])
         
-        let res = scheduler.start { xs.map { x throws -> Int in if x < 2 { return x * 2 } else { throw testError } } }
+        let res = await scheduler.start { await xs.map { x throws -> Int in if x < 2 { return x * 2 } else { throw testError } } }
         
         let correctMessages = Recorded.events(
             .next(210, 0 * 2),
@@ -174,30 +174,30 @@ extension ObservableMapTest {
     }
 
     #if TRACE_RESOURCES
-        func testMapReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).map { _ in true }.subscribe()
+    func testMapReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).map { _ in true }.subscribe()
         }
 
-        func testMap1ReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).map { _ in true }.subscribe()
+    func testMap1ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).map { _ in true }.subscribe()
         }
 
-        func testMap2ReleasesResourcesOnError() {
-            _ = Observable<Int>.just(1).map { _ -> Bool in throw testError }.subscribe()
+    func testMap2ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.just(1).map { _ -> Bool in throw testError }.subscribe()
         }
     #endif
 }
 
 // MARK: map compose
 extension ObservableMapTest {
-    func testMapCompose_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMapCompose_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             ])
 
-        let res = scheduler.start { xs.map { $0 * 10 }.map { $0 + 1 } }
+        let res = await scheduler.start { await xs.map { $0 * 10 }.map { $0 + 1 } }
 
         let correctMessages: [Recorded<Event<Int>>] = [
         ]
@@ -210,15 +210,15 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testMapCompose_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMapCompose_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(300)
             ])
 
-        let res = scheduler.start { xs.map { $0 * 10 }.map { $0 + 1 } }
+        let res = await scheduler.start { await xs.map { $0 * 10 }.map { $0 + 1 } }
 
         let correctMessages = [
             Recorded.completed(300, Int.self)
@@ -232,10 +232,10 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testMapCompose_Range() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMapCompose_Range() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 0),
             .next(220, 1),
@@ -244,7 +244,7 @@ extension ObservableMapTest {
             .completed(300)
             ])
 
-        let res = scheduler.start { xs.map { $0 * 10 }.map { $0 + 1 } }
+        let res = await scheduler.start { await xs.map { $0 * 10 }.map { $0 + 1 } }
 
         let correctMessages = Recorded.events(
             .next(210, 0 * 10 + 1),
@@ -262,10 +262,10 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testMapCompose_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMapCompose_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 0),
             .next(220, 1),
@@ -274,7 +274,7 @@ extension ObservableMapTest {
             .error(300, testError)
             ])
 
-        let res = scheduler.start { xs.map { $0 * 10 }.map { $0 + 1 } }
+        let res = await scheduler.start { await xs.map { $0 * 10 }.map { $0 + 1 } }
 
         let correctMessages = Recorded.events(
             .next(210, 0 * 10 + 1),
@@ -292,10 +292,10 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testMapCompose_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMapCompose_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 0),
             .next(220, 1),
@@ -304,7 +304,7 @@ extension ObservableMapTest {
             .error(300, testError)
             ])
 
-        let res = scheduler.start(disposed: 290) { xs.map { $0 * 10 }.map { $0 + 1 } }
+        let res = await scheduler.start(disposed: 290) { await xs.map { $0 * 10 }.map { $0 + 1 } }
 
         let correctMessages = Recorded.events(
             .next(210, 0 * 10 + 1),
@@ -321,10 +321,10 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testMapCompose_Selector1Throws() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMapCompose_Selector1Throws() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 0),
             .next(220, 1),
@@ -333,8 +333,8 @@ extension ObservableMapTest {
             .error(300, testError)
             ])
 
-        let res = scheduler.start {
-            xs
+        let res = await scheduler.start {
+            await xs
             .map { x throws -> Int in if x < 2 { return x * 10 } else { throw testError } }
             .map { $0 + 1 }
         }
@@ -353,10 +353,10 @@ extension ObservableMapTest {
         XCTAssertEqual(xs.subscriptions, correctSubscriptions)
     }
 
-    func testMapCompose_Selector2Throws() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testMapCompose_Selector2Throws() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 0),
             .next(220, 1),
@@ -365,8 +365,8 @@ extension ObservableMapTest {
             .error(300, testError)
             ])
 
-        let res = scheduler.start {
-            xs
+        let res = await scheduler.start {
+            await xs
                 .map { $0 * 10 }
                 .map { x throws -> Int in if x < 20 { return x + 1 } else { throw testError } }
         }

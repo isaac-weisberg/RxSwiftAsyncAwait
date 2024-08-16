@@ -40,7 +40,7 @@
 
             MainScheduler.ensureRunningOnMainThread()
             #if TRACE_RESOURCES
-                _ = Resources.incrementTotal()
+                _ = await Resources.incrementTotal()
             #endif
             super.init()
         }
@@ -250,7 +250,7 @@
                 v.on(.completed)
             }
             #if TRACE_RESOURCES
-                _ = Resources.decrementTotal()
+                _ = await Resources.decrementTotal()
             #endif
         }
     

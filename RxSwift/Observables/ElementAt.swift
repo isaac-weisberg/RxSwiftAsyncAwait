@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
+public extension ObservableType {
     /**
      Returns a sequence emitting only element _n_ emitted by an Observable
 
@@ -16,7 +16,7 @@ extension ObservableType {
      - returns: An observable sequence that emits the desired element as its own sole emission.
      */
     @available(*, deprecated, renamed: "element(at:)")
-    public func elementAt(_ index: Int)
+    func elementAt(_ index: Int)
         -> Observable<Element> {
         element(at: index)
     }
@@ -29,64 +29,73 @@ extension ObservableType {
      - parameter index: The index of the required element (starting from 0).
      - returns: An observable sequence that emits the desired element as its own sole emission.
      */
-    public func element(at index: Int)
+    func element(at index: Int)
         -> Observable<Element> {
-        ElementAt(source: self.asObservable(), index: index, throwOnEmpty: true)
+        ElementAt(source: asObservable(), index: index, throwOnEmpty: true)
     }
 }
 
-final private class ElementAtSink<Observer: ObserverType>: Sink<Observer>, ObserverType {
+private final actor ElementAtSink<Observer: ObserverType>: SinkOverSingleSubscription, ObserverType {
     typealias SourceType = Observer.Element
     typealias Parent = ElementAt<SourceType>
-    
+
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
+
     let parent: Parent
     var i: Int
-    
-    init(parent: Parent, observer: Observer, cancel: Cancelable) {
+
+    init(parent: Parent, observer: Observer) {
         self.parent = parent
-        self.i = parent.index
-        
-        super.init(observer: observer, cancel: cancel)
+        i = parent.index
+
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
-    
-    func on(_ event: Event<SourceType>) {
+
+    func on(_ event: Event<SourceType>, _ c: C) async {
+        if baseSink.disposed {
+            return
+        }
         switch event {
         case .next:
-
-            if self.i == 0 {
-                self.forwardOn(event)
-                self.forwardOn(.completed)
-                self.dispose()
+            if i == 0 {
+                await forwardOn(event, c.call())
+                await forwardOn(.completed, c.call())
+                await dispose()
             }
-            
+
             do {
-                _ = try decrementChecked(&self.i)
+                _ = try decrementChecked(&i)
             } catch let e {
-                self.forwardOn(.error(e))
-                self.dispose()
+                await self.forwardOn(.error(e), c.call())
+                await self.dispose()
                 return
             }
-            
+
         case .error(let e):
-            self.forwardOn(.error(e))
-            self.dispose()
+            await forwardOn(.error(e), c.call())
+            await dispose()
+
         case .completed:
-            if self.parent.throwOnEmpty {
-                self.forwardOn(.error(RxError.argumentOutOfRange))
+            if parent.throwOnEmpty {
+                await forwardOn(.error(RxError.argumentOutOfRange), c.call())
             } else {
-                self.forwardOn(.completed)
+                await forwardOn(.completed, c.call())
             }
-            
-            self.dispose()
+
+            await dispose()
         }
+    }
+
+    func dispose() async {
+        await baseSink.setDisposed()?.dispose()
     }
 }
 
-final private class ElementAt<SourceType>: Producer<SourceType> {
+private final class ElementAt<SourceType: Sendable>: Producer<SourceType> {
     let source: Observable<SourceType>
     let throwOnEmpty: Bool
     let index: Int
-    
+
     init(source: Observable<SourceType>, index: Int, throwOnEmpty: Bool) {
         if index < 0 {
             rxFatalError("index can't be negative")
@@ -95,11 +104,16 @@ final private class ElementAt<SourceType>: Producer<SourceType> {
         self.source = source
         self.index = index
         self.throwOnEmpty = throwOnEmpty
+        super.init()
     }
-    
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == SourceType {
-        let sink = ElementAtSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
-        return (sink: sink, subscription: subscription)
+
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer
+    )
+        async -> AsynchronousDisposable where Observer.Element == SourceType {
+        let sink = ElementAtSink(parent: self, observer: observer)
+        await sink.run(c.call(), source)
+        return sink
     }
 }

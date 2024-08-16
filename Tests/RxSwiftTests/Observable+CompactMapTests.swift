@@ -19,12 +19,12 @@ class ObservableCompactMapTest : RxTest {
 
 extension ObservableCompactMapTest {
 
-    func test_compactMapNilFromClosure() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_compactMapNilFromClosure() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var invoked = 0
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 1),
             .next(180, 2),
             .next(230, 3),
@@ -42,8 +42,8 @@ extension ObservableCompactMapTest {
             .completed(630)
         ])
         
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.compactMap { num in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.compactMap { num in
                 invoked += 1
                 return isPrime(num) ? num : nil
             }
@@ -64,12 +64,12 @@ extension ObservableCompactMapTest {
         XCTAssertEqual(9, invoked)
     }
     
-    func test_compactMapNilFromElement() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_compactMapNilFromElement() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var invoked = 0
 
-        let xs: TestableObservable<Int?> = scheduler.createHotObservable([
+        let xs: TestableObservable<Int?> = await scheduler.createHotObservable([
             .next(110, 1),
             .next(180, 2),
             .next(230, 3),
@@ -81,8 +81,8 @@ extension ObservableCompactMapTest {
             .completed(430)
             ])
 
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.compactMap { num in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.compactMap { num in
                 invoked += 1
                 return num
             }
@@ -101,12 +101,12 @@ extension ObservableCompactMapTest {
         XCTAssertEqual(3, invoked)
     }
 
-    func test_compactMapDisposed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_compactMapDisposed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var invoked = 0
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 1),
             .next(180, 2),
             .next(230, 3),
@@ -121,8 +121,8 @@ extension ObservableCompactMapTest {
             .completed(600)
             ])
         
-        let res = scheduler.start(disposed: 400) { () -> Observable<Int> in
-            return xs.compactMap { num in
+        let res = await scheduler.start(disposed: 400) { () -> Observable<Int> in
+            return await xs.compactMap { num in
                 invoked += 1
                 return isPrime(num) ? num : nil
             }

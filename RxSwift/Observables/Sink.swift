@@ -6,70 +6,105 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-class Sink<Observer: ObserverType>: Disposable {
-    fileprivate let observer: Observer
-    fileprivate let cancel: Cancelable
-    private let disposed = AtomicInt(0)
+protocol Sink: AsynchronousDisposable, AnyObject, Actor {
+    associatedtype Observer: ObserverType
 
-    #if DEBUG
-        private let synchronizationTracker = SynchronizationTracker()
-    #endif
+    var baseSink: BaseSink<Observer> { get }
+}
 
-    init(observer: Observer, cancel: Cancelable) {
-#if TRACE_RESOURCES
-        _ = Resources.incrementTotal()
-#endif
-        self.observer = observer
-        self.cancel = cancel
-    }
-
-    final func forwardOn(_ event: Event<Observer.Element>) {
-        #if DEBUG
-            self.synchronizationTracker.register(synchronizationErrorMessage: .default)
-            defer { self.synchronizationTracker.unregister() }
-        #endif
-        if isFlagSet(self.disposed, 1) {
+extension Sink {
+    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
+        if baseSink.disposed {
             return
         }
-        self.observer.on(event)
-    }
 
-    final func forwarder() -> SinkForward<Observer> {
-        SinkForward(forward: self)
-    }
-
-    final var isDisposed: Bool {
-        isFlagSet(self.disposed, 1)
-    }
-
-    func dispose() {
-        fetchOr(self.disposed, 1)
-        self.cancel.dispose()
-    }
-
-    deinit {
-#if TRACE_RESOURCES
-       _ =  Resources.decrementTotal()
-#endif
+        await baseSink.observer.on(event, c)
     }
 }
 
-final class SinkForward<Observer: ObserverType>: ObserverType {
-    typealias Element = Observer.Element 
+protocol SinkOverSingleSubscription: AsynchronousDisposable, AnyObject, Actor, ObserverType {
+    associatedtype Observer: ObserverType
 
-    private let forward: Sink<Observer>
+    var baseSink: BaseSinkOverSingleSubscription<Observer> { get }
+}
 
-    init(forward: Sink<Observer>) {
-        self.forward = forward
+extension SinkOverSingleSubscription {
+    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
+        if baseSink.disposed {
+            return
+        }
+
+        await baseSink.observer.on(event, c)
     }
 
-    final func on(_ event: Event<Element>) {
-        switch event {
-        case .next:
-            self.forward.observer.on(event)
-        case .error, .completed:
-            self.forward.observer.on(event)
-            self.forward.cancel.dispose()
+    func run(_ c: C, _ source: Observable<Element>) async {
+        let disposable = await source.subscribe(c.call(), self)
+        await baseSink.sourceDisposable.setDisposable(disposable)?.dispose()
+    }
+}
+
+final class BaseSink<Observer: ObserverType>: @unchecked Sendable {
+    let observer: Observer
+
+    init(observer: Observer) {
+        #if TRACE_RESOURCES
+            Task {
+                _ = await Resources.incrementTotal()
+            }
+        #endif
+        self.observer = observer
+    }
+
+    deinit {
+        #if TRACE_RESOURCES
+            Task {
+                _ = await Resources.decrementTotal()
+            }
+        #endif
+    }
+
+    var disposed = false
+
+    var timesDisposed = 0
+    func setDisposed() {
+        timesDisposed += 1
+        if timesDisposed > 2 {
+            rxAssert(false) // The RxSwift behavior for Sinks for now is to allow only two calls to dispose
         }
+        disposed = true
+    }
+}
+
+final class BaseSinkOverSingleSubscription<Observer: ObserverType>: @unchecked Sendable {
+    let observer: Observer
+
+    init(observer: Observer) {
+        #if TRACE_RESOURCES
+            Task {
+                _ = await Resources.incrementTotal()
+            }
+        #endif
+        self.observer = observer
+    }
+
+    deinit {
+        #if TRACE_RESOURCES
+            Task {
+                _ = await Resources.decrementTotal()
+            }
+        #endif
+    }
+
+    var disposed = false
+    let sourceDisposable = SingleAssignmentDisposable()
+
+    var timesDisposed = 0
+    func setDisposed() -> Disposable? {
+        timesDisposed += 1
+        if timesDisposed > 2 {
+            rxAssert(false) // The RxSwift behavior for Sinks for now is to allow only two calls to dispose
+        }
+        disposed = true
+        return sourceDisposable.dispose()
     }
 }

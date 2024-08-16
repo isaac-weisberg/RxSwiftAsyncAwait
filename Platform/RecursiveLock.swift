@@ -8,27 +8,30 @@
 
 import Foundation
 
+// typealias RecursiveLock = AsyncAwaitLock
+
 #if TRACE_RESOURCES
-    class RecursiveLock: NSRecursiveLock {
-        override init() {
-            _ = Resources.incrementTotal()
-            super.init()
-        }
 
-        override func lock() {
-            super.lock()
-            _ = Resources.incrementTotal()
-        }
-
-        override func unlock() {
-            super.unlock()
-            _ = Resources.decrementTotal()
-        }
-
-        deinit {
-            _ = Resources.decrementTotal()
-        }
-    }
+//    class RecursiveLock: NSRecursiveLock {
+//        override init() {
+//            _ = await Resources.incrementTotal()
+//            super.init()
+//        }
+//
+//        override func lock() {
+//            super.lock()
+//            _ = R_esources.incrementTotal()
+//        }
+//
+//        override func unlock() {
+//            super.unlock()
+//            _ = R_esources.decrementTotal()
+//        }
+//
+//        deinit {
+//            _ = R_esources.decrementTotal()
+//        }
+//    }
 #else
-    typealias RecursiveLock = NSRecursiveLock
+//    typealias RecursiveLock = NSRecursiveLock
 #endif

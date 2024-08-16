@@ -8,8 +8,7 @@
 
 import Foundation
 
-extension ObservableType {
-
+public extension ObservableType {
     /**
      Prints received events for all observers on standard output.
 
@@ -19,9 +18,15 @@ extension ObservableType {
      - parameter trimOutput: Should output be trimmed to max 40 characters.
      - returns: An observable sequence whose events are printed to standard output.
      */
-    public func debug(_ identifier: String? = nil, trimOutput: Bool = false, file: String = #file, line: UInt = #line, function: String = #function)
+    func debug(
+        _ identifier: String? = nil,
+        trimOutput: Bool = false,
+        file: String = #file,
+        line: UInt = #line,
+        function: String = #function
+    )
         -> Observable<Element> {
-            return Debug(source: self, identifier: identifier, trimOutput: trimOutput, file: file, line: line, function: function)
+        Debug(source: self, identifier: identifier, trimOutput: trimOutput, file: file, line: line, function: function)
     }
 }
 
@@ -31,72 +36,81 @@ private func logEvent(_ identifier: String, dateFormat: DateFormatter, content: 
     print("\(dateFormat.string(from: Date())): \(identifier) -> \(content)")
 }
 
-final private class DebugSink<Source: ObservableType, Observer: ObserverType>: Sink<Observer>, ObserverType where Observer.Element == Source.Element {
-    typealias Element = Observer.Element 
+private final actor DebugSink<Source: ObservableType, Observer: ObserverType>: SinkOverSingleSubscription,
+    ObserverType where Observer.Element == Source.Element {
+    typealias Element = Observer.Element
     typealias Parent = Debug<Source>
-    
+
     private let parent: Parent
     private let timestampFormatter = DateFormatter()
-    
-    init(parent: Parent, observer: Observer, cancel: Cancelable) {
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
+
+    init(parent: Parent, observer: Observer) async {
         self.parent = parent
-        self.timestampFormatter.dateFormat = dateFormat
+        timestampFormatter.dateFormat = dateFormat
 
-        logEvent(self.parent.identifier, dateFormat: self.timestampFormatter, content: "subscribed")
+        logEvent(self.parent.identifier, dateFormat: timestampFormatter, content: "subscribed")
 
-        super.init(observer: observer, cancel: cancel)
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
-    
-    func on(_ event: Event<Element>) {
+
+    func on(_ event: Event<Element>, _ c: C) async {
         let maxEventTextLength = 40
         let eventText = "\(event)"
 
-        let eventNormalized = (eventText.count > maxEventTextLength) && self.parent.trimOutput
-            ? String(eventText.prefix(maxEventTextLength / 2)) + "..." + String(eventText.suffix(maxEventTextLength / 2))
+        let eventNormalized = (eventText.count > maxEventTextLength) && parent.trimOutput
+            ? String(eventText.prefix(maxEventTextLength / 2)) + "..." +
+            String(eventText.suffix(maxEventTextLength / 2))
             : eventText
 
-        logEvent(self.parent.identifier, dateFormat: self.timestampFormatter, content: "Event \(eventNormalized)")
+        logEvent(parent.identifier, dateFormat: timestampFormatter, content: "Event \(eventNormalized)")
 
-        self.forwardOn(event)
+        await forwardOn(event, c.call())
         if event.isStopEvent {
-            self.dispose()
+            await dispose()
         }
     }
-    
-    override func dispose() {
-        if !self.isDisposed {
-            logEvent(self.parent.identifier, dateFormat: self.timestampFormatter, content: "isDisposed")
+
+    func dispose() async {
+        let disposable = baseSink.setDisposed()
+
+        if let disposable {
+            logEvent(parent.identifier, dateFormat: timestampFormatter, content: "willDispose")
+
+            await disposable.dispose()
         }
-        super.dispose()
+
+        logEvent(parent.identifier, dateFormat: timestampFormatter, content: "isDisposed")
+
     }
 }
 
-final private class Debug<Source: ObservableType>: Producer<Source.Element> {
+private final class Debug<Source: ObservableType>: Producer<Source.Element> {
     fileprivate let identifier: String
     fileprivate let trimOutput: Bool
     private let source: Source
 
     init(source: Source, identifier: String?, trimOutput: Bool, file: String, line: UInt, function: String) {
         self.trimOutput = trimOutput
-        if let identifier = identifier {
+        if let identifier {
             self.identifier = identifier
-        }
-        else {
+        } else {
             let trimmedFile: String
             if let lastIndex = file.lastIndex(of: "/") {
                 trimmedFile = String(file[file.index(after: lastIndex) ..< file.endIndex])
-            }
-            else {
+            } else {
                 trimmedFile = file
             }
             self.identifier = "\(trimmedFile):\(line) (\(function))"
         }
         self.source = source
+        super.init()
     }
-    
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Source.Element {
-        let sink = DebugSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
-        return (sink: sink, subscription: subscription)
+
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Source.Element {
+        let sink = await DebugSink(parent: self, observer: observer)
+        let subscription = await source.subscribe(c.call(), sink)
+        return sink
     }
 }

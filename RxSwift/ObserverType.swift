@@ -6,35 +6,115 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-/// Supports push-style iteration over an observable sequence.
-public protocol ObserverType {
-    /// The type of elements in sequence that observer can observe.
-    associatedtype Element
+//public enum ObserverOnCompletedHandler {
+//    case sync((C) -> Void)
+//    case async((C) async -> Void)
+//}
+//
+//public enum ObserverOnErrorHandler {
+//    case sync((Swift.Error, C) -> Void)
+//    case async((Swift.Error, C) async -> Void)
+//}
+//
+//public enum ObserverOnNextHandler<Element> {
+//    case sync((Element, C) -> Void)
+//    case async((Element, C) async -> Void)
+//}
 
-    /// Notify observer about sequence event.
-    ///
-    /// - parameter event: Event that occurred.
-    func on(_ event: Event<Element>)
+//public typealias SyncObserverEventHandler<Element> = @Sendable (Event<Element>, C) -> Void
+public typealias AsyncObserverEventHandler<Element> = @Sendable (Event<Element>, C) async -> Void
+
+//public enum ObserverEventHandler<Element>: Sendable {
+//    case sync(SyncObserverEventHandler<Element>)
+//    case async(AsyncObserverEventHandler<Element>)
+//}
+
+public protocol ObserverType: Sendable {
+    associatedtype Element: Sendable
+
+//    func asAnyObserver() -> AnyAsyncObserver<Element>
+    @Sendable
+    func on(_ event: Event<Element>, _ c: C) async -> Void
 }
 
-/// Convenience API extensions to provide alternate next, error, completed events
-extension ObserverType {
-    
-    /// Convenience method equivalent to `on(.next(element: Element))`
-    ///
-    /// - parameter element: Next element to send to observer(s)
-    public func onNext(_ element: Element) {
-        self.on(.next(element))
+public extension ObserverType {
+    func onNext(_ element: Element, _ c: C) async {
+        await on(.next(element), c)
     }
     
-    /// Convenience method equivalent to `on(.completed)`
-    public func onCompleted() {
-        self.on(.completed)
+    func onCompleted(_ c: C) async {
+        await on(.completed, c)
     }
     
-    /// Convenience method equivalent to `on(.error(Swift.Error))`
-    /// - parameter error: Swift.Error to send to observer(s)
-    public func onError(_ error: Swift.Error) {
-        self.on(.error(error))
+    func onError(_ error: Error, _ c: C) async {
+        await on(.error(error), c)
     }
 }
+
+//
+//public protocol SyncObserverType: Sendable, ObserverType {
+//    @Sendable func on(_ event: Event<Element>, _ c: C) -> Void
+//}
+
+//public extension SyncObserverType {
+//    func asAnyObserver() -> AnySyncObserver<Element> {
+//        AnySyncObserver(eventHandler: on(_:_:))
+//    }
+//}
+
+public typealias AsyncObserverType = ObserverType
+public typealias SyncObserverType = ObserverType
+
+//public extension AsyncObserverType {
+//    func asAnyObserver() -> AnyAsyncObserver<Element> {
+//        AnyAsyncObserver(eventHandler: on(_:_:))
+//    }
+//}
+
+//
+// public protocol ObserverType: Sendable {
+//    associatedtype Element: Sendable
+//
+//    var on: ObserverEventHandler<Element> { get }
+// }
+//
+// public extension ObserverType {
+//    var onNext: ObserverOnNextHandler<Element> {
+//        switch on {
+//        case .sync(let on):
+//            return .sync { e, c in
+//                on(.next(e), c.call())
+//            }
+//        case .async(let on):
+//            return .async { e, c in
+//                await on(.next(e), c.call())
+//            }
+//        }
+//    }
+//
+//    var onError: ObserverOnErrorHandler {
+//        switch on {
+//        case .sync(let on):
+//            return .sync { e, c in
+//                on(.error(e), c.call())
+//            }
+//        case .async(let on):
+//            return .async { e, c in
+//                await on(.error(e), c.call())
+//            }
+//        }
+//    }
+//
+//    var onCompleted: ObserverOnCompletedHandler {
+//        switch on {
+//        case .sync(let on):
+//            return .sync { c in
+//                on(.completed, c.call())
+//            }
+//        case .async(let on):
+//            return .async { c in
+//                await on(.completed, c.call())
+//            }
+//        }
+//    }
+// }

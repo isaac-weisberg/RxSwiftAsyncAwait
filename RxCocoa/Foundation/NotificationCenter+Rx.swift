@@ -17,13 +17,15 @@ extension Reactive where Base: NotificationCenter {
     - parameter object: Optional object used to filter notifications.
     - returns: Observable sequence of posted notifications.
     */
-    public func notification(_ name: Notification.Name?, object: AnyObject? = nil) -> Observable<Notification> {
-        return Observable.create { [weak object] observer in
+    public func notification(_ name: Notification.Name?, object: AnyObject? = nil) async -> Observable<Notification> {
+        return await Observable.create { [weak object] observer in
             let nsObserver = self.base.addObserver(forName: name, object: object, queue: nil) { notification in
-                observer.on(.next(notification))
+                Task {
+                    await observer.on(.next(notification))
+                }
             }
             
-            return Disposables.create {
+            return await Disposables.create {
                 self.base.removeObserver(nsObserver)
             }
         }

@@ -7,17 +7,57 @@
 //
 
 /// Represents two disposable resources that are disposed together.
-private final class BinaryDisposable : DisposeBase, Cancelable {
-
-    private let disposed = AtomicInt(0)
+final class BinaryDisposable {
+    private let disposed: NonAtomicInt
 
     // state
-    private var disposable1: Disposable?
-    private var disposable2: Disposable?
+    private let disposable1: SingleAssignmentDisposable
+    private let disposable2: SingleAssignmentDisposable
 
     /// - returns: Was resource disposed.
-    var isDisposed: Bool {
-        isFlagSet(self.disposed, 1)
+    func isDisposed() -> Bool {
+        isFlagSet(disposed, 1)
+    }
+
+    /// Constructs new binary disposable from two disposables.
+    ///
+    /// - parameter disposable1: First disposable
+    /// - parameter disposable2: Second disposable
+    init(_ disposable1: SingleAssignmentDisposable, _ disposable2: SingleAssignmentDisposable) {
+        disposed = NonAtomicInt(0)
+        self.disposable1 = disposable1
+        self.disposable2 = disposable2
+        SynchronousDisposeBaseInit()
+    }
+
+    /// Calls the disposal action if and only if the current instance hasn't been disposed yet.
+    ///
+    /// After invoking disposal action, disposal action will be dereferenced.
+    func dispose() -> Dispose2Action? {
+        if fetchOr(disposed, 1) == 0 {
+            let disposable1 = self.disposable1.dispose()
+            let disposable2 = self.disposable2.dispose()
+            
+            return Dispose2Action(disposable1: disposable1, disposable2: disposable2)
+        }
+        return nil
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
+    }
+}
+
+final class BinaryDisposableClassic: AsynchronousCancelable {
+    private let disposed: NonAtomicInt
+
+    // state
+    private let disposable1: Disposable
+    private let disposable2: Disposable
+
+    /// - returns: Was resource disposed.
+    func isDisposed() -> Bool {
+        isFlagSet(disposed, 1)
     }
 
     /// Constructs new binary disposable from two disposables.
@@ -25,29 +65,57 @@ private final class BinaryDisposable : DisposeBase, Cancelable {
     /// - parameter disposable1: First disposable
     /// - parameter disposable2: Second disposable
     init(_ disposable1: Disposable, _ disposable2: Disposable) {
+        disposed = NonAtomicInt(0)
         self.disposable1 = disposable1
         self.disposable2 = disposable2
-        super.init()
+        SynchronousDisposeBaseInit()
     }
 
     /// Calls the disposal action if and only if the current instance hasn't been disposed yet.
     ///
     /// After invoking disposal action, disposal action will be dereferenced.
-    func dispose() {
-        if fetchOr(self.disposed, 1) == 0 {
-            self.disposable1?.dispose()
-            self.disposable2?.dispose()
-            self.disposable1 = nil
-            self.disposable2 = nil
+    func dispose() async {
+        if fetchOr(disposed, 1) == 0 {
+            async let disposable1: () = self.disposable1.dispose()
+            async let disposable2: () = self.disposable2.dispose()
+            
+            await disposable1
+            await disposable2
         }
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
     }
 }
 
-extension Disposables {
-
+public extension Disposables {
     /// Creates a disposable with the given disposables.
-    public static func create(_ disposable1: Disposable, _ disposable2: Disposable) -> Cancelable {
-        BinaryDisposable(disposable1, disposable2)
+    static func create(
+        _ disposable1: AsynchronousDisposable,
+        _ disposable2: AsynchronousDisposable
+    ) -> AsynchronousCancelable {
+        BinaryDisposableClassic(disposable1, disposable2)
     }
+}
 
+struct Dispose2Action {
+    let disposable1: Disposable?
+    let disposable2: Disposable?
+    
+    init?(disposable1: Disposable?, disposable2: Disposable?) {
+        if disposable1 == nil, disposable2 == nil {
+            return nil
+        }
+        self.disposable1 = disposable1
+        self.disposable2 = disposable2
+    }
+    
+    func dispose() async {
+        async let disposed1: ()? = disposable1?.dispose()
+        async let disposed2: ()? = disposable2?.dispose()
+        
+        await disposed1
+        await disposed2
+    }
 }

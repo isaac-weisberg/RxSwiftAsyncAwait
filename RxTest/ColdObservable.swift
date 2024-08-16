@@ -16,12 +16,12 @@ import RxSwift
 final class ColdObservable<Element>
     : TestableObservable<Element> {
 
-    override init(testScheduler: TestScheduler, recordedEvents: [Recorded<Event<Element>>]) {
-        super.init(testScheduler: testScheduler, recordedEvents: recordedEvents)
+    override init(testScheduler: TestScheduler, recordedEvents: [Recorded<Event<Element>>]) async {
+        await super.init(testScheduler: testScheduler, recordedEvents: recordedEvents)
     }
 
     /// Subscribes `observer` to receive events for this sequence.
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    override func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
         self.subscriptions.append(Subscription(self.testScheduler.clock))
         
         let i = self.subscriptions.count - 1
@@ -29,15 +29,15 @@ final class ColdObservable<Element>
         var disposed = false
 
         for recordedEvent in self.recordedEvents {
-            _ = self.testScheduler.scheduleRelativeVirtual((), dueTime: recordedEvent.time, action: { _ in
+            _ = await self.testScheduler.scheduleRelativeVirtual((), dueTime: recordedEvent.time, action: { _ in
                 if !disposed {
-                    observer.on(recordedEvent.value)
+                    await observer.on(recordedEvent.value)
                 }
                 return Disposables.create()
             })
         }
         
-        return Disposables.create {
+        return await Disposables.create {
             disposed = true
             let existing = self.subscriptions[i]
             self.subscriptions[i] = Subscription(existing.subscribe, self.testScheduler.clock)

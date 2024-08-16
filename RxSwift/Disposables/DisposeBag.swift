@@ -6,139 +6,152 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension Disposable {
+public extension AsynchronousDisposable {
     /// Adds `self` to `bag`
     ///
     /// - parameter bag: `DisposeBag` to add `self` to.
-    public func disposed(by bag: DisposeBag) {
-        bag.insert(self)
+    func disposed(by bag: DisposeBag) async {
+        await bag.insert(self)
     }
 }
 
 /**
-Thread safe bag that disposes added disposables on `deinit`.
+ Thread safe bag that disposes added disposables on `deinit`.
 
-This returns ARC (RAII) like resource management to `RxSwift`.
+ This returns ARC (RAII) like resource management to `RxSwift`.
 
-In case contained disposables need to be disposed, just put a different dispose bag
-or create a new one in its place.
+ In case contained disposables need to be disposed, just put a different dispose bag
+ or create a new one in its place.
 
-    self.existingDisposeBag = DisposeBag()
+     self.existingDisposeBag = DisposeBag()
 
-In case explicit disposal is necessary, there is also `CompositeDisposable`.
-*/
-public final class DisposeBag: DisposeBase {
-    
-    private var lock = SpinLock()
-    
+ In case explicit disposal is necessary, there is also `CompositeDisposable`.
+ */
+
+public final class DisposeBag {
+    let actualDisposeBag: DisposeBagUnderThehood
+
+    public init() {
+        actualDisposeBag = DisposeBagUnderThehood()
+    }
+
+    deinit {
+        Task { [actualDisposeBag] in
+            await actualDisposeBag.dispose()
+        }
+    }
+}
+
+public final actor DisposeBagUnderThehood: Sendable {
+
     // state
-    private var disposables = [Disposable]()
-    private var isDisposed = false
-    
+    fileprivate var disposables = [AsynchronousDisposable]()
+    fileprivate var isDisposed = false
+
     /// Constructs new empty dispose bag.
-    public override init() {
-        super.init()
+    public init() {
+        SynchronousDisposeBaseInit()
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
+    }
+    
+    fileprivate func append(_ disposables: [AsynchronousDisposable]) {
+        self.disposables.append(contentsOf: disposables)
     }
 
     /// Adds `disposable` to be disposed when dispose bag is being deinited.
     ///
     /// - parameter disposable: Disposable to add.
-    public func insert(_ disposable: Disposable) {
-        self._insert(disposable)?.dispose()
+    public func insert(_ disposable: AsynchronousDisposable) async {
+        await _insert(disposable)?.dispose()
     }
-    
-    private func _insert(_ disposable: Disposable) -> Disposable? {
-        self.lock.performLocked {
-            if self.isDisposed {
-                return disposable
-            }
 
-            self.disposables.append(disposable)
-
-            return nil
+    private func _insert(_ disposable: AsynchronousDisposable) async -> AsynchronousDisposable? {
+        if isDisposed {
+            return disposable
         }
+
+        disposables.append(disposable)
+
+        return nil
     }
 
     /// This is internal on purpose, take a look at `CompositeDisposable` instead.
-    private func dispose() {
-        let oldDisposables = self._dispose()
+    fileprivate func dispose() async {
+        let oldDisposables = await _dispose()
 
         for disposable in oldDisposables {
-            disposable.dispose()
+            await disposable.dispose()
         }
     }
 
-    private func _dispose() -> [Disposable] {
-        self.lock.performLocked {
-            let disposables = self.disposables
-            
-            self.disposables.removeAll(keepingCapacity: false)
-            self.isDisposed = true
-            
-            return disposables
-        }
-    }
-    
-    deinit {
-        self.dispose()
+    private func _dispose() async -> [AsynchronousDisposable] {
+        let disposables = disposables
+
+        self.disposables.removeAll(keepingCapacity: false)
+        isDisposed = true
+
+        return disposables
+
     }
 }
 
-extension DisposeBag {
+public extension DisposeBag {
     /// Convenience init allows a list of disposables to be gathered for disposal.
-    public convenience init(disposing disposables: Disposable...) {
-        self.init()
-        self.disposables += disposables
-    }
+//    convenience init(disposing disposables: AsynchronousDisposable...) async {
+//        await self.init()
+//        await actualDisposeBag.append(disposables)
+//    }
 
     /// Convenience init which utilizes a function builder to let you pass in a list of
     /// disposables to make a DisposeBag of.
-    public convenience init(@DisposableBuilder builder: () -> [Disposable]) {
-      self.init(disposing: builder())
+    convenience init(@DisposableBuilder builder: () -> [AsynchronousDisposable]) async {
+        await self.init(disposing: builder())
     }
 
     /// Convenience init allows an array of disposables to be gathered for disposal.
-    public convenience init(disposing disposables: [Disposable]) {
+    convenience init(disposing disposables: [AsynchronousDisposable]) async {
         self.init()
-        self.disposables += disposables
+        await actualDisposeBag.append(disposables)
     }
 
     /// Convenience function allows a list of disposables to be gathered for disposal.
-    public func insert(_ disposables: Disposable...) {
-        self.insert(disposables)
+    func insert(_ disposables: AsynchronousDisposable...) async {
+        await insert(disposables)
     }
 
     /// Convenience function allows a list of disposables to be gathered for disposal.
-    public func insert(@DisposableBuilder builder: () -> [Disposable]) {
-        self.insert(builder())
+    func insert(@DisposableBuilder builder: () -> [AsynchronousDisposable]) async {
+        await insert(builder())
     }
 
     /// Convenience function allows an array of disposables to be gathered for disposal.
-    public func insert(_ disposables: [Disposable]) {
-        self.lock.performLocked {
-            if self.isDisposed {
-                disposables.forEach { $0.dispose() }
-            } else {
-                self.disposables += disposables
+    func insert(_ disposables: [AsynchronousDisposable]) async {
+        if await actualDisposeBag.isDisposed {
+            for disposable in disposables {
+                await disposable.dispose()
             }
+        } else {
+            await actualDisposeBag.append(disposables)
         }
     }
 
     /// A function builder accepting a list of Disposables and returning them as an array.
     #if swift(>=5.4)
-    @resultBuilder
-    public struct DisposableBuilder {
-      public static func buildBlock(_ disposables: Disposable...) -> [Disposable] {
-        return disposables
-      }
-    }
+        @resultBuilder
+        struct DisposableBuilder {
+            public static func buildBlock(_ disposables: AsynchronousDisposable...) -> [AsynchronousDisposable] {
+                disposables
+            }
+        }
     #else
-    @_functionBuilder
-    public struct DisposableBuilder {
-      public static func buildBlock(_ disposables: Disposable...) -> [Disposable] {
-        return disposables
-      }
-    }
+        @_functionBuilder
+        struct DisposableBuilder {
+            public static func buildBlock(_ disposables: AsynchronousDisposable...) -> [AsynchronousDisposable] {
+                disposables
+            }
+        }
     #endif
-    
 }

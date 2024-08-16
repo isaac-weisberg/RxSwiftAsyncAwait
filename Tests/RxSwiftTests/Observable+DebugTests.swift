@@ -14,16 +14,16 @@ class ObservableDebugTest : RxTest {
 }
 
 extension ObservableDebugTest {
-    func testDebug_Completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDebug_Completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 0),
             .completed(600)
             ])
 
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.debug()
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.debug()
         }
 
         XCTAssertEqual(res.events, [
@@ -36,16 +36,16 @@ extension ObservableDebugTest {
             ])
     }
 
-    func testDebug_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDebug_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 0),
             .error(600, testError)
             ])
 
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.debug()
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.debug()
         }
 
         XCTAssertEqual(res.events, [
@@ -59,12 +59,12 @@ extension ObservableDebugTest {
     }
 
     #if TRACE_RESOURCES
-        func testReplayNReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).debug().subscribe()
+    func testReplayNReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).debug().subscribe()
         }
 
-        func testReplayNReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).debug().subscribe()
+    func testReplayNReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).debug().subscribe()
         }
     #endif
 }

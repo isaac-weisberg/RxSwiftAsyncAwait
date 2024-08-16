@@ -8,8 +8,7 @@
 
 import Foundation
 
-extension ObservableType {
-
+public extension ObservableType {
     /**
      Ignores elements from an observable sequence which are followed by another element within a specified relative time duration, using the specified scheduler to run throttling timers.
 
@@ -19,103 +18,126 @@ extension ObservableType {
      - parameter scheduler: Scheduler to run the throttle timers on.
      - returns: The throttled sequence.
      */
-    public func debounce(_ dueTime: RxTimeInterval, scheduler: SchedulerType)
+    func debounce(_ dueTime: RxTimeInterval)
         -> Observable<Element> {
-            return Debounce(source: self.asObservable(), dueTime: dueTime, scheduler: scheduler)
+        Debounce(source: asObservable(), dueTime: dueTime)
     }
 }
 
-final private class DebounceSink<Observer: ObserverType>
-    : Sink<Observer>
-    , ObserverType
-    , LockOwnerType
-    , SynchronizedOnType {
-    typealias Element = Observer.Element 
+private final actor DebounceSink<Observer: ObserverType>:
+    SinkOverSingleSubscription,
+    ObserverType, ActorLock {
+    typealias Element = Observer.Element
     typealias ParentType = Debounce<Element>
 
-    private let parent: ParentType
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
-    let lock = RecursiveLock()
+    private let parent: ParentType
 
     // state
     private var id = 0 as UInt64
     private var value: Element?
+    private let timerSerialDisposable = SerialDisposableGeneric<DisposableTimer>()
 
-    let cancellable = SerialDisposable()
-
-    init(parent: ParentType, observer: Observer, cancel: Cancelable) {
+    init(parent: ParentType, observer: Observer) {
         self.parent = parent
 
-        super.init(observer: observer, cancel: cancel)
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
-    func run() -> Disposable {
-        let subscription = self.parent.source.subscribe(self)
-
-        return Disposables.create(subscription, cancellable)
-    }
-
-    func on(_ event: Event<Element>) {
-        self.synchronizedOn(event)
-    }
-
-    func synchronized_on(_ event: Event<Element>) {
+    func on(_ event: Event<Element>, _ c: C) async {
+        if baseSink.disposed {
+            return
+        }
         switch event {
         case .next(let element):
-            self.id = self.id &+ 1
-            let currentId = self.id
-            self.value = element
+            id = id &+ 1
+            let currentId = id
+            value = element
 
+            let dueTime = parent.dueTime
 
-            let scheduler = self.parent.scheduler
-            let dueTime = self.parent.dueTime
-
-            let d = SingleAssignmentDisposable()
-            self.cancellable.disposable = d
-            d.setDisposable(scheduler.scheduleRelative(currentId, dueTime: dueTime, action: self.propagate))
-        case .error:
-            self.value = nil
-            self.forwardOn(event)
-            self.dispose()
-        case .completed:
-            if let value = self.value {
-                self.value = nil
-                self.forwardOn(.next(value))
+            let timer = DisposableTimer(dueTime) { [weak self] _ in
+                await self?.propagate(c: c.call(), currentId)
             }
-            self.forwardOn(.completed)
-            self.dispose()
+            timerSerialDisposable.replace(timer)?.dispose()
+        case .error:
+            value = nil
+            await forwardOn(event, c.call())
+            await dispose()
+        case .completed:
+            if let value {
+                self.value = nil
+                await forwardOn(.next(value), c.call())
+            }
+            await forwardOn(.completed, c.call())
+            await dispose()
         }
     }
 
-    func propagate(_ currentId: UInt64) -> Disposable {
-        self.lock.performLocked {
-            let originalValue = self.value
-
-            if let value = originalValue, self.id == currentId {
-                self.value = nil
-                self.forwardOn(.next(value))
-            }
-
-            return Disposables.create()
+    func propagate(c: C, _ currentId: UInt64) async {
+        if baseSink.disposed {
+            return
         }
+
+        let originalValue = value
+
+        if let value = originalValue, id == currentId {
+            self.value = nil
+            await forwardOn(.next(value), c.call())
+        }
+    }
+
+    func dispose() async {
+        let disposable1 = baseSink.setDisposed()
+        let disposable2 = timerSerialDisposable.dispose()
+
+        disposable2?.dispose()
+        await disposable1?.dispose()
     }
 }
 
-final private class Debounce<Element>: Producer<Element> {
+private final class Debounce<Element: Sendable>: Producer<Element> {
     fileprivate let source: Observable<Element>
     fileprivate let dueTime: RxTimeInterval
-    fileprivate let scheduler: SchedulerType
 
-    init(source: Observable<Element>, dueTime: RxTimeInterval, scheduler: SchedulerType) {
+    init(source: Observable<Element>, dueTime: RxTimeInterval) {
         self.source = source
         self.dueTime = dueTime
-        self.scheduler = scheduler
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        let sink = DebounceSink(parent: self, observer: observer, cancel: cancel)
-        let subscription = sink.run()
-        return (sink: sink, subscription: subscription)
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer
+    )
+        async -> AsynchronousDisposable where Observer.Element == Element {
+        let sink = DebounceSink(parent: self, observer: observer)
+        await sink.run(c.call(), source)
+        return sink
     }
-    
+}
+
+final class DisposableTimer: @unchecked Sendable {
+    typealias Handler = @Sendable (DisposableTimer) async -> Void
+
+    var task: Task<Void, Never>?
+    var disposed = false
+
+    init(_ timeInterval: RxTimeInterval, _ handler: @escaping Handler) {
+        task = Task {
+            do {
+                try await Task.sleep(nanoseconds: timeInterval.nanoseconds)
+            } catch {
+                return
+            }
+            await handler(self)
+        }
+    }
+
+    func dispose() {
+        rxAssert(!disposed)
+        task?.cancel()
+        task = nil
+    }
 }

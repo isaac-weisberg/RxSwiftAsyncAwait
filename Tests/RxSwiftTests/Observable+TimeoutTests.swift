@@ -14,16 +14,16 @@ class ObservableTimeoutTest : RxTest {
 }
 
 extension ObservableTimeoutTest {
-    func testTimeout_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 0),
             .completed(300)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(200), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(200), scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -35,16 +35,16 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 0),
             .error(300, testError)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(200), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(200), scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -56,15 +56,15 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 0),
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(1000), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(1000), scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [])
@@ -74,10 +74,10 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_Duetime_Simple() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_Duetime_Simple() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 42),
             .next(25, 43),
             .next(40, 44),
@@ -85,8 +85,8 @@ extension ObservableTimeoutTest {
             .completed(60)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(30), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(30), scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -102,10 +102,10 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_Duetime_Timeout_Exact() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_Duetime_Timeout_Exact() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 42),
             .next(20, 43),
             .next(50, 44),
@@ -113,8 +113,8 @@ extension ObservableTimeoutTest {
             .completed(70)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(30), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(30), scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -130,10 +130,10 @@ extension ObservableTimeoutTest {
             ])
     }
 
-    func testTimeout_Duetime_Timeout() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_Duetime_Timeout() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(10, 42),
             .next(20, 43),
             .next(50, 44),
@@ -141,8 +141,8 @@ extension ObservableTimeoutTest {
             .completed(70)
             ])
 
-        let res = scheduler.start {
-            xs.timeout(.seconds(25), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(25), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -156,10 +156,10 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_Duetime_Disposed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_Duetime_Disposed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(205, 1),
             .next(210, 2),
             .next(240, 3),
@@ -172,8 +172,8 @@ extension ObservableTimeoutTest {
             .completed(600)
             ])
         
-        let res = scheduler.start(disposed: 370) {
-            xs.timeout(.seconds(40), scheduler: scheduler)
+        let res = await scheduler.start(disposed: 370) {
+            await xs.timeout(.seconds(40), scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -191,10 +191,10 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_TimeoutOccurs_1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_TimeoutOccurs_1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 1),
             .next(130, 2),
             .next(310, 3),
@@ -202,15 +202,15 @@ extension ObservableTimeoutTest {
             .completed(500)
             ])
 
-        let ys = scheduler.createColdObservable([
+        let ys = await scheduler.createColdObservable([
             .next(50, -1),
             .next(200, -2),
             .next(310, -3),
             .completed(320)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -229,10 +229,10 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_TimeoutOccurs_2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_TimeoutOccurs_2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 1),
             .next(130, 2),
             .next(240, 3),
@@ -241,15 +241,15 @@ extension ObservableTimeoutTest {
             .completed(500)
             ])
         
-        let ys = scheduler.createColdObservable([
+        let ys = await scheduler.createColdObservable([
             .next(50, -1),
             .next(200, -2),
             .next(310, -3),
             .completed(320)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -270,10 +270,10 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_TimeoutOccurs_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_TimeoutOccurs_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 1),
             .next(130, 2),
             .next(240, 3),
@@ -282,11 +282,11 @@ extension ObservableTimeoutTest {
             .completed(500)
             ])
         
-        let ys: TestableObservable<Int> = scheduler.createColdObservable([
+        let ys: TestableObservable<Int> = await scheduler.createColdObservable([
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -303,19 +303,19 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_TimeoutOccurs_Completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_TimeoutOccurs_Completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs: TestableObservable<Int> = scheduler.createHotObservable([
+        let xs: TestableObservable<Int> = await scheduler.createHotObservable([
             .completed(500)
             ])
         
-        let ys = scheduler.createColdObservable([
+        let ys = await scheduler.createColdObservable([
             .next(100, -1)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -331,19 +331,19 @@ extension ObservableTimeoutTest {
             ])
     }
 
-    func testTimeout_TimeoutOccurs_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_TimeoutOccurs_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs: TestableObservable<Int> = scheduler.createHotObservable([
+        let xs: TestableObservable<Int> = await scheduler.createHotObservable([
             .error(500, testError)
             ])
 
-        let ys = scheduler.createColdObservable([
+        let ys = await scheduler.createColdObservable([
             .next(100, -1)
             ])
 
-        let res = scheduler.start {
-            xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -359,19 +359,19 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_TimeoutOccurs_NextIsError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_TimeoutOccurs_NextIsError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs: TestableObservable<Int> = scheduler.createHotObservable([
+        let xs: TestableObservable<Int> = await scheduler.createHotObservable([
             .next(500, 42)
             ])
         
-        let ys: TestableObservable<Int> = scheduler.createColdObservable([
+        let ys: TestableObservable<Int> = await scheduler.createColdObservable([
             .error(100, testError)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -387,19 +387,19 @@ extension ObservableTimeoutTest {
             ])
     }
     
-    func testTimeout_TimeoutNotOccurs_Completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_TimeoutNotOccurs_Completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs: TestableObservable<Int> = scheduler.createHotObservable([
+        let xs: TestableObservable<Int> = await scheduler.createHotObservable([
             .completed(250)
             ])
         
-        let ys: TestableObservable<Int> = scheduler.createColdObservable([
+        let ys: TestableObservable<Int> = await scheduler.createColdObservable([
             .next(100, -1)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -413,19 +413,19 @@ extension ObservableTimeoutTest {
         XCTAssertEqual(ys.subscriptions, [])
     }
     
-    func testTimeout_TimeoutNotOccurs_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_TimeoutNotOccurs_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs: TestableObservable<Int> = scheduler.createHotObservable([
+        let xs: TestableObservable<Int> = await scheduler.createHotObservable([
             .error(250, testError)
             ])
         
-        let ys: TestableObservable<Int> = scheduler.createColdObservable([
+        let ys: TestableObservable<Int> = await scheduler.createColdObservable([
             .next(100, -1)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -439,10 +439,10 @@ extension ObservableTimeoutTest {
         XCTAssertEqual(ys.subscriptions, [])
     }
     
-    func testTimeout_TimeoutNotOccurs() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTimeout_TimeoutNotOccurs() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 1),
             .next(130, 2),
             .next(240, 3),
@@ -451,15 +451,15 @@ extension ObservableTimeoutTest {
             .completed(500)
             ])
         
-        let ys = scheduler.createColdObservable([
+        let ys = await scheduler.createColdObservable([
             .next(50, -1),
             .next(200, -2),
             .next(310, -3),
             .completed(320)
             ])
         
-        let res = scheduler.start {
-            xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.timeout(.seconds(100), other: ys, scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -478,16 +478,16 @@ extension ObservableTimeoutTest {
     }
 
     #if TRACE_RESOURCES
-        func testTimeoutReleasesResourcesOnComplete() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).timeout(.seconds(100), other: Observable.empty(), scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testTimeoutReleasesResourcesOnComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).timeout(.seconds(100), other: Observable.empty(), scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
 
-        func testTimeoutReleasesResourcesOnError() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).timeout(.seconds(100), other: Observable.empty(), scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testTimeoutReleasesResourcesOnError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).timeout(.seconds(100), other: Observable.empty(), scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
     #endif
 

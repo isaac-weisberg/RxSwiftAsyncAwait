@@ -32,283 +32,281 @@ class ObservableObserveOnTest : ObservableObserveOnTestBase {
 // observeOn serial scheduler
 extension ObservableObserveOnTest {
 
-    func runDispatchQueueSchedulerTests(_ tests: (SerialDispatchQueueScheduler) -> Disposable) {
+    func runDispatchQueueSchedulerTests(_ tests: (SerialDispatchQueueScheduler) async -> Disposable) async {
         let scheduler = SerialDispatchQueueScheduler(internalSerialQueueName: "testQueue1")
-        runDispatchQueueSchedulerTests(scheduler, tests: tests).dispose()
+        await runDispatchQueueSchedulerTests(scheduler, tests: tests).dispose()
     }
 
-    func runDispatchQueueSchedulerTests(_ scheduler: SerialDispatchQueueScheduler, tests: (SerialDispatchQueueScheduler) -> Disposable) -> Disposable {
+    func runDispatchQueueSchedulerTests(_ scheduler: SerialDispatchQueueScheduler, tests: (SerialDispatchQueueScheduler) async -> Disposable) async -> Disposable {
         // simplest possible solution, even though it has horrible efficiency in this case probably
-        let disposable = tests(scheduler)
+        let disposable = await tests(scheduler)
         let expectation = self.expectation(description: "Wait for all tests to complete")
 
-        _ = scheduler.schedule(()) { _ in
+        _ = await scheduler.schedule(()) { _ in
             expectation.fulfill()
             return Disposables.create()
         }
 
-        waitForExpectations(timeout: 1.0) { e in
-            XCTAssertTrue(e == nil, "Everything not completed in 1.0 sec.")
-        }
+        await waitForExpectations(timeout: 1.0)
 
         return disposable
     }
 
-    func runDispatchQueueSchedulerMultiplexedTests(_ tests: [(SerialDispatchQueueScheduler) -> Disposable]) {
+    func runDispatchQueueSchedulerMultiplexedTests(_ tests: [(SerialDispatchQueueScheduler) async -> Disposable]) async {
         let scheduler = SerialDispatchQueueScheduler(internalSerialQueueName: "testQueue1")
 
-        let compositeDisposable = CompositeDisposable()
+        let compositeDisposable = await CompositeDisposable()
 
         for test in tests {
-            _ = compositeDisposable.insert(runDispatchQueueSchedulerTests(scheduler, tests: test))
+            _ = await compositeDisposable.insert(runDispatchQueueSchedulerTests(scheduler, tests: test))
         }
 
-        compositeDisposable.dispose()
+        await compositeDisposable.dispose()
     }
 
     // tests
 
-    func testObserveOnDispatchQueue_DoesPerformWorkOnQueue() {
+    func testObserveOnDispatchQueue_DoesPerformWorkOnQueue() async {
         let unitTestsThread = Thread.current
 
         var didExecute = false
 
-        runDispatchQueueSchedulerTests { scheduler in
-            let observable = Observable.just(0)
+        await runDispatchQueueSchedulerTests { scheduler in
+            let observable = await Observable.just(0)
                 .observe(on:scheduler)
-            return observable.subscribe(onNext: { _ in
+            return await observable.subscribe(onNext: { _ in
                 didExecute = true
-                XCTAssert(Thread.current !== unitTestsThread)
+                assert(Thread.current !== unitTestsThread)
             })
         }
 
-        XCTAssert(didExecute)
+        await assert(didExecute)
     }
 
     #if TRACE_RESOURCES
-        func testObserveOnDispatchQueue_EnsureCorrectImplementationIsChosen() {
-            runDispatchQueueSchedulerTests { scheduler in
-                XCTAssert(Resources.numberOfSerialDispatchQueueObservables == 0)
-                let a = Observable.just(0)
+    func testObserveOnDispatchQueue_EnsureCorrectImplementationIsChosen() async {
+        await runDispatchQueueSchedulerTests { scheduler in
+            await assertTrue(await Resources.numberOfSerialDispatchQueueObservables == 0)
+            let a = await Observable.just(0)
                 .observe(on:scheduler)
-                XCTAssertTrue(a == a) // shut up swift compiler :(, we only need to keep this in memory
-                XCTAssert(Resources.numberOfSerialDispatchQueueObservables == 1)
+            await assertTrue(a == a) // shut up swift compiler :(, we only need to keep this in memory
+            await assert(await Resources.numberOfSerialDispatchQueueObservables == 1)
                 return Disposables.create()
             }
 
-            XCTAssert(Resources.numberOfSerialDispatchQueueObservables == 0)
+        await assert(await Resources.numberOfSerialDispatchQueueObservables == 0)
         }
 
-        func testObserveOnDispatchQueue_DispatchQueueSchedulerIsSerial() {
-            let numberOfConcurrentEvents = AtomicInt(0)
-            let numberOfExecutions = AtomicInt(0)
-            runDispatchQueueSchedulerTests { scheduler in
-                XCTAssert(Resources.numberOfSerialDispatchQueueObservables == 0)
+    func testObserveOnDispatchQueue_DispatchQueueSchedulerIsSerial() async {
+        let numberOfConcurrentEvents = await AtomicInt(0)
+        let numberOfExecutions = await AtomicInt(0)
+        await runDispatchQueueSchedulerTests { scheduler in
+            await assert(await Resources.numberOfSerialDispatchQueueObservables == 0)
                 let action = { (s: Void) -> Disposable in
-                    XCTAssertEqual(increment(numberOfConcurrentEvents), 0)
+                    await assertEqual(await increment(numberOfConcurrentEvents), 0)
                     self.sleep(0.1) // should be enough to block the queue, so if it's concurrent, it will fail
-                    XCTAssertEqual(decrement(numberOfConcurrentEvents), 1)
-                    increment(numberOfExecutions)
+                    await assertEqual(await decrement(numberOfConcurrentEvents), 1)
+                    await increment(numberOfExecutions)
                     return Disposables.create()
                 }
-                _ = scheduler.schedule((), action: action)
-                _ = scheduler.schedule((), action: action)
+            _ = await scheduler.schedule((), action: action)
+            _ = await scheduler.schedule((), action: action)
                 return Disposables.create()
             }
 
-            XCTAssertEqual(Resources.numberOfSerialDispatchQueueObservables, 0)
-            XCTAssertEqual(globalLoad(numberOfExecutions), 2)
+        await assertEqual(await Resources.numberOfSerialDispatchQueueObservables, 0)
+        await assertEqual(await globalLoad(numberOfExecutions), 2)
         }
     #endif
 
-    func testObserveOnDispatchQueue_DeadlockErrorImmediately() {
+    func testObserveOnDispatchQueue_DeadlockErrorImmediately() async {
         var nEvents = 0
 
-        runDispatchQueueSchedulerTests { scheduler in
-            let observable: Observable<Int> = Observable.error(testError).observe(on:scheduler)
-            return observable.subscribe(onError: { _ in
+        await runDispatchQueueSchedulerTests { scheduler in
+            let observable: Observable<Int> = await Observable.error(testError).observe(on:scheduler)
+            return await observable.subscribe(onError: { _ in
                 nEvents += 1
             })
         }
 
-        XCTAssertEqual(nEvents, 1)
+        await assertEqual(nEvents, 1)
     }
 
-    func testObserveOnDispatchQueue_DeadlockEmpty() {
+    func testObserveOnDispatchQueue_DeadlockEmpty() async {
         var nEvents = 0
 
-        runDispatchQueueSchedulerTests { scheduler in
-            let observable: Observable<Int> = Observable.empty().observe(on:scheduler)
+        await runDispatchQueueSchedulerTests { scheduler in
+            let observable: Observable<Int> = await Observable.empty().observe(on:scheduler)
 
-            return observable.subscribe(onCompleted: {
+            return await observable.subscribe(onCompleted: {
                 nEvents += 1
             })
         }
 
-        XCTAssertEqual(nEvents, 1)
+        await assertEqual(nEvents, 1)
     }
 
-    func testObserveOnDispatchQueue_Never() {
-        runDispatchQueueSchedulerTests { scheduler in
-            let xs: Observable<Int> = Observable.never()
-            return xs
+    func testObserveOnDispatchQueue_Never() async {
+        await runDispatchQueueSchedulerTests { scheduler in
+            let xs: Observable<Int> = await Observable.never()
+            return await xs
                 .observe(on:scheduler)
                 .subscribe(onNext: { _ in
-                    XCTAssert(false)
+                    assert(false)
                 })
         }
     }
 
-    func testObserveOnDispatchQueue_Simple() {
-        let xs = PrimitiveHotObservable<Int>()
+    func testObserveOnDispatchQueue_Simple() async {
+        let xs = await PrimitiveHotObservable<Int>()
         let observer = PrimitiveMockObserver<Int>()
 
-        runDispatchQueueSchedulerMultiplexedTests([
+        await runDispatchQueueSchedulerMultiplexedTests([
             { scheduler in
-                let subscription = (xs.observe(on:scheduler)).subscribe(observer)
-                XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-                xs.on(.next(0))
+                let subscription = await (xs.observe(on:scheduler)).subscribe(observer)
+                await assert(await xs.subscriptions == [SubscribedToHotObservable])
+                await xs.on(.next(0))
 
                 return subscription
             },
             { scheduler in
-                XCTAssertEqual(observer.events, [
+                await assertEqual(observer.events, [
                     .next(0)
                     ])
-                xs.on(.next(1))
-                xs.on(.next(2))
+                await xs.on(.next(1))
+                await xs.on(.next(2))
                 return Disposables.create()
             },
             { scheduler in
-                XCTAssertEqual(observer.events, [
+                await assertEqual(observer.events, [
                     .next(0),
                     .next(1),
                     .next(2)
                     ])
-                XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-                xs.on(.completed)
+                await assert(await xs.subscriptions == [SubscribedToHotObservable])
+                await xs.on(.completed)
                 return Disposables.create()
             },
             { scheduler in
-                XCTAssertEqual(observer.events, [
+                await assertEqual(observer.events, [
                     .next(0),
                     .next(1),
                     .next(2),
                     .completed()
                     ])
-                XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+                await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
                 return Disposables.create()
             },
             ])
     }
 
-    func testObserveOnDispatchQueue_Empty() {
-        let xs = PrimitiveHotObservable<Int>()
+    func testObserveOnDispatchQueue_Empty() async {
+        let xs = await PrimitiveHotObservable<Int>()
         let observer = PrimitiveMockObserver<Int>()
 
-        runDispatchQueueSchedulerMultiplexedTests([
+        await runDispatchQueueSchedulerMultiplexedTests([
             { scheduler in
-                let subscription = (xs.observe(on:scheduler)).subscribe(observer)
-                XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-                xs.on(.completed)
+                let subscription = await (xs.observe(on:scheduler)).subscribe(observer)
+                await assert(await xs.subscriptions == [SubscribedToHotObservable])
+                await xs.on(.completed)
                 return subscription
             },
             { scheduler in
-                XCTAssertEqual(observer.events, [
+                await assertEqual(observer.events, [
                     .completed()
                     ])
-                XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+                await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
                 return Disposables.create()
             }
             ])
     }
 
-    func testObserveOnDispatchQueue_Error() {
-        let xs = PrimitiveHotObservable<Int>()
+    func testObserveOnDispatchQueue_Error() async {
+        let xs = await PrimitiveHotObservable<Int>()
         let observer = PrimitiveMockObserver<Int>()
 
-        runDispatchQueueSchedulerMultiplexedTests([
+        await runDispatchQueueSchedulerMultiplexedTests([
             { scheduler in
-                let subscription = (xs.observe(on:scheduler)).subscribe(observer)
-                XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-                xs.on(.next(0))
+                let subscription = await (xs.observe(on:scheduler)).subscribe(observer)
+                await assert(await xs.subscriptions == [SubscribedToHotObservable])
+                await xs.on(.next(0))
 
                 return subscription
             },
             { scheduler in
-                XCTAssertEqual(observer.events, [
+                await assertEqual(observer.events, [
                     .next(0)
                     ])
-                xs.on(.next(1))
-                xs.on(.next(2))
+                await xs.on(.next(1))
+                await xs.on(.next(2))
                 return Disposables.create()
             },
             { scheduler in
-                XCTAssertEqual(observer.events, [
+                await assertEqual(observer.events, [
                     .next(0),
                     .next(1),
                     .next(2)
                     ])
-                XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-                xs.on(.error(testError))
+                await assert(await xs.subscriptions == [SubscribedToHotObservable])
+                await xs.on(.error(testError))
                 return Disposables.create()
             },
             { scheduler in
-                XCTAssertEqual(observer.events, [
+                await assertEqual(observer.events, [
                     .next(0),
                     .next(1),
                     .next(2),
                     .error(testError)
                     ])
-                XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+                await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
                 return Disposables.create()
             },
             ])
     }
 
-    func testObserveOnDispatchQueue_Dispose() {
-        let xs = PrimitiveHotObservable<Int>()
+    func testObserveOnDispatchQueue_Dispose() async {
+        let xs = await PrimitiveHotObservable<Int>()
         let observer = PrimitiveMockObserver<Int>()
         var subscription: Disposable!
 
-        runDispatchQueueSchedulerMultiplexedTests([
+        await runDispatchQueueSchedulerMultiplexedTests([
             { scheduler in
-                subscription = (xs.observe(on:scheduler)).subscribe(observer)
-                XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-                xs.on(.next(0))
+                subscription = await (xs.observe(on:scheduler)).subscribe(observer)
+                await assert(await xs.subscriptions == [SubscribedToHotObservable])
+                await xs.on(.next(0))
 
                 return subscription
             },
             { scheduler in
-                XCTAssertEqual(observer.events, [
+                await assertEqual(observer.events, [
                     .next(0)
                     ])
 
-                XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-                subscription.dispose()
-                XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+                await assert(await xs.subscriptions == [SubscribedToHotObservable])
+                await subscription.dispose()
+                await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
 
-                xs.on(.error(testError))
+                await xs.on(.error(testError))
 
                 return Disposables.create()
             },
             { scheduler in
-                XCTAssertEqual(observer.events, [
+                await assertEqual(observer.events, [
                     .next(0),
                     ])
-                XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+                await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
                 return Disposables.create()
             }
             ])
     }
 
     #if TRACE_RESOURCES
-        func testObserveOnSerialReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).observe(on:MainScheduler.instance).subscribe()
+    func testObserveOnSerialReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).observe(on:MainScheduler.instance).subscribe()
         }
 
-        func testObserveOnSerialReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).observe(on:MainScheduler.instance).subscribe()
+    func testObserveOnSerialReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).observe(on:MainScheduler.instance).subscribe()
         }
     #endif
 }
@@ -318,14 +316,14 @@ extension ObservableObserveOnTest {
 #if !os(Linux)
 // Test event is cancelled properly.
 extension ObservableObserveOnTest {
-    func testDisposeWithEnqueuedElement() {
-        let emit = PublishSubject<Int>()
+    func testDisposeWithEnqueuedElement() async {
+        let emit = await PublishSubject<Int>()
         let blockingTheSerialScheduler = self.expectation(description: "blocking")
         let unblock = self.expectation(description: "unblock")
         let testDone = self.expectation(description: "test done")
         let scheduler = SerialDispatchQueueScheduler(qos: .default)
         var events: [Event<Int>] = []
-        let subscription = emit.observe(on:scheduler).subscribe { update in
+        let subscription = await emit.observe(on:scheduler).subscribe { update in
             switch update {
             case .next(let value):
                 if value == 0 {
@@ -337,27 +335,27 @@ extension ObservableObserveOnTest {
             }
             events.append(update)
         }
-        emit.on(.next(0))
+        await emit.on(.next(0))
         self.wait(for: [blockingTheSerialScheduler], timeout: 1.0)
-        emit.on(.next(1))
-        _ = scheduler.schedule(()) { _ in
+        await emit.on(.next(1))
+        _ = await scheduler.schedule(()) { _ in
             testDone.fulfill()
             return Disposables.create()
         }
-        subscription.dispose()
+        await subscription.dispose()
         unblock.fulfill()
         self.wait(for: [testDone], timeout: 1.0)
-        XCTAssertEqual(events, [.next(0)])
+        await assertEqual(events, [.next(0)])
     }
 
-    func testDisposeWithEnqueuedError() {
-        let emit = PublishSubject<Int>()
+    func testDisposeWithEnqueuedError() async {
+        let emit = await PublishSubject<Int>()
         let blockingTheSerialScheduler = self.expectation(description: "blocking")
         let unblock = self.expectation(description: "unblock")
         let testDone = self.expectation(description: "test done")
         let scheduler = SerialDispatchQueueScheduler(qos: .default)
         var events: [Event<Int>] = []
-        let subscription = emit.observe(on:scheduler).subscribe { update in
+        let subscription = await emit.observe(on:scheduler).subscribe { update in
             switch update {
             case .next(let value):
                 if value == 0 {
@@ -369,27 +367,27 @@ extension ObservableObserveOnTest {
             }
             events.append(update)
         }
-        emit.on(.next(0))
+        await emit.on(.next(0))
         self.wait(for: [blockingTheSerialScheduler], timeout: 1.0)
-        emit.on(.error(TestError.dummyError))
-        _ = scheduler.schedule(()) { _ in
+        await emit.on(.error(TestError.dummyError))
+        _ = await scheduler.schedule(()) { _ in
             testDone.fulfill()
             return Disposables.create()
         }
-        subscription.dispose()
+        await subscription.dispose()
         unblock.fulfill()
         self.wait(for: [testDone], timeout: 1.0)
-        XCTAssertEqual(events, [.next(0)])
+        await assertEqual(events, [.next(0)])
     }
 
-    func testDisposeWithEnqueuedCompleted() {
-        let emit = PublishSubject<Int>()
+    func testDisposeWithEnqueuedCompleted() async {
+        let emit = await PublishSubject<Int>()
         let blockingTheSerialScheduler = self.expectation(description: "blocking")
         let unblock = self.expectation(description: "unblock")
         let testDone = self.expectation(description: "test done")
         let scheduler = SerialDispatchQueueScheduler(qos: .default)
         var events: [Event<Int>] = []
-        let subscription = emit.observe(on:scheduler).subscribe { update in
+        let subscription = await emit.observe(on:scheduler).subscribe { update in
             switch update {
             case .next(let value):
                 if value == 0 {
@@ -401,17 +399,17 @@ extension ObservableObserveOnTest {
             }
             events.append(update)
         }
-        emit.on(.next(0))
+        await emit.on(.next(0))
         self.wait(for: [blockingTheSerialScheduler], timeout: 1.0)
-        emit.on(.completed)
-        _ = scheduler.schedule(()) { _ in
+        await emit.on(.completed)
+        _ = await scheduler.schedule(()) { _ in
             testDone.fulfill()
             return Disposables.create()
         }
-        subscription.dispose()
+        await subscription.dispose()
         unblock.fulfill()
         self.wait(for: [testDone], timeout: 1.0)
-        XCTAssertEqual(events, [.next(0)])
+        await assertEqual(events, [.next(0)])
     }
 }
 #endif
@@ -426,20 +424,20 @@ class ObservableObserveOnTestConcurrentSchedulerTest: ObservableObserveOnTestBas
     }
 
     #if TRACE_RESOURCES
-        func testObserveOn_EnsureCorrectImplementationIsChosen() {
+    func testObserveOn_EnsureCorrectImplementationIsChosen() async {
             let scheduler = self.createScheduler()
 
-            XCTAssert(Resources.numberOfSerialDispatchQueueObservables == 0)
-            _ = Observable.just(0).observe(on:scheduler)
+        await assert(await Resources.numberOfSerialDispatchQueueObservables == 0)
+        _ = await Observable.just(0).observe(on:scheduler)
             self.sleep(0.1)
-            XCTAssert(Resources.numberOfSerialDispatchQueueObservables == 0)
+        await assert(await Resources.numberOfSerialDispatchQueueObservables == 0)
         }
     #endif
 
-    func testObserveOn_EnsureTestsAreExecutedWithRealConcurrentScheduler() {
+    func testObserveOn_EnsureTestsAreExecutedWithRealConcurrentScheduler() async {
         var events: [String] = []
 
-        let stop = BehaviorSubject(value: 0)
+        let stop = await BehaviorSubject(value: 0)
 
         #if os(Linux)
         /// A regression in the Swift 5.1 compiler causes a hang
@@ -455,7 +453,7 @@ class ObservableObserveOnTestConcurrentSchedulerTest: ObservableObserveOnTestBas
         var writtenStarted = 0
         var writtenEnded = 0
 
-        let concurrent = { () -> Disposable in
+        let concurrent = { () async -> Disposable in
             self.performLocked {
                 events.append("Started")
             }
@@ -480,106 +478,106 @@ class ObservableObserveOnTestConcurrentSchedulerTest: ObservableObserveOnTestBas
             }
             condition.unlock()
 
-            stop.on(.completed)
+            await stop.on(.completed)
 
             return Disposables.create()
         }
 
-        _ = scheduler.schedule((), action: concurrent)
+        _ = await scheduler.schedule((), action: concurrent)
 
-        _ = scheduler.schedule((), action: concurrent)
+        _ = await scheduler.schedule((), action: concurrent)
 
-        _ = try! stop.toBlocking().last()
+        _ = try! await stop.toBlocking().last()
 
-        XCTAssertEqual(events, ["Started", "Started", "Ended", "Ended"])
+        await assertEqual(events, ["Started", "Started", "Ended", "Ended"])
     }
 
-    func testObserveOn_Never() {
+    func testObserveOn_Never() async {
         let scheduler = createScheduler()
 
-        let xs: Observable<Int> = Observable.never()
-        let subscription = xs
+        let xs: Observable<Int> = await Observable.never()
+        let subscription = await xs
             .observe(on:scheduler)
             .subscribe(onNext: { _ in
-                XCTAssert(false)
+                assert(false)
             })
 
         sleep(0.1)
 
-        subscription.dispose()
+        await subscription.dispose()
     }
 
-    func testObserveOn_Simple() {
-        let xs = PrimitiveHotObservable<Int>()
+    func testObserveOn_Simple() async {
+        let xs = await PrimitiveHotObservable<Int>()
         let observer = PrimitiveMockObserver<Int>()
 
         let scheduler = createScheduler()
 
-        let subscription = (xs.observe(on:scheduler)).subscribe(observer)
-        XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-        xs.on(.next(0))
+        let subscription = await (xs.observe(on:scheduler)).subscribe(observer)
+        await assert(await xs.subscriptions == [SubscribedToHotObservable])
+        await xs.on(.next(0))
 
         sleep(0.1)
 
-        XCTAssertEqual(observer.events, [
+        await assertEqual(observer.events, [
             .next(0)
             ])
-        xs.on(.next(1))
-        xs.on(.next(2))
+        await xs.on(.next(1))
+        await xs.on(.next(2))
 
         sleep(0.1)
 
-        XCTAssertEqual(observer.events, [
+        await assertEqual(observer.events, [
             .next(0),
             .next(1),
             .next(2)
             ])
-        XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-        xs.on(.completed)
+        await assert(await xs.subscriptions == [SubscribedToHotObservable])
+        await xs.on(.completed)
 
         sleep(0.1)
 
-        XCTAssertEqual(observer.events, [
+        await assertEqual(observer.events, [
             .next(0),
             .next(1),
             .next(2),
             .completed()
             ])
-        XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+        await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
 
-        subscription.dispose()
+        await subscription.dispose()
 
         sleep(0.1)
     }
 
-    func testObserveOn_Empty() {
-        let xs = PrimitiveHotObservable<Int>()
+    func testObserveOn_Empty() async {
+        let xs = await PrimitiveHotObservable<Int>()
         let observer = PrimitiveMockObserver<Int>()
 
         let scheduler = createScheduler()
 
-        _ = xs.observe(on:scheduler).subscribe(observer)
+        _ = await xs.observe(on:scheduler).subscribe(observer)
 
-        XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-        xs.on(.completed)
+        await assert(await xs.subscriptions == [SubscribedToHotObservable])
+        await xs.on(.completed)
 
         sleep(0.1)
 
-        XCTAssertEqual(observer.events, [
+        await assertEqual(observer.events, [
             .completed()
             ])
-        XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+        await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
     }
 
-    func testObserveOn_ConcurrentSchedulerIsSerialized() {
-        let xs = PrimitiveHotObservable<Int>()
+    func testObserveOn_ConcurrentSchedulerIsSerialized() async {
+        let xs = await PrimitiveHotObservable<Int>()
         let observer = PrimitiveMockObserver<Int>()
 
         var executed = false
 
         let scheduler = createScheduler()
 
-        let res = xs
+        let res = await xs
             .observe(on:scheduler)
             .map { v -> Int in
                 if v == 0 {
@@ -588,108 +586,108 @@ class ObservableObserveOnTestConcurrentSchedulerTest: ObservableObserveOnTestBas
                 }
                 return v
         }
-        let subscription = res.subscribe(observer)
+        let subscription = await res.subscribe(observer)
 
-        XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-        xs.on(.next(0))
-        xs.on(.next(1))
-        xs.on(.completed)
+        await assert(await xs.subscriptions == [SubscribedToHotObservable])
+        await xs.on(.next(0))
+        await xs.on(.next(1))
+        await xs.on(.completed)
 
         sleep(0.3)
 
-        XCTAssertEqual(observer.events, [
+        await assertEqual(observer.events, [
             .next(0),
             .next(1),
             .completed()
             ])
-        XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+        await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
 
-        XCTAssert(executed)
+        await assert(executed)
 
-        subscription.dispose()
+        await subscription.dispose()
     }
 
-    func testObserveOn_Error() {
-        let xs = PrimitiveHotObservable<Int>()
+    func testObserveOn_Error() async {
+        let xs = await PrimitiveHotObservable<Int>()
         let observer = PrimitiveMockObserver<Int>()
 
         let scheduler = createScheduler()
 
-        _ = xs.observe(on:scheduler).subscribe(observer)
+        _ = await xs.observe(on:scheduler).subscribe(observer)
 
-        XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-        xs.on(.next(0))
+        await assert(await xs.subscriptions == [SubscribedToHotObservable])
+        await xs.on(.next(0))
 
         sleep(0.1)
 
-        XCTAssertEqual(observer.events, [
+        await assertEqual(observer.events, [
             .next(0)
             ])
-        xs.on(.next(1))
-        xs.on(.next(2))
+        await xs.on(.next(1))
+        await xs.on(.next(2))
 
         sleep(0.1)
 
-        XCTAssertEqual(observer.events, [
+        await assertEqual(observer.events, [
             .next(0),
             .next(1),
             .next(2)
             ])
-        XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-        xs.on(.error(testError))
+        await assert(await xs.subscriptions == [SubscribedToHotObservable])
+        await xs.on(.error(testError))
 
         sleep(0.1)
 
-        XCTAssertEqual(observer.events, [
+        await assertEqual(observer.events, [
             .next(0),
             .next(1),
             .next(2),
             .error(testError)
             ])
-        XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+        await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
 
     }
 
-    func testObserveOn_Dispose() {
-        let xs = PrimitiveHotObservable<Int>()
+    func testObserveOn_Dispose() async {
+        let xs = await PrimitiveHotObservable<Int>()
         let observer = PrimitiveMockObserver<Int>()
 
         let scheduler = createScheduler()
-        let subscription = xs.observe(on:scheduler).subscribe(observer)
-        XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-        xs.on(.next(0))
+        let subscription = await xs.observe(on:scheduler).subscribe(observer)
+        await assert(await xs.subscriptions == [SubscribedToHotObservable])
+        await xs.on(.next(0))
 
         sleep(0.1)
 
-        XCTAssertEqual(observer.events, [
+        await assertEqual(observer.events, [
             .next(0)
             ])
 
-        XCTAssert(xs.subscriptions == [SubscribedToHotObservable])
-        subscription.dispose()
-        XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+        await assert(await xs.subscriptions == [SubscribedToHotObservable])
+        await subscription.dispose()
+        await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
 
-        xs.on(.error(testError))
+        await xs.on(.error(testError))
 
         sleep(0.1)
 
-        XCTAssertEqual(observer.events, [
+        await assertEqual(observer.events, [
             .next(0),
             ])
-        XCTAssert(xs.subscriptions == [UnsunscribedFromHotObservable])
+        await assert(await xs.subscriptions == [UnsunscribedFromHotObservable])
     }
 
     #if TRACE_RESOURCES
-        func testObserveOnReleasesResourcesOnComplete() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).observe(on:testScheduler).subscribe()
-            testScheduler.start()
+    func testObserveOnReleasesResourcesOnComplete() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).observe(on:testScheduler).subscribe()
+        await testScheduler.start()
         }
         
-        func testObserveOnReleasesResourcesOnError() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).observe(on:testScheduler).subscribe()
-            testScheduler.start()
+    func testObserveOnReleasesResourcesOnError() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).observe(on:testScheduler).subscribe()
+        await testScheduler.start()
         }
     #endif
 }

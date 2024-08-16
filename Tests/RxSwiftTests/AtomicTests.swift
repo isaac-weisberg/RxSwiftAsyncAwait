@@ -47,14 +47,14 @@ private typealias AtomicPrimitive = AtomicIntSanityCheck
 class AtomicTests: RxTest {}
 
 extension AtomicTests {
-    func testAtomicInitialValue() {
-        let atomic = AtomicPrimitive(4)
-        XCTAssertEqual(globalLoad(atomic), 4)
+    func testAtomicInitialValue() async {
+        let atomic = await AtomicPrimitive(4)
+        await assertEqual(await globalLoad(atomic), 4)
     }
 
-    func testAtomicInitialDefaultValue() {
-        let atomic = AtomicPrimitive()
-        XCTAssertEqual(globalLoad(atomic), 0)
+    func testAtomicInitialDefaultValue() async {
+        let atomic = await AtomicPrimitive()
+        await assertEqual(await globalLoad(atomic), 0)
     }
 }
 
@@ -62,122 +62,134 @@ extension AtomicTests {
     private static let repeatCount = 100
     private static let concurrency = 8
 
-    func testFetchOrSetsBits() {
-        let atomic = AtomicPrimitive()
-        XCTAssertEqual(fetchOr(atomic, 0), 0)
-        XCTAssertEqual(fetchOr(atomic, 4), 0)
-        XCTAssertEqual(fetchOr(atomic, 8), 4)
-        XCTAssertEqual(fetchOr(atomic, 0), 12)
+    func testFetchOrSetsBits() async {
+        let atomic = await AtomicPrimitive()
+        await assertEqual(await fetchOr(atomic, 0), 0)
+        await assertEqual(await fetchOr(atomic, 4), 0)
+        await assertEqual(await fetchOr(atomic, 8), 4)
+        await assertEqual(await fetchOr(atomic, 0), 12)
     }
 
-    func testFetchOrConcurrent() {
+    func testFetchOrConcurrent() async {
         let queue = DispatchQueue.global(qos: .default)
         for _ in 0 ..< AtomicTests.repeatCount {
-            let atomic = AtomicPrimitive(0)
+            let atomic = await AtomicPrimitive(0)
 
-            let counter = AtomicPrimitive(0)
+            let counter = await AtomicPrimitive(0)
 
             var expectations = [XCTestExpectation]()
 
             for _ in 0 ..< AtomicTests.concurrency {
                 let expectation = self.expectation(description: "wait until operation completes")
                 queue.async {
-                    while globalLoad(atomic) == 0 {}
-
-                    if fetchOr(atomic, -1) == 1 {
-                        globalAdd(counter, 1)
+                    Task {
+                        while await globalLoad(atomic) == 0 {}
+                        
+                        if await fetchOr(atomic, -1) == 1 {
+                            await globalAdd(counter, 1)
+                        }
+                        
+                        expectation.fulfill()
                     }
-
-                    expectation.fulfill()
                 }
                 expectations.append(expectation)
             }
-            fetchOr(atomic, 1)
+            await fetchOr(atomic, 1)
 
             #if os(Linux)
             self.waitForExpectations(timeout: 1.0) { _ in }
             #else
-            XCTWaiter().wait(for: expectations, timeout: 1.0)
+            await XCTWaiter().fulfillment(of: expectations, timeout: 1.0)
             #endif
-            XCTAssertEqual(globalLoad(counter), 1)
+            await assertEqual(await globalLoad(counter), 1)
         }
     }
 
-    func testAdd() {
-        let atomic = AtomicPrimitive(0)
-        XCTAssertEqual(globalAdd(atomic, 4), 0)
-        XCTAssertEqual(globalAdd(atomic, 3), 4)
-        XCTAssertEqual(globalAdd(atomic, 10), 7)
+    func testAdd() async {
+        let atomic = await AtomicPrimitive(0)
+        await assertEqual(await globalAdd(atomic, 4), 0)
+        await assertEqual(await globalAdd(atomic, 3), 4)
+        await assertEqual(await globalAdd(atomic, 10), 7)
     }
 
-    func testAddConcurrent() {
+    func testAddConcurrent() async {
         let queue = DispatchQueue.global(qos: .default)
         for _ in 0 ..< AtomicTests.repeatCount {
-            let atomic = AtomicPrimitive(0)
+            let atomic = await AtomicPrimitive(0)
 
-            let counter = AtomicPrimitive(0)
+            let counter = await AtomicPrimitive(0)
 
             var expectations = [XCTestExpectation]()
 
             for _ in 0 ..< AtomicTests.concurrency {
                 let expectation = self.expectation(description: "wait until operation completes")
                 queue.async {
-                    while globalLoad(atomic) == 0 {}
-
-                    globalAdd(counter, 1)
-
-                    expectation.fulfill()
+                    Task {
+                        while await globalLoad(atomic) == 0 {}
+                        
+                        await globalAdd(counter, 1)
+                        
+                        expectation.fulfill()
+                    }
                 }
                 expectations.append(expectation)
             }
-            fetchOr(atomic, 1)
+            await fetchOr(atomic, 1)
 
             #if os(Linux)
             waitForExpectations(timeout: 1.0) { _ in }
             #else
-            XCTWaiter().wait(for: expectations, timeout: 1.0)
+            await XCTWaiter().fulfillment(of: expectations, timeout: 1.0)
             #endif
 
-            XCTAssertEqual(globalLoad(counter), 8)
+            await assertEqual(await globalLoad(counter), 8)
         }
     }
 
-    func testSub() {
-        let atomic = AtomicPrimitive(0)
-        XCTAssertEqual(sub(atomic, -4), 0)
-        XCTAssertEqual(sub(atomic, -3), 4)
-        XCTAssertEqual(sub(atomic, -10), 7)
+    func testSub() async {
+        let atomic = await AtomicPrimitive(0)
+        await assertEqual(await sub(atomic, -4), 0)
+        await assertEqual(await sub(atomic, -3), 4)
+        await assertEqual(await sub(atomic, -10), 7)
     }
 
-    func testSubConcurrent() {
+    func testSubConcurrent() async {
         let queue = DispatchQueue.global(qos: .default)
         for _ in 0 ..< AtomicTests.repeatCount {
-            let atomic = AtomicPrimitive(0)
+            let atomic = await AtomicPrimitive(0)
 
-            let counter = AtomicPrimitive(0)
+            let counter = await AtomicPrimitive(0)
 
             var expectations = [XCTestExpectation]()
 
             for _ in 0 ..< AtomicTests.concurrency {
                 let expectation = self.expectation(description: "wait until operation completes")
                 queue.async {
-                    while globalLoad(atomic) == 0 {}
-
-                    sub(counter, 1)
-
-                    expectation.fulfill()
+                    Task {
+                        while await globalLoad(atomic) == 0 {}
+                        
+                        await sub(counter, 1)
+                        
+                        expectation.fulfill()
+                    }
                 }
                 expectations.append(expectation)
             }
-            fetchOr(atomic, 1)
+            await fetchOr(atomic, 1)
 
             #if os(Linux)
             waitForExpectations(timeout: 1.0) { _ in }
             #else
-            XCTWaiter().wait(for: expectations, timeout: 1.0)
+            await XCTWaiter().fulfillment(of: expectations, timeout: 1.0)
             #endif
 
-            XCTAssertEqual(globalLoad(counter), -8)
+            await assertEqual(await globalLoad(counter), -8)
         }
     }
+}
+
+func assertEqual<T>(_ lhs: @autoclosure () async -> T, _ rhs: @autoclosure () async -> T, message: @escaping @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) async where T: Equatable {
+    let lhsVal = await lhs()
+    let rhsVal = await rhs()
+    XCTAssertEqual(lhsVal, rhsVal, message(), file: file, line: line)
 }

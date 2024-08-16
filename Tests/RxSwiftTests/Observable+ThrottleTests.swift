@@ -16,10 +16,10 @@ class ObservableThrottleTest : RxTest {
 }
 
 extension ObservableThrottleTest {
-    func test_ThrottleTimeSpan_NotLatest_Completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_NotLatest_Completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(250, 3),
@@ -30,8 +30,8 @@ extension ObservableThrottleTest {
             .completed(500)
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), latest: false, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), latest: false, scheduler: scheduler)
         }
 
         let correct = Recorded.events(
@@ -49,16 +49,16 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
 
-    func test_ThrottleTimeSpan_NotLatest_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_NotLatest_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 0),
 
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), latest: false, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), latest: false, scheduler: scheduler)
         }
 
         let correct: [Recorded<Event<Int>>] = [
@@ -73,16 +73,16 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
 
-    func test_ThrottleTimeSpan_NotLatest_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_NotLatest_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 0),
             .completed(500)
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), latest: false, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), latest: false, scheduler: scheduler)
         }
 
         let correct = [
@@ -98,10 +98,10 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
 
-    func test_ThrottleTimeSpan_NotLatest_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_NotLatest_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(250, 3),
@@ -112,8 +112,8 @@ extension ObservableThrottleTest {
             .completed(500)
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), latest: false, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), latest: false, scheduler: scheduler)
         }
 
         let correct = Recorded.events(
@@ -130,10 +130,10 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
 
-    func test_ThrottleTimeSpan_NotLatest_NoEnd() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_NotLatest_NoEnd() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(250, 3),
@@ -143,8 +143,8 @@ extension ObservableThrottleTest {
             .next(450, 7),
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), latest: false, scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), latest: false, scheduler: scheduler)
         }
 
         let correct = Recorded.events(
@@ -161,13 +161,13 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
 
-    func test_ThrottleTimeSpan_NotLatest_WithRealScheduler() {
+    func test_ThrottleTimeSpan_NotLatest_WithRealScheduler() async {
         #if !os(Linux)
         let scheduler = ConcurrentDispatchQueueScheduler(qos: .default)
 
         let start = Date()
 
-        let a = try! Observable.from([0, 1])
+        let a = try! await Observable.from([0, 1])
             .throttle(.seconds(2), latest: false, scheduler: scheduler)
             .toBlocking()
             .toArray()
@@ -180,16 +180,16 @@ extension ObservableThrottleTest {
     }
 
     #if TRACE_RESOURCES
-        func testThrottleNotLatestReleasesResourcesOnComplete() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).throttle(.seconds(0), latest: false, scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testThrottleNotLatestReleasesResourcesOnComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).throttle(.seconds(0), latest: false, scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
 
-        func testThrottleNotLatestReleasesResourcesOnError() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).throttle(.seconds(0), latest: false, scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testThrottleNotLatestReleasesResourcesOnError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).throttle(.seconds(0), latest: false, scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
     #endif
 }
@@ -197,10 +197,10 @@ extension ObservableThrottleTest {
 // MARK: Throttle
 extension ObservableThrottleTest {
 
-    func test_ThrottleTimeSpan_Completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_Completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(250, 3),
@@ -211,8 +211,8 @@ extension ObservableThrottleTest {
             .completed(500)
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), scheduler: scheduler)
         }
 
         let correct = Recorded.events(
@@ -231,10 +231,10 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
 
-    func test_ThrottleTimeSpan_CompletedAfterDueTime() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_CompletedAfterDueTime() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(250, 3),
@@ -245,8 +245,8 @@ extension ObservableThrottleTest {
             .completed(900)
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), scheduler: scheduler)
         }
 
         let correct = Recorded.events(
@@ -265,16 +265,16 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
 
-    func test_ThrottleTimeSpan_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 0),
 
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), scheduler: scheduler)
         }
 
         let correct: [Recorded<Event<Int>>] = [
@@ -289,16 +289,16 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
 
-    func test_ThrottleTimeSpan_Empty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_Empty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 0),
             .completed(500)
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), scheduler: scheduler)
         }
 
         let correct = [
@@ -314,10 +314,10 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
 
-    func test_ThrottleTimeSpan_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(250, 3),
@@ -328,8 +328,8 @@ extension ObservableThrottleTest {
             .completed(500)
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), scheduler: scheduler)
         }
 
         let correct = Recorded.events(
@@ -346,10 +346,10 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
 
-    func test_ThrottleTimeSpan_NoEnd() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_ThrottleTimeSpan_NoEnd() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(250, 3),
@@ -359,8 +359,8 @@ extension ObservableThrottleTest {
             .next(450, 7),
             ])
 
-        let res = scheduler.start {
-            xs.throttle(.seconds(200), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.throttle(.seconds(200), scheduler: scheduler)
         }
 
         let correct = Recorded.events(
@@ -378,12 +378,12 @@ extension ObservableThrottleTest {
         XCTAssertEqual(xs.subscriptions, subscriptions)
     }
     
-    func test_ThrottleTimeSpan_WithRealScheduler_seconds() {
+    func test_ThrottleTimeSpan_WithRealScheduler_seconds() async {
         let scheduler = ConcurrentDispatchQueueScheduler(qos: .default)
 
         let start = Date()
 
-        let a = try! Observable.from([0, 1])
+        let a = try! await Observable.from([0, 1])
             .throttle(.seconds(2), scheduler: scheduler)
             .toBlocking()
             .toArray()
@@ -394,12 +394,12 @@ extension ObservableThrottleTest {
         XCTAssertEqual(a, [0, 1])
     }
     
-    func test_ThrottleTimeSpan_WithRealScheduler_milliseconds() {
+    func test_ThrottleTimeSpan_WithRealScheduler_milliseconds() async {
         let scheduler = ConcurrentDispatchQueueScheduler(qos: .default)
         
         let start = Date()
         
-        let a = try! Observable.from([0, 1])
+        let a = try! await Observable.from([0, 1])
             .throttle(.milliseconds(2_000), scheduler: scheduler)
             .toBlocking()
             .toArray()
@@ -410,12 +410,12 @@ extension ObservableThrottleTest {
         XCTAssertEqual(a, [0, 1])
     }
     
-    func test_ThrottleTimeSpan_WithRealScheduler_microseconds() {
+    func test_ThrottleTimeSpan_WithRealScheduler_microseconds() async {
         let scheduler = ConcurrentDispatchQueueScheduler(qos: .default)
         
         let start = Date()
         
-        let a = try! Observable.from([0, 1])
+        let a = try! await Observable.from([0, 1])
             .throttle(.microseconds(2_000_000), scheduler: scheduler)
             .toBlocking()
             .toArray()
@@ -426,12 +426,12 @@ extension ObservableThrottleTest {
         XCTAssertEqual(a, [0, 1])
     }
     
-    func test_ThrottleTimeSpan_WithRealScheduler_nanoseconds() {
+    func test_ThrottleTimeSpan_WithRealScheduler_nanoseconds() async {
         let scheduler = ConcurrentDispatchQueueScheduler(qos: .default)
         
         let start = Date()
         
-        let a = try! Observable.from([0, 1])
+        let a = try! await Observable.from([0, 1])
             .throttle(.nanoseconds(2_000_000_000), scheduler: scheduler)
             .toBlocking()
             .toArray()
@@ -443,16 +443,16 @@ extension ObservableThrottleTest {
     }
 
     #if TRACE_RESOURCES
-        func testThrottleLatestReleasesResourcesOnComplete() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).throttle(.seconds(0), latest: true, scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testThrottleLatestReleasesResourcesOnComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).throttle(.seconds(0), latest: true, scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
 
-        func testThrottleLatestReleasesResourcesOnError() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).throttle(.seconds(0), latest: true, scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testThrottleLatestReleasesResourcesOnError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).throttle(.seconds(0), latest: true, scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
     #endif
 }

@@ -16,7 +16,7 @@ public enum RxError
     /// Unknown error occurred.
     case unknown
     /// Performing an action on disposed object.
-    case disposed(object: AnyObject)
+    case disposed(object: AnyObject & Sendable)
     /// Arithmetic overflow error.
     case overflow
     /// Argument out of range error.

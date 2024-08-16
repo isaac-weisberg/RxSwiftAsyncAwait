@@ -16,10 +16,10 @@ class ObservableDelayTest : RxTest {
 
 extension ObservableDelayTest {
     
-    func testDelay_TimeSpan_Simple1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelay_TimeSpan_Simple1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
     
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(250, 2),
             .next(350, 3),
@@ -27,8 +27,8 @@ extension ObservableDelayTest {
             .completed(550)
             ])
     
-        let res = scheduler.start {
-            xs.delay(.seconds(100), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.delay(.seconds(100), scheduler: scheduler)
         }
     
         XCTAssertEqual(res.events, [
@@ -43,10 +43,10 @@ extension ObservableDelayTest {
             ])
     }
     
-    func testDelay_TimeSpan_Simple2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelay_TimeSpan_Simple2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(250, 2),
             .next(350, 3),
@@ -54,8 +54,8 @@ extension ObservableDelayTest {
             .completed(550)
             ])
         
-        let res = scheduler.start {
-            xs.delay(.seconds(50), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.delay(.seconds(50), scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -70,10 +70,10 @@ extension ObservableDelayTest {
             ])
     }
     
-    func testDelay_TimeSpan_Simple3() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelay_TimeSpan_Simple3() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(250, 2),
             .next(350, 3),
@@ -81,8 +81,8 @@ extension ObservableDelayTest {
             .completed(550)
             ])
         
-        let res = scheduler.start {
-            xs.delay(.seconds(150), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.delay(.seconds(150), scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -97,16 +97,16 @@ extension ObservableDelayTest {
             ])
     }
 
-    func testDelay_TimeSpan_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelay_TimeSpan_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .error(250, testError)
             ])
 
-        let res = scheduler.start {
-            xs.delay(.seconds(150), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.delay(.seconds(150), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -118,16 +118,16 @@ extension ObservableDelayTest {
             ])
     }
 
-    func testDelay_TimeSpan_Completed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelay_TimeSpan_Completed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(250)
             ])
 
-        let res = scheduler.start {
-            xs.delay(.seconds(150), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.delay(.seconds(150), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -139,10 +139,10 @@ extension ObservableDelayTest {
             ])
     }
 
-    func testDelay_TimeSpan_Error1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelay_TimeSpan_Error1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
     
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(250, 2),
             .next(350, 3),
@@ -150,8 +150,8 @@ extension ObservableDelayTest {
             .error(550, testError)
             ])
     
-        let res = scheduler.start {
-            xs.delay(.seconds(50), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.delay(.seconds(50), scheduler: scheduler)
         }
     
         XCTAssertEqual(res.events, [
@@ -166,10 +166,10 @@ extension ObservableDelayTest {
             ])
     }
     
-    func testDelay_TimeSpan_Error2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelay_TimeSpan_Error2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(150, 1),
             .next(250, 2),
             .next(350, 3),
@@ -177,8 +177,8 @@ extension ObservableDelayTest {
             .error(550, testError)
             ])
         
-        let res = scheduler.start {
-            xs.delay(.seconds(150), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.delay(.seconds(150), scheduler: scheduler)
         }
         
         XCTAssertEqual(res.events, [
@@ -192,151 +192,159 @@ extension ObservableDelayTest {
             ])
     }
     
-    func testDelay_TimeSpan_Real_Simple() {
-        let waitForError: ReplaySubject<()> = ReplaySubject.create(bufferSize: 1)
+    func testDelay_TimeSpan_Real_Simple() async {
+        let waitForError: ReplaySubject<()> = await ReplaySubject.create(bufferSize: 1)
         let scheduler = ConcurrentDispatchQueueScheduler(qos: .default)
         
-        let s = PublishSubject<Int>()
+        let s = await PublishSubject<Int>()
     
-        let res = s.delay(.milliseconds(10), scheduler: scheduler)
+        let res = await s.delay(.milliseconds(10), scheduler: scheduler)
     
         var array = [Int]()
         
-        let subscription = res.subscribe(
+        let subscription = await res.subscribe(
             onNext: { i in
                 array.append(i)
             },
             onCompleted: {
-                waitForError.onCompleted()
+                await waitForError.onCompleted()
         })
         
         DispatchQueue.global(qos: .default).async {
-            s.onNext(1)
-            s.onNext(2)
-            s.onNext(3)
-            s.onCompleted()
+            Task {
+                await s.onNext(1)
+                await s.onNext(2)
+                await s.onNext(3)
+                await s.onCompleted()
+            }
         }
 
-        try! _ = waitForError.toBlocking(timeout: 5.0).first()
+        try! _ = await waitForError.toBlocking(timeout: 5.0).first()
         
-        subscription.dispose()
+        await subscription.dispose()
         
         XCTAssertEqual([1, 2, 3], array)
     }
     
-    func testDelay_TimeSpan_Real_Error1() {
-        let errorReceived: ReplaySubject<()> = ReplaySubject.create(bufferSize: 1)
+    func testDelay_TimeSpan_Real_Error1() async {
+        let errorReceived: ReplaySubject<()> = await ReplaySubject.create(bufferSize: 1)
         let scheduler = ConcurrentDispatchQueueScheduler(qos: .default)
         
-        let s = PublishSubject<Int>()
+        let s = await PublishSubject<Int>()
 
-        let res = s.delay(.milliseconds(10), scheduler: scheduler)
+        let res = await s.delay(.milliseconds(10), scheduler: scheduler)
         
         var array = [Int]()
 
         var error: Swift.Error?
         
-        let subscription = res.subscribe(
+        let subscription = await res.subscribe(
             onNext: { i in
                 array.append(i)
             },
             onError: { e in
                 error = e
-                errorReceived.onCompleted()
+                await errorReceived.onCompleted()
         })
         
         DispatchQueue.global(qos: .default).async {
-            s.onNext(1)
-            s.onNext(2)
-            s.onNext(3)
-            s.onError(testError)
+            Task {
+                await s.onNext(1)
+                await s.onNext(2)
+                await s.onNext(3)
+                await s.onError(testError)
+            }
         }
 
-        try! errorReceived.toBlocking(timeout: 5.0).first()
+        try! await errorReceived.toBlocking(timeout: 5.0).first()
         
-        subscription.dispose()
+        await subscription.dispose()
 
         XCTAssertEqual(error! as! TestError, testError)
     }
     
-    func testDelay_TimeSpan_Real_Error2() {
-        let elementProcessed: ReplaySubject<()> = ReplaySubject.create(bufferSize: 1)
-        let errorReceived: ReplaySubject<()> = ReplaySubject.create(bufferSize: 1)
+    func testDelay_TimeSpan_Real_Error2() async {
+        let elementProcessed: ReplaySubject<()> = await ReplaySubject.create(bufferSize: 1)
+        let errorReceived: ReplaySubject<()> = await ReplaySubject.create(bufferSize: 1)
         let scheduler = ConcurrentDispatchQueueScheduler(qos: .default)
         
-        let s = PublishSubject<Int>()
+        let s = await PublishSubject<Int>()
         
-        let res = s.delay(.milliseconds(10), scheduler: scheduler)
+        let res = await s.delay(.milliseconds(10), scheduler: scheduler)
         
         var array = [Int]()
         var err: TestError?
         
-        let subscription = res.subscribe(
+        let subscription = await res.subscribe(
             onNext: { i in
                 array.append(i)
-                elementProcessed.onCompleted()
+                await elementProcessed.onCompleted()
             },
             onError: { ex in
                 err = ex as? TestError
-                errorReceived.onCompleted()
+                await errorReceived.onCompleted()
         })
         
         DispatchQueue.global(qos: .default).async {
-            s.onNext(1)
-            try! _ = elementProcessed.toBlocking(timeout: 5.0).first()
-            s.onError(testError)
+            Task {
+                await s.onNext(1)
+                try! _ = await elementProcessed.toBlocking(timeout: 5.0).first()
+                await s.onError(testError)
+            }
         }
 
-        try! _ = errorReceived.toBlocking(timeout: 5.0).first()
+        try! _ = await errorReceived.toBlocking(timeout: 5.0).first()
         
-        subscription.dispose()
+        await subscription.dispose()
         
         XCTAssertEqual([1], array)
         XCTAssertEqual(testError, err)
     }
 
 
-    func testDelay_TimeSpan_Real_Error3() {
-        let elementProcessed: ReplaySubject<()> = ReplaySubject.create(bufferSize: 1)
-        let errorReceived: ReplaySubject<()> = ReplaySubject.create(bufferSize: 1)
-        let acknowledged: ReplaySubject<()> = ReplaySubject.create(bufferSize: 1)
+    func testDelay_TimeSpan_Real_Error3() async {
+        let elementProcessed: ReplaySubject<()> = await ReplaySubject.create(bufferSize: 1)
+        let errorReceived: ReplaySubject<()> = await ReplaySubject.create(bufferSize: 1)
+        let acknowledged: ReplaySubject<()> = await ReplaySubject.create(bufferSize: 1)
         let scheduler = ConcurrentDispatchQueueScheduler(qos: .default)
         
-        let s = PublishSubject<Int>()
+        let s = await PublishSubject<Int>()
         
-        let res = s.delay(.milliseconds(10), scheduler: scheduler)
+        let res = await s.delay(.milliseconds(10), scheduler: scheduler)
         
         var array = [Int]()
         var err: TestError?
         
-        let subscription = res.subscribe(
+        let subscription = await res.subscribe(
             onNext: { i in
                 array.append(i)
-                elementProcessed.onCompleted()
-                try! _ = acknowledged.toBlocking(timeout: 5.0).first()
+                await elementProcessed.onCompleted()
+                try! _ = await acknowledged.toBlocking(timeout: 5.0).first()
             },
             onError: { ex in
                 err = ex as? TestError
-                errorReceived.onCompleted()
+                await errorReceived.onCompleted()
         })
         
         DispatchQueue.global(qos: .default).async {
-            s.onNext(1)
-            try! _ = elementProcessed.toBlocking(timeout: 5.0).first()
-            s.onError(testError)
-            acknowledged.onCompleted()
+            Task {
+                await s.onNext(1)
+                try! _ = await elementProcessed.toBlocking(timeout: 5.0).first()
+                await s.onError(testError)
+                await acknowledged.onCompleted()
+            }
         }
 
-        try! _ = errorReceived.toBlocking(timeout: 5.0).first()
+        try! _ = await errorReceived.toBlocking(timeout: 5.0).first()
         
-        subscription.dispose()
+        await subscription.dispose()
         
         XCTAssertEqual([1], array)
         XCTAssertEqual(testError, err)
     }
     
-    func testDelay_TimeSpan_Positive() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelay_TimeSpan_Positive() async {
+        let scheduler = await TestScheduler(initialClock: 0)
     
         let msgs = Recorded.events(
             .next(150, 1),
@@ -346,34 +354,34 @@ extension ObservableDelayTest {
             .completed(550)
         )
     
-        let xs = scheduler.createHotObservable(msgs)
+        let xs = await scheduler.createHotObservable(msgs)
     
         let delay = 42
-        let res = scheduler.start {
-            xs.delay(.seconds(delay), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.delay(.seconds(delay), scheduler: scheduler)
         }
     
-        XCTAssertEqual(res.events,
+        await XCTAssertEqual(res.events,
             msgs.map { Recorded(time: $0.time + delay, value: $0.value) }
                 .filter { $0.time > 200 })
     }
     
-    func testDelay_TimeSpan_DefaultScheduler() {
-        let scheduler = MainScheduler.instance
-        XCTAssertEqual(try! Observable.just(1).delay(.milliseconds(1), scheduler: scheduler).toBlocking(timeout: 5.0).toArray(), [1])
+    func testDelay_TimeSpan_DefaultScheduler() async {
+        let scheduler = MainScheduler.instance!
+        await assertEqual(try! await Observable.just(1).delay(.milliseconds(1), scheduler: scheduler).toBlocking(timeout: 5.0).toArray(), [1])
     }
 
     #if TRACE_RESOURCES
-        func testDelayReleasesResourcesOnComplete() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).delay(.seconds(100), scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testDelayReleasesResourcesOnComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).delay(.seconds(100), scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
 
-        func testDelayReleasesResourcesOnError() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).delay(.seconds(100), scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testDelayReleasesResourcesOnError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).delay(.seconds(100), scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
     #endif
 }

@@ -15,10 +15,10 @@ class ObservableWithLatestFromTest : RxTest {
 
 extension ObservableWithLatestFromTest {
     
-    func testWithLatestFrom_Simple1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testWithLatestFrom_Simple1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, 1),
             .next(180, 2),
             .next(250, 3),
@@ -32,15 +32,15 @@ extension ObservableWithLatestFromTest {
             .completed(590)
         ])
         
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(255, "bar"),
             .next(330, "foo"),
             .next(350, "qux"),
             .completed(400)
         ])
         
-        let res = scheduler.start {
-            xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
+        let res = await scheduler.start {
+            await xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
         }
         
         XCTAssertEqual(res.events, [
@@ -63,15 +63,15 @@ extension ObservableWithLatestFromTest {
         ])
     }
     
-    func testWithLatestFrom_TwoObservablesWithImmediateValues() {
-        let xs = BehaviorSubject<Int>(value: 3)
-        let ys = BehaviorSubject<Int>(value: 5)
+    func testWithLatestFrom_TwoObservablesWithImmediateValues() async {
+        let xs = await BehaviorSubject<Int>(value: 3)
+        let ys = await BehaviorSubject<Int>(value: 5)
         
-        let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
         
-        let res = scheduler.start {
-            xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
+        let res = await scheduler.start {
+            await xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
                 .take(1)
         }
         
@@ -81,10 +81,10 @@ extension ObservableWithLatestFromTest {
         ])
     }
     
-    func testWithLatestFrom_Simple2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testWithLatestFrom_Simple2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, 1),
             .next(180, 2),
             .next(250, 3),
@@ -94,7 +94,7 @@ extension ObservableWithLatestFromTest {
             .completed(390)
         ])
         
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(255, "bar"),
             .next(330, "foo"),
             .next(350, "qux"),
@@ -102,8 +102,8 @@ extension ObservableWithLatestFromTest {
             .completed(400)
         ])
         
-        let res = scheduler.start {
-            xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
+        let res = await scheduler.start {
+            await xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
         }
         
         XCTAssertEqual(res.events, [
@@ -122,10 +122,10 @@ extension ObservableWithLatestFromTest {
         ])
     }
     
-    func testWithLatestFrom_Simple3() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testWithLatestFrom_Simple3() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, 1),
             .next(180, 2),
             .next(250, 3),
@@ -135,7 +135,7 @@ extension ObservableWithLatestFromTest {
             .completed(390)
         ])
         
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(245, "bar"),
             .next(330, "foo"),
             .next(350, "qux"),
@@ -143,8 +143,8 @@ extension ObservableWithLatestFromTest {
             .completed(400)
         ])
         
-        let res = scheduler.start {
-            xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
+        let res = await scheduler.start {
+            await xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
         }
         
         XCTAssertEqual(res.events, [
@@ -164,10 +164,10 @@ extension ObservableWithLatestFromTest {
         ])
     }
     
-    func testWithLatestFrom_Error1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testWithLatestFrom_Error1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, 1),
             .next(180, 2),
             .next(250, 3),
@@ -181,15 +181,15 @@ extension ObservableWithLatestFromTest {
             .error(590, testError)
         ])
         
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(255, "bar"),
             .next(330, "foo"),
             .next(350, "qux"),
             .completed(400)
         ])
         
-        let res = scheduler.start {
-            xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
+        let res = await scheduler.start {
+            await xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
         }
         
         XCTAssertEqual(res.events, [
@@ -212,10 +212,10 @@ extension ObservableWithLatestFromTest {
         ])
     }
     
-    func testWithLatestFrom_Error2() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testWithLatestFrom_Error2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, 1),
             .next(180, 2),
             .next(250, 3),
@@ -225,15 +225,15 @@ extension ObservableWithLatestFromTest {
             .completed(390)
         ])
         
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(255, "bar"),
             .next(330, "foo"),
             .next(350, "qux"),
             .error(370, testError)
         ])
         
-        let res = scheduler.start {
-            xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
+        let res = await scheduler.start {
+            await xs.withLatestFrom(ys) { x, y in "\(x)\(y)" }
         }
         
         XCTAssertEqual(res.events, [
@@ -252,10 +252,10 @@ extension ObservableWithLatestFromTest {
         ])
     }
     
-    func testWithLatestFrom_Error3() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testWithLatestFrom_Error3() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, 1),
             .next(180, 2),
             .next(250, 3),
@@ -265,15 +265,15 @@ extension ObservableWithLatestFromTest {
             .completed(390)
         ])
         
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(255, "bar"),
             .next(330, "foo"),
             .next(350, "qux"),
             .completed(400)
         ])
         
-        let res = scheduler.start {
-            xs.withLatestFrom(ys) { x, y throws -> String in
+        let res = await scheduler.start {
+            await xs.withLatestFrom(ys) { x, y throws -> String in
                 if x == 5 {
                     throw testError
                 }
@@ -295,10 +295,10 @@ extension ObservableWithLatestFromTest {
         ])
     }
 
-    func testWithLatestFrom_MakeSureDefaultOverloadTakesSecondSequenceValues() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testWithLatestFrom_MakeSureDefaultOverloadTakesSecondSequenceValues() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, 1),
             .next(180, 2),
             .next(250, 3),
@@ -312,15 +312,15 @@ extension ObservableWithLatestFromTest {
             .completed(590)
             ])
 
-        let ys = scheduler.createHotObservable([
+        let ys = await scheduler.createHotObservable([
             .next(255, "bar"),
             .next(330, "foo"),
             .next(350, "qux"),
             .completed(400)
             ])
 
-        let res = scheduler.start {
-            xs.withLatestFrom(ys)
+        let res = await scheduler.start {
+            await xs.withLatestFrom(ys)
         }
 
         XCTAssertEqual(res.events, [
@@ -344,28 +344,28 @@ extension ObservableWithLatestFromTest {
     }
 
     #if TRACE_RESOURCES
-        func testWithLatestFromReleasesResourcesOnComplete1() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).delay(.seconds(20), scheduler: scheduler).withLatestFrom(Observable<Int>.just(1)).subscribe()
-            scheduler.start()
+    func testWithLatestFromReleasesResourcesOnComplete1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).delay(.seconds(20), scheduler: scheduler).withLatestFrom(Observable<Int>.just(1)).subscribe()
+        await scheduler.start()
         }
 
-        func testWithLatestFromReleasesResourcesOnComplete2() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).withLatestFrom(Observable<Int>.just(1).delay(.seconds(20), scheduler: scheduler)).subscribe()
-            scheduler.start()
+    func testWithLatestFromReleasesResourcesOnComplete2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).withLatestFrom(Observable<Int>.just(1).delay(.seconds(20), scheduler: scheduler)).subscribe()
+        await scheduler.start()
         }
 
-        func testWithLatestFromReleasesResourcesOnError1() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.never().timeout(.seconds(20), scheduler: scheduler).withLatestFrom(Observable<Int>.just(1)).subscribe()
-            scheduler.start()
+    func testWithLatestFromReleasesResourcesOnError1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.never().timeout(.seconds(20), scheduler: scheduler).withLatestFrom(Observable<Int>.just(1)).subscribe()
+        await scheduler.start()
         }
 
-        func testWithLatestFromReleasesResourcesOnError2() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).withLatestFrom(Observable<Int>.never().timeout(.seconds(20), scheduler: scheduler)).subscribe()
-            scheduler.start()
+    func testWithLatestFromReleasesResourcesOnError2() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).withLatestFrom(Observable<Int>.never().timeout(.seconds(20), scheduler: scheduler)).subscribe()
+        await scheduler.start()
         }
     #endif
 }

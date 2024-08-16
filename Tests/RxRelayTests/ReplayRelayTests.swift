@@ -12,67 +12,67 @@ import RxRelay
 import RxTest
 
 class ReplayRelayTests: RxTest {
-    func test_noEvents() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_noEvents() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let relay = ReplayRelay<Int>.create(bufferSize: 3)
+        let relay = await ReplayRelay<Int>.create(bufferSize: 3)
         let result = scheduler.createObserver(Int.self)
 
-        _ = relay.subscribe(result)
+        _ = await relay.subscribe(result)
 
         XCTAssertTrue(result.events.isEmpty)
     }
 
-    func test_fewerEventsThanBufferSize() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_fewerEventsThanBufferSize() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var relay: ReplayRelay<Int>! = nil
         let result = scheduler.createObserver(Int.self)
         var subscription: Disposable! = nil
 
-        scheduler.scheduleAt(100) { relay = ReplayRelay.create(bufferSize: 3) }
-        scheduler.scheduleAt(150) { relay.accept(1) }
-        scheduler.scheduleAt(200) { relay.accept(2) }
-        scheduler.scheduleAt(300) { subscription = relay.subscribe(result) }
-        scheduler.scheduleAt(350) {
+        await scheduler.scheduleAt(100) { relay = await ReplayRelay.create(bufferSize: 3) }
+        await scheduler.scheduleAt(150) { await relay.accept(1) }
+        await scheduler.scheduleAt(200) { await relay.accept(2) }
+        await scheduler.scheduleAt(300) { subscription = await relay.subscribe(result) }
+        await scheduler.scheduleAt(350) {
             XCTAssertEqual(result.events, [
                 .next(300, 1),
                 .next(300, 2),
             ])
         }
-        scheduler.scheduleAt(400) { subscription.dispose() }
+        await scheduler.scheduleAt(400) { await subscription.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
     }
 
-    func test_moreEventsThanBufferSize() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_moreEventsThanBufferSize() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var relay: ReplayRelay<Int>! = nil
         let result = scheduler.createObserver(Int.self)
         var subscription: Disposable! = nil
 
-        scheduler.scheduleAt(100) { relay = ReplayRelay.create(bufferSize: 3) }
-        scheduler.scheduleAt(150) { relay.accept(1) }
-        scheduler.scheduleAt(200) { relay.accept(2) }
-        scheduler.scheduleAt(250) { relay.accept(3) }
-        scheduler.scheduleAt(300) { relay.accept(4) }
-        scheduler.scheduleAt(350) { relay.accept(5) }
-        scheduler.scheduleAt(400) { subscription = relay.subscribe(result) }
-        scheduler.scheduleAt(450) {
+        await scheduler.scheduleAt(100) { relay = await ReplayRelay.create(bufferSize: 3) }
+        await scheduler.scheduleAt(150) { await relay.accept(1) }
+        await scheduler.scheduleAt(200) { await relay.accept(2) }
+        await scheduler.scheduleAt(250) { await relay.accept(3) }
+        await scheduler.scheduleAt(300) { await relay.accept(4) }
+        await scheduler.scheduleAt(350) { await relay.accept(5) }
+        await scheduler.scheduleAt(400) { subscription = await relay.subscribe(result) }
+        await scheduler.scheduleAt(450) {
             XCTAssertEqual(result.events, [
                 .next(400, 3),
                 .next(400, 4),
                 .next(400, 5),
             ])
         }
-        scheduler.scheduleAt(500) { subscription.dispose() }
+        await scheduler.scheduleAt(500) { await subscription.dispose() }
 
-        scheduler.start()
+        await scheduler.start()
     }
 
-    func test_moreEventsThanBufferSizeMultipleObservers() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_moreEventsThanBufferSizeMultipleObservers() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
         var relay: ReplayRelay<Int>! = nil
         let result1 = scheduler.createObserver(Int.self)
@@ -81,15 +81,15 @@ class ReplayRelayTests: RxTest {
         let result2 = scheduler.createObserver(Int.self)
         var subscription2: Disposable! = nil
 
-        scheduler.scheduleAt(100) { relay = ReplayRelay.create(bufferSize: 3) }
-        scheduler.scheduleAt(150) { subscription1 = relay.subscribe(result1) }
-        scheduler.scheduleAt(200) { relay.accept(1) }
-        scheduler.scheduleAt(250) { relay.accept(2) }
-        scheduler.scheduleAt(300) { relay.accept(3) }
-        scheduler.scheduleAt(350) { relay.accept(4) }
-        scheduler.scheduleAt(400) { relay.accept(5) }
-        scheduler.scheduleAt(450) { subscription2 = relay.subscribe(result2) }
-        scheduler.scheduleAt(500) {
+        await scheduler.scheduleAt(100) { relay = await ReplayRelay.create(bufferSize: 3) }
+        await scheduler.scheduleAt(150) { subscription1 = await relay.subscribe(result1) }
+        await scheduler.scheduleAt(200) { await relay.accept(1) }
+        await scheduler.scheduleAt(250) { await relay.accept(2) }
+        await scheduler.scheduleAt(300) { await relay.accept(3) }
+        await scheduler.scheduleAt(350) { await relay.accept(4) }
+        await scheduler.scheduleAt(400) { await relay.accept(5) }
+        await scheduler.scheduleAt(450) { subscription2 = await relay.subscribe(result2) }
+        await scheduler.scheduleAt(500) {
             XCTAssertEqual(result1.events, [
                 .next(200, 1),
                 .next(250, 2),
@@ -103,11 +103,11 @@ class ReplayRelayTests: RxTest {
                 .next(450, 5),
             ])
         }
-        scheduler.scheduleAt(550) {
-            subscription1.dispose()
-            subscription2.dispose()
+        await scheduler.scheduleAt(550) {
+            await subscription1.dispose()
+            await subscription2.dispose()
         }
 
-        scheduler.start()
+        await scheduler.start()
     }
 }

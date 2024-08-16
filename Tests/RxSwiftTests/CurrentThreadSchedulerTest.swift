@@ -14,12 +14,12 @@ class CurrentThreadSchedulerTest : RxTest {
 }
 
 extension CurrentThreadSchedulerTest {
-    func testCurrentThreadScheduler_scheduleRequired() {
+    func testCurrentThreadScheduler_scheduleRequired() async {
 
         XCTAssertTrue(CurrentThreadScheduler.isScheduleRequired)
 
         var executed = false
-        _ = CurrentThreadScheduler.instance.schedule(()) { _ in
+        _ = await CurrentThreadScheduler.instance.schedule(()) { _ in
             executed = true
             XCTAssertTrue(!CurrentThreadScheduler.isScheduleRequired)
             return Disposables.create()
@@ -28,16 +28,16 @@ extension CurrentThreadSchedulerTest {
         XCTAssertTrue(executed)
     }
 
-    func testCurrentThreadScheduler_basicScenario() {
+    func testCurrentThreadScheduler_basicScenario() async {
 
         XCTAssertTrue(CurrentThreadScheduler.isScheduleRequired)
 
         var messages = [Int]()
-        _ = CurrentThreadScheduler.instance.schedule(()) { _ in
+        _ = await CurrentThreadScheduler.instance.schedule(()) { _ in
             messages.append(1)
-            _ = CurrentThreadScheduler.instance.schedule(()) { _ in
+            _ = await CurrentThreadScheduler.instance.schedule(()) { _ in
                 messages.append(3)
-                _ = CurrentThreadScheduler.instance.schedule(()) {
+                _ = await CurrentThreadScheduler.instance.schedule(()) {
                     messages.append(5)
                     return Disposables.create()
                 }
@@ -51,20 +51,20 @@ extension CurrentThreadSchedulerTest {
         XCTAssertEqual(messages, [1, 2, 3, 4, 5])
     }
 
-    func testCurrentThreadScheduler_disposing1() {
+    func testCurrentThreadScheduler_disposing1() async {
 
         XCTAssertTrue(CurrentThreadScheduler.isScheduleRequired)
 
         var messages = [Int]()
-        _ = CurrentThreadScheduler.instance.schedule(()) { _ in
+        _ = await CurrentThreadScheduler.instance.schedule(()) { _ in
             messages.append(1)
-            let disposable = CurrentThreadScheduler.instance.schedule(()) { _ in
+            let disposable = await CurrentThreadScheduler.instance.schedule(()) { _ in
                 messages.append(3)
-                let disposable = CurrentThreadScheduler.instance.schedule(()) {
+                let disposable = await CurrentThreadScheduler.instance.schedule(()) {
                     messages.append(5)
                     return Disposables.create()
                 }
-                disposable.dispose()
+                await disposable.dispose()
                 messages.append(4)
                 return disposable
             }
@@ -75,23 +75,23 @@ extension CurrentThreadSchedulerTest {
         XCTAssertEqual(messages, [1, 2, 3, 4])
     }
 
-    func testCurrentThreadScheduler_disposing2() {
+    func testCurrentThreadScheduler_disposing2() async {
 
         XCTAssertTrue(CurrentThreadScheduler.isScheduleRequired)
 
         var messages = [Int]()
-        _ = CurrentThreadScheduler.instance.schedule(()) { _ in
+        _ = await CurrentThreadScheduler.instance.schedule(()) { _ in
             messages.append(1)
-            let disposable = CurrentThreadScheduler.instance.schedule(()) { _ in
+            let disposable = await CurrentThreadScheduler.instance.schedule(()) { _ in
                 messages.append(3)
-                let disposable = CurrentThreadScheduler.instance.schedule(()) {
+                let disposable = await CurrentThreadScheduler.instance.schedule(()) {
                     messages.append(5)
                     return Disposables.create()
                 }
                 messages.append(4)
                 return disposable
             }
-            disposable.dispose()
+            await disposable.dispose()
             messages.append(2)
             return disposable
         }

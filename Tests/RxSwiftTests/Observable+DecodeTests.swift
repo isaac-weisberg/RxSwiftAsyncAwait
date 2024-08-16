@@ -14,7 +14,7 @@ class ObservableDecodeTest: RxTest {
 }
 
 extension ObservableDecodeTest {
-  func testDecodeValidJSON() {
+    func testDecodeValidJSON() async {
     let rawJSON = """
     [
       {"id": 1, "name": "Shai", "country": "Israel"},
@@ -22,10 +22,10 @@ extension ObservableDecodeTest {
     ]
     """.data(using: .utf8)!
 
-    let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-    let res = scheduler.start {
-        Observable
+        let res = await scheduler.start {
+        await Observable
           .just(rawJSON)
           .decode(type: [FakeObject].self, decoder: JSONDecoder())
     }
@@ -39,17 +39,17 @@ extension ObservableDecodeTest {
         ])
   }
 
-  func testDecodeInvalidJSON() {
+    func testDecodeInvalidJSON() async {
     let rawJSON = """
     [
       {
     ]
     """.data(using: .utf8)!
 
-    let scheduler = TestScheduler(initialClock: 0)
+        let scheduler = await TestScheduler(initialClock: 0)
 
-    let res = scheduler.start {
-        Observable
+        let res = await scheduler.start {
+        await Observable
           .just(rawJSON)
           .decode(type: [FakeObject].self, decoder: JSONDecoder())
     }

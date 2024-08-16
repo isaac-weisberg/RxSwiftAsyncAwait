@@ -14,10 +14,10 @@ class ObservableTakeWhileTest : RxTest {
 }
 
 extension ObservableTakeWhileTest {
-    func testTakeWhile_Exclusive_Complete_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Exclusive_Complete_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -35,8 +35,8 @@ extension ObservableTakeWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .exclusive)
@@ -57,10 +57,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(4, invoked)
     }
     
-    func testTakeWhile_Exclusive_Complete_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Exclusive_Complete_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -77,8 +77,8 @@ extension ObservableTakeWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .exclusive)
@@ -100,10 +100,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(6, invoked)
     }
     
-    func testTakeWhile_Exclusive_Error_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Exclusive_Error_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -121,8 +121,8 @@ extension ObservableTakeWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .exclusive)
@@ -141,10 +141,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(2, invoked)
     }
     
-    func testTakeWhile_Exclusive_Error_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Exclusive_Error_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -161,8 +161,8 @@ extension ObservableTakeWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .exclusive)
@@ -184,10 +184,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(6, invoked)
     }
     
-    func testTakeWhile_Exclusive_Dispose_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Exclusive_Dispose_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -204,8 +204,8 @@ extension ObservableTakeWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start(disposed: 300) { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start(disposed: 300) { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .exclusive)
@@ -224,10 +224,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(3, invoked)
     }
     
-    func testTakeWhile_Exclusive_Dispose_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Exclusive_Dispose_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -244,8 +244,8 @@ extension ObservableTakeWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start(disposed: 400) { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start(disposed: 400) { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .exclusive)
@@ -267,10 +267,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(6, invoked)
     }
     
-    func testTakeWhile_Exclusive_Zero() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Exclusive_Zero() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(205, 100),
@@ -288,8 +288,8 @@ extension ObservableTakeWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start(disposed: 300) { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start(disposed: 300) { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .exclusive)
@@ -306,10 +306,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(1, invoked)
     }
     
-    func testTakeWhile_Exclusive_Throw() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Exclusive_Throw() async {
+        let scheduler = await TestScheduler(initialClock: 0)
  
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -326,8 +326,8 @@ extension ObservableTakeWhileTest {
         
         var invoked = 0
         
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.take(while: { num in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.take(while: { num in
                 invoked += 1
                 
                 if invoked == 3 {
@@ -351,10 +351,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(3, invoked)
     }
 
-    func testTakeWhile_Inclusive_Complete_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Inclusive_Complete_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -372,8 +372,8 @@ extension ObservableTakeWhileTest {
 
         var invoked = 0
 
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .inclusive)
@@ -394,10 +394,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(4, invoked)
     }
 
-    func testTakeWhile_Inclusive_Complete_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Inclusive_Complete_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -414,8 +414,8 @@ extension ObservableTakeWhileTest {
 
         var invoked = 0
 
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .inclusive)
@@ -438,10 +438,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(6, invoked)
     }
 
-    func testTakeWhile_Inclusive_Error_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Inclusive_Error_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -459,8 +459,8 @@ extension ObservableTakeWhileTest {
 
         var invoked = 0
 
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .inclusive)
@@ -479,10 +479,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(2, invoked)
     }
 
-    func testTakeWhile_Inclusive_Error_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Inclusive_Error_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -499,8 +499,8 @@ extension ObservableTakeWhileTest {
 
         var invoked = 0
 
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .inclusive)
@@ -523,10 +523,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(6, invoked)
     }
 
-    func testTakeWhile_Inclusive_Dispose_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Inclusive_Dispose_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -543,8 +543,8 @@ extension ObservableTakeWhileTest {
 
         var invoked = 0
 
-        let res = scheduler.start(disposed: 300) { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start(disposed: 300) { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .inclusive)
@@ -563,10 +563,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(3, invoked)
     }
 
-    func testTakeWhile_Inclusive_Dispose_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Inclusive_Dispose_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -583,8 +583,8 @@ extension ObservableTakeWhileTest {
 
         var invoked = 0
 
-        let res = scheduler.start(disposed: 400) { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start(disposed: 400) { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .inclusive)
@@ -607,10 +607,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(6, invoked)
     }
 
-    func testTakeWhile_Inclusive_Zero() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Inclusive_Zero() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(205, 100),
@@ -628,8 +628,8 @@ extension ObservableTakeWhileTest {
 
         var invoked = 0
 
-        let res = scheduler.start(disposed: 300) { () -> Observable<Int> in
-            return xs.take(while: { (num: Int) -> Bool in
+        let res = await scheduler.start(disposed: 300) { () -> Observable<Int> in
+            return await xs.take(while: { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }, behavior: .inclusive)
@@ -647,10 +647,10 @@ extension ObservableTakeWhileTest {
         XCTAssertEqual(1, invoked)
     }
 
-    func testTakeWhile_Inclusive_Throw() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTakeWhile_Inclusive_Throw() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(90, -1),
             .next(110, -1),
             .next(210, 2),
@@ -667,8 +667,8 @@ extension ObservableTakeWhileTest {
 
         var invoked = 0
 
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.take(while: { num in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.take(while: { num in
                 invoked += 1
 
                 if invoked == 3 {
@@ -694,16 +694,16 @@ extension ObservableTakeWhileTest {
     
 
     #if TRACE_RESOURCES
-    func testTakeWhileReleasesResourcesOnComplete() {
-        _ = Observable<Int>.just(1).take(while: { _ in true }).subscribe()
+    func testTakeWhileReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).take(while: { _ in true }).subscribe()
     }
 
-    func testTakeWhile1ReleasesResourcesOnError() {
-        _ = Observable<Int>.error(testError).take(while: { _ in true }).subscribe()
+    func testTakeWhile1ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).take(while: { _ in true }).subscribe()
     }
 
-    func testTakeWhile2ReleasesResourcesOnError() {
-        _ = Observable<Int>.just(1).take(while: { _ -> Bool in throw testError }).subscribe()
+    func testTakeWhile2ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.just(1).take(while: { _ -> Bool in throw testError }).subscribe()
     }
     #endif
 }

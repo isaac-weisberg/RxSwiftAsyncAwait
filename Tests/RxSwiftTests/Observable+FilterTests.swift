@@ -35,12 +35,12 @@ func isPrime(_ i: Int) -> Bool {
 }
 
 extension ObservableFilterTest {
-    func test_filterComplete() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_filterComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var invoked = 0
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 1),
             .next(180, 2),
             .next(230, 3),
@@ -58,8 +58,8 @@ extension ObservableFilterTest {
             .completed(630)
         ])
         
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.filter { (num: Int) -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.filter { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }
@@ -80,12 +80,12 @@ extension ObservableFilterTest {
         XCTAssertEqual(9, invoked)
     }
     
-    func test_filterTrue() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_filterTrue() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var invoked = 0
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 1),
             .next(180, 2),
             .next(230, 3),
@@ -100,8 +100,8 @@ extension ObservableFilterTest {
             .completed(600)
             ])
         
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.filter { _ -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.filter { _ -> Bool in
                 invoked += 1
                 return true
             }
@@ -127,12 +127,12 @@ extension ObservableFilterTest {
         XCTAssertEqual(9, invoked)
     }
    
-    func test_filterFalse() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_filterFalse() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var invoked = 0
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 1),
             .next(180, 2),
             .next(230, 3),
@@ -147,8 +147,8 @@ extension ObservableFilterTest {
             .completed(600)
             ])
         
-        let res = scheduler.start { () -> Observable<Int> in
-            return xs.filter { _ -> Bool in
+        let res = await scheduler.start { () -> Observable<Int> in
+            return await xs.filter { _ -> Bool in
                 invoked += 1
                 return false
             }
@@ -165,12 +165,12 @@ extension ObservableFilterTest {
         XCTAssertEqual(9, invoked)
     }
     
-    func test_filterDisposed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func test_filterDisposed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
         var invoked = 0
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 1),
             .next(180, 2),
             .next(230, 3),
@@ -185,8 +185,8 @@ extension ObservableFilterTest {
             .completed(600)
             ])
         
-        let res = scheduler.start(disposed: 400) { () -> Observable<Int> in
-            return xs.filter { (num: Int) -> Bool in
+        let res = await scheduler.start(disposed: 400) { () -> Observable<Int> in
+            return await xs.filter { (num: Int) -> Bool in
                 invoked += 1
                 return isPrime(num)
             }
@@ -206,32 +206,32 @@ extension ObservableFilterTest {
     }
 
     #if TRACE_RESOURCES
-        func testFilterReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).filter { _ in true }.subscribe()
+    func testFilterReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).filter { _ in true }.subscribe()
         }
 
-        func testFilter1ReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).filter { _ in true }.subscribe()
+    func testFilter1ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).filter { _ in true }.subscribe()
         }
 
-        func testFilter2ReleasesResourcesOnError() {
-            _ = Observable<Int>.just(1).filter { _ -> Bool in throw testError }.subscribe()
+    func testFilter2ReleasesResourcesOnError() async {
+        _ = await Observable<Int>.just(1).filter { _ -> Bool in throw testError }.subscribe()
         }
     #endif
 }
 
 extension ObservableFilterTest {
-    func testIgnoreElements_DoesNotSendValues() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testIgnoreElements_DoesNotSendValues() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(220, 2),
             .completed(230)
             ])
 
-        let res = scheduler.start {
-            xs.ignoreElements()
+        let res = await scheduler.start {
+            await xs.ignoreElements()
         }
 
         XCTAssertEqual(res.events, [
@@ -244,12 +244,12 @@ extension ObservableFilterTest {
     }
 
     #if TRACE_RESOURCES
-        func testIgnoreElementsReleasesResourcesOnComplete() {
-            _ = Observable<Int>.just(1).ignoreElements().subscribe()
+    func testIgnoreElementsReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.just(1).ignoreElements().subscribe()
         }
 
-        func testIgnoreElementsReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).ignoreElements().subscribe()
+    func testIgnoreElementsReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).ignoreElements().subscribe()
         }
     #endif
 }

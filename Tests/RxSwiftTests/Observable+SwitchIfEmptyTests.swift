@@ -14,22 +14,22 @@ class ObservableSwitchIfEmptyTest : RxTest {
 }
 
 extension ObservableSwitchIfEmptyTest {
-    func testSwitchIfEmpty_SourceNotEmpty_SwitchCompletes() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let source = scheduler.createHotObservable([
+    func testSwitchIfEmpty_SourceNotEmpty_SwitchCompletes() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let source = await scheduler.createHotObservable([
             .next(205, 1),
             .completed(210, Int.self)
             ])
-        let switchSource = scheduler.createColdObservable([
+        let switchSource = await scheduler.createColdObservable([
             .next(10, 0),
-            .next(20, 1),
+            .next(20, 1), 
             .next(30, 2),
             .next(40, 3),
             .completed(50)
             ])
 
-        let res = scheduler.start {
-            return source.ifEmpty(switchTo: switchSource.asObservable())
+        let res = await scheduler.start {
+            return await source.ifEmpty(switchTo: switchSource.asObservable())
         }
 
         XCTAssertEqual(res.events, [
@@ -43,13 +43,13 @@ extension ObservableSwitchIfEmptyTest {
             ])
     }
 
-    func testSwitchIfEmpty_SourceNotEmptyError_SwitchCompletes() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let source = scheduler.createHotObservable([
+    func testSwitchIfEmpty_SourceNotEmptyError_SwitchCompletes() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let source = await scheduler.createHotObservable([
             .next(205, 1),
             .error(210, testError)
             ])
-        let switchSource = scheduler.createColdObservable([
+        let switchSource = await scheduler.createColdObservable([
             .next(10, 0),
             .next(20, 1),
             .next(30, 2),
@@ -57,8 +57,8 @@ extension ObservableSwitchIfEmptyTest {
             .completed(50)
             ])
 
-        let res = scheduler.start {
-            return source.ifEmpty(switchTo: switchSource.asObservable())
+        let res = await scheduler.start {
+            return await source.ifEmpty(switchTo: switchSource.asObservable())
         }
 
         XCTAssertEqual(res.events, [
@@ -72,12 +72,12 @@ extension ObservableSwitchIfEmptyTest {
             ])
     }
 
-    func testSwitchIfEmpty_SourceEmptyError_SwitchCompletes() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let source = scheduler.createHotObservable([
+    func testSwitchIfEmpty_SourceEmptyError_SwitchCompletes() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let source = await scheduler.createHotObservable([
             .error(210, testError, Int.self)
             ])
-        let switchSource = scheduler.createColdObservable([
+        let switchSource = await scheduler.createColdObservable([
             .next(10, 0),
             .next(20, 1),
             .next(30, 2),
@@ -85,8 +85,8 @@ extension ObservableSwitchIfEmptyTest {
             .completed(50)
             ])
 
-        let res = scheduler.start {
-            return source.ifEmpty(switchTo: switchSource.asObservable())
+        let res = await scheduler.start {
+            return await source.ifEmpty(switchTo: switchSource.asObservable())
         }
 
         XCTAssertEqual(res.events, [
@@ -99,12 +99,12 @@ extension ObservableSwitchIfEmptyTest {
             ])
     }
 
-    func testSwitchIfEmpty_SourceEmpty_SwitchCompletes() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let source = scheduler.createHotObservable([
+    func testSwitchIfEmpty_SourceEmpty_SwitchCompletes() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let source = await scheduler.createHotObservable([
                 .completed(210, Int.self)
             ])
-        let switchSource = scheduler.createColdObservable([
+        let switchSource = await scheduler.createColdObservable([
                 .next(10, 0),
                 .next(20, 1),
                 .next(30, 2),
@@ -112,8 +112,8 @@ extension ObservableSwitchIfEmptyTest {
                 .completed(50)
             ])
         
-        let res = scheduler.start {
-            return source.ifEmpty(switchTo: switchSource.asObservable())
+        let res = await scheduler.start {
+            return await source.ifEmpty(switchTo: switchSource.asObservable())
         }
         
         XCTAssertEqual(res.events, [
@@ -131,12 +131,12 @@ extension ObservableSwitchIfEmptyTest {
             ])
     }
 
-    func testSwitchIfEmpty_SourceEmpty_SwitchError() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let source = scheduler.createHotObservable([
+    func testSwitchIfEmpty_SourceEmpty_SwitchError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let source = await scheduler.createHotObservable([
             .completed(210, Int.self)
             ])
-        let switchSource = scheduler.createColdObservable([
+        let switchSource = await scheduler.createColdObservable([
             .next(10, 0),
             .next(20, 1),
             .next(30, 2),
@@ -144,8 +144,8 @@ extension ObservableSwitchIfEmptyTest {
             .error(50, testError)
             ])
 
-        let res = scheduler.start {
-            return source.ifEmpty(switchTo: switchSource.asObservable())
+        let res = await scheduler.start {
+            return await source.ifEmpty(switchTo: switchSource.asObservable())
         }
 
         XCTAssertEqual(res.events, [
@@ -163,12 +163,12 @@ extension ObservableSwitchIfEmptyTest {
             ])
     }
 
-    func testSwitchIfEmpty_Never() {
-        let scheduler = TestScheduler(initialClock: 0)
-        let source = scheduler.createHotObservable([
+    func testSwitchIfEmpty_Never() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        let source = await scheduler.createHotObservable([
                 .next(0, 0)
             ])
-        let switchSource = scheduler.createColdObservable([
+        let switchSource = await scheduler.createColdObservable([
                 .next(10, 0),
                 .next(20, 1),
                 .next(30, 2),
@@ -176,8 +176,8 @@ extension ObservableSwitchIfEmptyTest {
                 .completed(50)
             ])
         
-        let res = scheduler.start {
-            return source.ifEmpty(switchTo: switchSource.asObservable())
+        let res = await scheduler.start {
+            return await source.ifEmpty(switchTo: switchSource.asObservable())
         }
         
         XCTAssertEqual(res.events, [])
@@ -188,30 +188,30 @@ extension ObservableSwitchIfEmptyTest {
     }
 
     #if TRACE_RESOURCES
-        func testSwitchIfEmptyReleasesResourcesOnComplete1() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).ifEmpty(switchTo: Observable.just(1)).subscribe()
+    func testSwitchIfEmptyReleasesResourcesOnComplete1() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).ifEmpty(switchTo: Observable.just(1)).subscribe()
 
-            testScheduler.start()
+        await testScheduler.start()
         }
-        func testSwitchIfEmptyReleasesResourcesOnComplete2() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.empty().ifEmpty(switchTo: Observable.just(1)).subscribe()
+    func testSwitchIfEmptyReleasesResourcesOnComplete2() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.empty().ifEmpty(switchTo: Observable.just(1)).subscribe()
 
-            testScheduler.start()
+        await testScheduler.start()
         }
-        func testSwitchIfEmptyReleasesResourcesOnError1() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).ifEmpty(switchTo: Observable.just(1)).subscribe()
+    func testSwitchIfEmptyReleasesResourcesOnError1() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).ifEmpty(switchTo: Observable.just(1)).subscribe()
 
-            testScheduler.start()
+        await testScheduler.start()
         }
 
-        func testSwitchIfEmptyReleasesResourcesOnError2() {
-            let testScheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.empty().ifEmpty(switchTo: Observable<Int>.error(testError)).subscribe()
+    func testSwitchIfEmptyReleasesResourcesOnError2() async {
+        let testScheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.empty().ifEmpty(switchTo: Observable<Int>.error(testError)).subscribe()
 
-            testScheduler.start()
+        await testScheduler.start()
         }
     #endif
 }

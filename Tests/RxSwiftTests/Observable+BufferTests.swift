@@ -14,10 +14,10 @@ class ObservableBufferTest : RxTest {
 }
 
 extension ObservableBufferTest {
-    func testBufferWithTimeOrCount_Basic() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testBufferWithTimeOrCount_Basic() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(205, 1),
             .next(210, 2),
             .next(240, 3),
@@ -31,8 +31,8 @@ extension ObservableBufferTest {
             ])
         
         
-        let res = scheduler.start {
-            xs.buffer(timeSpan: .seconds(70), count: 3, scheduler: scheduler).map { EquatableArray($0) }
+        let res = await scheduler.start {
+            await xs.buffer(timeSpan: .seconds(70), count: 3, scheduler: scheduler).map { EquatableArray($0) }
         }
         
         XCTAssertEqual(res.events, [
@@ -51,10 +51,10 @@ extension ObservableBufferTest {
             ])
     }
     
-    func testBufferWithTimeOrCount_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testBufferWithTimeOrCount_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(205, 1),
             .next(210, 2),
             .next(240, 3),
@@ -67,8 +67,8 @@ extension ObservableBufferTest {
             .error(600, testError)
             ])
         
-        let res = scheduler.start {
-            xs.buffer(timeSpan: .seconds(70), count: 3, scheduler: scheduler).map { EquatableArray($0) }
+        let res = await scheduler.start {
+            await xs.buffer(timeSpan: .seconds(70), count: 3, scheduler: scheduler).map { EquatableArray($0) }
         }
         
         XCTAssertEqual(res.events, [
@@ -86,10 +86,10 @@ extension ObservableBufferTest {
             ])
     }
     
-    func testBufferWithTimeOrCount_Disposed() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testBufferWithTimeOrCount_Disposed() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(205, 1),
             .next(210, 2),
             .next(240, 3),
@@ -102,8 +102,8 @@ extension ObservableBufferTest {
             .completed(600)
             ])
         
-        let res = scheduler.start(disposed: 370) {
-            xs.buffer(timeSpan: .seconds(70), count: 3, scheduler: scheduler).map { EquatableArray($0) }
+        let res = await scheduler.start(disposed: 370) {
+            await xs.buffer(timeSpan: .seconds(70), count: 3, scheduler: scheduler).map { EquatableArray($0) }
         }
         
         XCTAssertEqual(res.events, [
@@ -117,10 +117,10 @@ extension ObservableBufferTest {
             ])
     }
 
-    func testBufferWithTimeOrCount_Default() {
+    func testBufferWithTimeOrCount_Default() async {
         let backgroundScheduler = SerialDispatchQueueScheduler(qos: .default)
         
-        let result = try! Observable.range(start: 1, count: 10, scheduler: backgroundScheduler)
+        let result = try! await Observable.range(start: 1, count: 10, scheduler: backgroundScheduler)
             .buffer(timeSpan: .seconds(1000), count: 3, scheduler: backgroundScheduler)
             .skip(1)
             .toBlocking()
@@ -130,16 +130,16 @@ extension ObservableBufferTest {
     }
 
     #if TRACE_RESOURCES
-        func testBufferReleasesResourcesOnComplete() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).buffer(timeSpan: .seconds(0), count: 10, scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testBufferReleasesResourcesOnComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).buffer(timeSpan: .seconds(0), count: 10, scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
 
-        func testBufferReleasesResourcesOnError() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).buffer(timeSpan: .seconds(0), count: 10, scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testBufferReleasesResourcesOnError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).buffer(timeSpan: .seconds(0), count: 10, scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
     #endif
 }

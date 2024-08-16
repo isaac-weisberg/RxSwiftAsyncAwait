@@ -14,11 +14,11 @@ class ObservableRepeatTest : RxTest {
 }
 
 extension ObservableRepeatTest {
-    func testRepeat_Element() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testRepeat_Element() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let res = scheduler.start(disposed: 207) {
-            Observable.repeatElement(42, scheduler: scheduler)
+        let res = await scheduler.start(disposed: 207) {
+            await Observable.repeatElement(42, scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [

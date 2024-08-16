@@ -6,8 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
-
+public extension ObservableType {
     /**
      Projects each element of an observable sequence into an optional form and filters all optional results.
 
@@ -15,49 +14,52 @@ extension ObservableType {
      - returns: An observable sequence whose elements are the result of filtering the transform function for each element of the source.
 
      */
-    public func compactMap<Result>(_ transform: @escaping (Element) throws -> Result?)
+    func compactMap<Result>(_ transform: @Sendable @escaping (Element) throws -> Result?)
         -> Observable<Result> {
-        CompactMap(source: self.asObservable(), transform: transform)
+        CompactMap(source: asObservable(), transform: transform)
     }
 }
 
-final private class CompactMapSink<SourceType, Observer: ObserverType>: Sink<Observer>, ObserverType {
-    typealias Transform = (SourceType) throws -> ResultType?
+private final actor CompactMapSink<Element: Sendable, Observer: ObserverType>: SinkOverSingleSubscription,
+    ObserverType {
+    typealias Predicate = (Element) throws -> Observer.Element?
 
-    typealias ResultType = Observer.Element 
-    typealias Element = SourceType
+    private let predicate: Predicate
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
-    private let transform: Transform
+    init(predicate: @escaping Predicate, observer: Observer) {
+        self.predicate = predicate
 
-    init(transform: @escaping Transform, observer: Observer, cancel: Cancelable) {
-        self.transform = transform
-        super.init(observer: observer, cancel: cancel)
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
-    func on(_ event: Event<SourceType>) {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
             do {
-                if let mappedElement = try self.transform(element) {
-                    self.forwardOn(.next(mappedElement))
+                if let newElement = try predicate(element) {
+                    await forwardOn(.next(newElement), c.call())
                 }
-            }
-            catch let e {
-                self.forwardOn(.error(e))
-                self.dispose()
+            } catch {
+                await forwardOn(.error(error), c.call())
+                await dispose()
             }
         case .error(let error):
-            self.forwardOn(.error(error))
-            self.dispose()
+            await forwardOn(.error(error), c.call())
+            await dispose()
         case .completed:
-            self.forwardOn(.completed)
-            self.dispose()
+            await forwardOn(.completed, c.call())
+            await dispose()
         }
+    }
+
+    func dispose() async {
+        await baseSink.setDisposed()?.dispose()
     }
 }
 
-final private class CompactMap<SourceType, ResultType>: Producer<ResultType> {
-    typealias Transform = (SourceType) throws -> ResultType?
+private final class CompactMap<SourceType: Sendable, ResultType: Sendable>: Producer<ResultType> {
+    typealias Transform = @Sendable (SourceType) throws -> ResultType?
 
     private let source: Observable<SourceType>
 
@@ -66,11 +68,14 @@ final private class CompactMap<SourceType, ResultType>: Producer<ResultType> {
     init(source: Observable<SourceType>, transform: @escaping Transform) {
         self.source = source
         self.transform = transform
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
-        let sink = CompactMapSink(transform: self.transform, observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
-        return (sink: sink, subscription: subscription)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == ResultType {
+
+        let sink = CompactMapSink(predicate: transform, observer: observer)
+        await sink.run(c.call(), source)
+        return sink
     }
 }

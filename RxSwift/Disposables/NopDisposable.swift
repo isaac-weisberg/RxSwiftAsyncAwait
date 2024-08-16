@@ -9,22 +9,35 @@
 /// Represents a disposable that does nothing on disposal.
 ///
 /// Nop = No Operation
-private struct NopDisposable : Disposable {
+//private struct NopDisposable : SynchronousDisposable {
+// 
+//    fileprivate static let noOp: SynchronousDisposable = NopDisposable()
+//    
+//    private init() {
+//        
+//    }
+//    
+//    /// Does nothing.
+//    public func dispose() {
+//    }
+//}
+
+extension Disposables {
+    /**
+     Creates a disposable that does nothing on disposal.
+     */
+    static public func create() -> AsynchronousDisposable { NopAsyncDisposable.noOp }
+}
+
+private final class NopAsyncDisposable : AsynchronousDisposable {
  
-    fileprivate static let noOp: Disposable = NopDisposable()
+    fileprivate static let noOp: AsynchronousDisposable = NopAsyncDisposable()
     
     private init() {
         
     }
     
     /// Does nothing.
-    public func dispose() {
+    public func dispose() async {
     }
-}
-
-extension Disposables {
-    /**
-     Creates a disposable that does nothing on disposal.
-     */
-    static public func create() -> Disposable { NopDisposable.noOp }
 }

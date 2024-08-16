@@ -14,10 +14,10 @@ class ObservableTakeTest : RxTest {
 }
 
 extension ObservableTakeTest {
-    func testTake_Complete_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_Complete_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -40,8 +40,8 @@ extension ObservableTakeTest {
             .completed(690)
             ])
         
-        let res = scheduler.start {
-            xs.take(20)
+        let res = await scheduler.start {
+            await xs.take(20)
         }
         
         XCTAssertEqual(res.events, [
@@ -70,10 +70,10 @@ extension ObservableTakeTest {
             ])
     }
     
-    func testTake_Complete_Same() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_Complete_Same() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -96,8 +96,8 @@ extension ObservableTakeTest {
             .completed(690)
             ])
         
-        let res = scheduler.start {
-            xs.take(17)
+        let res = await scheduler.start {
+            await xs.take(17)
         }
         
         XCTAssertEqual(res.events, [
@@ -126,10 +126,10 @@ extension ObservableTakeTest {
             ])
     }
     
-    func testTake_Complete_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_Complete_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -152,8 +152,8 @@ extension ObservableTakeTest {
             .completed(690)
             ])
         
-        let res = scheduler.start {
-            xs.take(10)
+        let res = await scheduler.start {
+            await xs.take(10)
         }
         
         XCTAssertEqual(res.events, [
@@ -175,10 +175,10 @@ extension ObservableTakeTest {
             ])
     }
     
-    func testTake_Error_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_Error_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -201,8 +201,8 @@ extension ObservableTakeTest {
             .error(690, testError)
             ])
         
-        let res = scheduler.start {
-            xs.take(20)
+        let res = await scheduler.start {
+            await xs.take(20)
         }
         
         XCTAssertEqual(res.events, [
@@ -231,10 +231,10 @@ extension ObservableTakeTest {
             ])
     }
 
-    func testTake_Error_Same() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_Error_Same() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -257,8 +257,8 @@ extension ObservableTakeTest {
             .error(690, testError)
             ])
         
-        let res = scheduler.start {
-            xs.take(17)
+        let res = await scheduler.start {
+            await xs.take(17)
         }
         
         XCTAssertEqual(res.events, [
@@ -287,10 +287,10 @@ extension ObservableTakeTest {
             ])
     }
     
-    func testTake_Error_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_Error_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -313,8 +313,8 @@ extension ObservableTakeTest {
             .error(690, testError)
             ])
         
-        let res = scheduler.start {
-            xs.take(3)
+        let res = await scheduler.start {
+            await xs.take(3)
         }
         
         XCTAssertEqual(res.events, [
@@ -329,10 +329,10 @@ extension ObservableTakeTest {
             ])
     }
     
-    func testTake_Dispose_Before() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_Dispose_Before() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -355,8 +355,8 @@ extension ObservableTakeTest {
             .error(690, testError)
             ])
         
-        let res = scheduler.start(disposed: 250) {
-            xs.take(3)
+        let res = await scheduler.start(disposed: 250) {
+            await xs.take(3)
         }
         
         XCTAssertEqual(res.events, [
@@ -369,10 +369,10 @@ extension ObservableTakeTest {
             ])
     }
     
-    func testTake_Dispose_After() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_Dispose_After() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -395,8 +395,8 @@ extension ObservableTakeTest {
             .error(690, testError)
             ])
         
-        let res = scheduler.start(disposed: 400) {
-            xs.take(3)
+        let res = await scheduler.start(disposed: 400) {
+            await xs.take(3)
         }
         
         XCTAssertEqual(res.events, [
@@ -411,18 +411,18 @@ extension ObservableTakeTest {
             ])
     }
     
-    func testTake_0_DefaultScheduler() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_0_DefaultScheduler() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
             .next(230, 13)
         ])
         
-        let res = scheduler.start {
-            xs.take(0)
+        let res = await scheduler.start {
+            await xs.take(0)
         }
         
         XCTAssertEqual(res.events, [
@@ -433,10 +433,10 @@ extension ObservableTakeTest {
         ])
     }
     
-    func testTake_Take1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_Take1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(70, 6),
             .next(150, 4),
             .next(210, 9),
@@ -450,8 +450,8 @@ extension ObservableTakeTest {
             .completed(400)
             ])
         
-        let res = scheduler.start {
-            xs.take(3)
+        let res = await scheduler.start {
+            await xs.take(3)
         }
         
         XCTAssertEqual(res.events, [
@@ -466,21 +466,21 @@ extension ObservableTakeTest {
             ])
     }
     
-    func testTake_DecrementCountsFirst() {
-        let k = BehaviorSubject(value: false)
+    func testTake_DecrementCountsFirst() async {
+        let k = await BehaviorSubject(value: false)
         
-        _ = k.take(1).subscribe(onNext: { n in
-            k.on(.next(!n))
+        _ = await k.take(1).subscribe(onNext: { n in
+            await k.on(.next(!n))
         })
     }
 
     #if TRACE_RESOURCES
-        func testTakeReleasesResourcesOnComplete() {
-            _ = Observable<Int>.of(1, 2).take(1).subscribe()
+    func testTakeReleasesResourcesOnComplete() async {
+        _ = await Observable<Int>.of(1, 2).take(1).subscribe()
         }
 
-        func testTakeReleasesResourcesOnError() {
-            _ = Observable<Int>.error(testError).take(1).subscribe()
+    func testTakeReleasesResourcesOnError() async {
+        _ = await Observable<Int>.error(testError).take(1).subscribe()
         }
     #endif
 }
@@ -488,17 +488,17 @@ extension ObservableTakeTest {
 
 extension ObservableTakeTest {
 
-    func testTake_TakeZero() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_TakeZero() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(220, 2),
             .completed(230)
         ])
 
-        let res = scheduler.start {
-            xs.take(for: .seconds(0), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.take(for: .seconds(0), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -510,18 +510,18 @@ extension ObservableTakeTest {
             ])
     }
 
-    func testTake_Some() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_Some() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(220, 2),
             .next(230, 3),
             .completed(240)
             ])
 
-        let res = scheduler.start {
-            xs.take(for: .seconds(25), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.take(for: .seconds(25), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -535,17 +535,17 @@ extension ObservableTakeTest {
             ])
     }
 
-    func testTake_TakeLate() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_TakeLate() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(220, 2),
             .completed(230),
             ])
 
-        let res = scheduler.start {
-            xs.take(for: .seconds(50), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.take(for: .seconds(50), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -559,16 +559,16 @@ extension ObservableTakeTest {
             ])
     }
 
-    func testTake_TakeError() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_TakeError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(0, 0),
             .error(210, testError)
             ])
 
-        let res = scheduler.start {
-            xs.take(for: .seconds(50), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.take(for: .seconds(50), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -580,15 +580,15 @@ extension ObservableTakeTest {
             ])
     }
 
-    func testTake_TakeNever() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_TakeNever() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(0, 0),
             ])
 
-        let res = scheduler.start {
-            xs.take(for: .seconds(50), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.take(for: .seconds(50), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -600,10 +600,10 @@ extension ObservableTakeTest {
             ])
     }
 
-    func testTake_TakeTwice1() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_TakeTwice1() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(220, 2),
             .next(230, 3),
@@ -613,8 +613,8 @@ extension ObservableTakeTest {
             .completed(270)
             ])
 
-        let res = scheduler.start {
-            xs.take(for: .seconds(55), scheduler: scheduler).take(for: .seconds(35), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.take(for: .seconds(55), scheduler: scheduler).take(for: .seconds(35), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -629,10 +629,10 @@ extension ObservableTakeTest {
             ])
     }
 
-    func testTake_TakeDefault() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testTake_TakeDefault() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(210, 1),
             .next(220, 2),
             .next(230, 3),
@@ -642,8 +642,8 @@ extension ObservableTakeTest {
             .completed(270)
             ])
 
-        let res = scheduler.start {
-            xs.take(for: .seconds(35), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.take(for: .seconds(35), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -660,16 +660,16 @@ extension ObservableTakeTest {
 
 
     #if TRACE_RESOURCES
-        func testTakeTimeReleasesResourcesOnComplete() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).take(for: .seconds(35), scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testTakeTimeReleasesResourcesOnComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).take(for: .seconds(35), scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
 
-        func testTakeTimeReleasesResourcesOnError() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).take(for: .seconds(35), scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testTakeTimeReleasesResourcesOnError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).take(for: .seconds(35), scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
     #endif
 }

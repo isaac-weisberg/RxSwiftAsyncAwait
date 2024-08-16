@@ -1,41 +1,47 @@
+////
+////  First.swift
+////  RxSwift
+////
+////  Created by Krunoslav Zaher on 7/31/17.
+////  Copyright © 2017 Krunoslav Zaher. All rights reserved.
+////
 //
-//  First.swift
-//  RxSwift
+//private final actor FirstSink<Element, Observer: ObserverType>: Sink, ObserverType where Observer.Element == Element? {
+//    typealias Parent = First<Element>
+//    let baseSink: BaseSink<Observer>
+//    
+//    init(observer: Observer) async {
+//        self.baseSink = BaseSink(observer: observer)
+//    }
 //
-//  Created by Krunoslav Zaher on 7/31/17.
-//  Copyright © 2017 Krunoslav Zaher. All rights reserved.
+//    func on(_ event: Event<Element>, _ c: C) async {
+//        switch event {
+//        case .next(let value):
+//            await self.forwardOn(.next(value), c.call())
+//            await self.forwardOn(.completed, c.call())
+//            await self.dispose()
+//        case .error(let error):
+//            await self.forwardOn(.error(error), c.call())
+//            await self.dispose()
+//        case .completed:
+//            await self.forwardOn(.next(nil), c.call())
+//            await self.forwardOn(.completed, c.call())
+//            await self.dispose()
+//        }
+//    }
+//}
 //
-
-private final class FirstSink<Element, Observer: ObserverType> : Sink<Observer>, ObserverType where Observer.Element == Element? {
-    typealias Parent = First<Element>
-
-    func on(_ event: Event<Element>) {
-        switch event {
-        case .next(let value):
-            self.forwardOn(.next(value))
-            self.forwardOn(.completed)
-            self.dispose()
-        case .error(let error):
-            self.forwardOn(.error(error))
-            self.dispose()
-        case .completed:
-            self.forwardOn(.next(nil))
-            self.forwardOn(.completed)
-            self.dispose()
-        }
-    }
-}
-
-final class First<Element>: Producer<Element?> {
-    private let source: Observable<Element>
-
-    init(source: Observable<Element>) {
-        self.source = source
-    }
-
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element? {
-        let sink = FirstSink(observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
-        return (sink: sink, subscription: subscription)
-    }
-}
+//final class First<Element>: Producer<Element?> {
+//    private let source: Observable<Element>
+//
+//    init(source: Observable<Element>) async {
+//        self.source = source
+//        await super.init()
+//    }
+//
+//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element? {
+//        let sink = await FirstSink(observer: observer)
+//        let subscription = await self.source.subscribe(c.call(), sink)
+//        return sink
+//    }
+//}

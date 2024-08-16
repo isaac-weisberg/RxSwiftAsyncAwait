@@ -12,30 +12,25 @@
  * ensures binding is performed on a specific scheduler
 
  `Binder` doesn't retain target and in case target is released, element isn't bound.
- 
+
  By default it binds elements on main scheduler.
  */
-public struct Binder<Value>: ObserverType {
+public struct Binder<Value: Sendable>: ObserverType {
     public typealias Element = Value
-    
-    private let binding: (Event<Value>) -> Void
+
+    private let binding: @Sendable (C, Event<Value>) async -> Void
 
     /// Initializes `Binder`
     ///
     /// - parameter target: Target object.
     /// - parameter scheduler: Scheduler used to bind the events.
     /// - parameter binding: Binding logic.
-    public init<Target: AnyObject>(_ target: Target, scheduler: ImmediateSchedulerType = MainScheduler(), binding: @escaping (Target, Value) -> Void) {
-        weak var weakTarget = target
-
-        self.binding = { event in
+    public init<Target: AnyObject>(_ target: Target, binding: @escaping (Target, Value) async -> Void) async {
+        self.binding = { [weak target] _, event in
             switch event {
             case .next(let element):
-                _ = scheduler.schedule(element) { element in
-                    if let target = weakTarget {
-                        binding(target, element)
-                    }
-                    return Disposables.create()
+                if let target {
+                    await binding(target, element)
                 }
             case .error(let error):
                 rxFatalErrorInDebug("Binding error: \(error)")
@@ -46,14 +41,16 @@ public struct Binder<Value>: ObserverType {
     }
 
     /// Binds next element to owner view as described in `binding`.
-    public func on(_ event: Event<Value>) {
-        self.binding(event)
+    public func on(_ event: Event<Value>, _ c: C) async {
+        await binding(c.call(), event)
     }
 
     /// Erases type of observer.
     ///
     /// - returns: type erased observer.
     public func asObserver() -> AnyObserver<Value> {
-        AnyObserver(eventHandler: self.on)
+        AnyObserver(eventHandler: { c, e in
+            await on(c, e)
+        })
     }
 }

@@ -7,17 +7,22 @@
 //
 
 protocol Lock {
-    func lock()
-    func unlock()
+    func performLocked<R>(_ c: C, _ work: @escaping (C) async -> R) async -> R
+    #if VICIOUS_TRACING
+    func performLocked<R>(_ work: @escaping () async -> R, _ file: StaticString, _ line: UInt) async -> R
+    #else
+    func performLocked<R>(_ work: @escaping () async -> R) async -> R
+    #endif
 }
-
-// https://lists.swift.org/pipermail/swift-dev/Week-of-Mon-20151214/000321.html
-typealias SpinLock = RecursiveLock
-
-extension RecursiveLock : Lock {
-    @inline(__always)
-    final func performLocked<T>(_ action: () -> T) -> T {
-        self.lock(); defer { self.unlock() }
-        return action()
+#if VICIOUS_TRACING
+extension Lock {
+    func performLocked<R>(_ work: @escaping () async -> R, _ file: StaticString = #file, _ line: UInt = #line) async -> R {
+        await performLocked(work, file, line)
     }
 }
+#endif
+
+// https://lists.swift.org/pipermail/swift-dev/Week-of-Mon-20151214/000321.html
+// typealias SpinLock = AsyncAwaitLock
+
+//extension AsyncAwaitLock: Lock {}

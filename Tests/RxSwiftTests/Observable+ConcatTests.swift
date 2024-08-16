@@ -15,52 +15,54 @@ class ObservableConcatTest : RxTest {
 
 // this generates
 // [generator(0), [generator(1), [generator(2), ..].concat()].concat()].concat()
-func generateCollection<T>(_ startIndex: Int, _ generator: @escaping (Int) -> Observable<T>) -> Observable<T> {
-    let all = [0, 1].lazy.map { i in
-        return i == 0 ? generator(startIndex) : generateCollection(startIndex + 1, generator)
+// BROKEN
+func generateCollection<T>(_ startIndex: Int, _ generator: @escaping (Int) async -> Observable<T>) async -> Observable<T> {
+    let all = await [0, 1].map { i in
+        return await i == 0 ? generator(startIndex) : generateCollection(startIndex + 1, generator)
     }
-    return Observable.concat(all)
+    return await Observable.concat(all)
 }
 
 // this generates
 // [generator(0), [generator(1), [generator(2), ..].concat()].concat()].concat()
 // This should
-func generateSequence<T>(_ startIndex: Int, _ generator: @escaping (Int) -> Observable<T>) -> Observable<T> {
+// BROKEN
+func generateSequence<T>(_ startIndex: Int, _ generator: @escaping (Int) async -> Observable<T>) async -> Observable<T> {
     let indexes: [Int] = [0, 1]
-    let all = AnySequence(indexes.lazy.map { i -> Observable<T> in
-        return i == 0 ? generator(startIndex) : generateSequence(startIndex + 1, generator)
+    let all = await AnySequence(indexes.map { i -> Observable<T> in
+        return await i == 0 ? generator(startIndex) : generateSequence(startIndex + 1, generator)
     })
-    return Observable<T>.concat(all)
+    return await Observable<T>.concat(all)
 }
 
 // MARK: concat
 extension ObservableConcatTest {
-    func testConcat_DefaultScheduler() {
+    func testConcat_DefaultScheduler() async {
         var sum = 0
-        _ = Observable.concat([Observable.just(1), Observable.just(2), Observable.just(3)]).subscribe(onNext: { e -> Void in
+        _ = await Observable.concat([Observable.just(1), Observable.just(2), Observable.just(3)]).subscribe(onNext: { e -> Void in
             sum += e
         })
         
         XCTAssertEqual(sum, 6)
     }
     
-    func testConcat_IEofIO() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_IEofIO() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createColdObservable([
+        let xs1 = await scheduler.createColdObservable([
             .next(10, 1),
             .next(20, 2),
             .next(30, 3),
             .completed(40),
         ])
         
-        let xs2 = scheduler.createColdObservable([
+        let xs2 = await scheduler.createColdObservable([
             .next(10, 4),
             .next(20, 5),
             .completed(30),
         ])
         
-        let xs3 = scheduler.createColdObservable([
+        let xs3 = await scheduler.createColdObservable([
             .next(10, 6),
             .next(20, 7),
             .next(30, 8),
@@ -68,8 +70,8 @@ extension ObservableConcatTest {
             .completed(50)
         ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2, xs3].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2, xs3].map { await $0.asObservable() })
         }
         
         let messages = Recorded.events(
@@ -100,21 +102,21 @@ extension ObservableConcatTest {
         ])
     }
     
-    func testConcat_EmptyEmpty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_EmptyEmpty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(230),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(250),
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = [
@@ -132,20 +134,20 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_EmptyNever() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_EmptyNever() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(230),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages: [Recorded<Event<Int>>] = [
@@ -162,19 +164,19 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_NeverNever() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_NeverNever() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages: [Recorded<Event<Int>>] = [
@@ -190,21 +192,21 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_EmptyThrow() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_EmptyThrow() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(230),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .error(250, testError)
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = [
@@ -222,21 +224,21 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_ThrowEmpty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_ThrowEmpty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .error(230, testError),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = [
@@ -253,21 +255,21 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_ThrowThrow() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_ThrowThrow() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .error(230, testError1),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .error(250, testError2)
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = [
@@ -284,22 +286,22 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_ReturnEmpty() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_ReturnEmpty() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .completed(230),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = Recorded.events(
@@ -318,22 +320,22 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_EmptyReturn() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_EmptyReturn() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .completed(230),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(240, 2),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = Recorded.events(
@@ -352,21 +354,21 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_ReturnNever() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_ReturnNever() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .completed(230),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = [
@@ -384,21 +386,21 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_NeverReturn() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_NeverReturn() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .completed(230),
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages: [Recorded<Event<Int>>] = [
@@ -414,23 +416,23 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_ReturnReturn() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_ReturnReturn() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .completed(230)
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(240, 3),
             .completed(250),
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = Recorded.events(
@@ -450,22 +452,22 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_ThrowReturn() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_ThrowReturn() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .error(230, testError1)
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(240, 2),
             .completed(250),
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = [
@@ -482,22 +484,22 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_ReturnThrow() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_ReturnThrow() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(220, 2),
             .completed(230)
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .error(250, testError2),
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = Recorded.events(
@@ -516,25 +518,25 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_SomeDataSomeData() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_SomeDataSomeData() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
             .completed(225)
             ])
         
-        let xs2 = scheduler.createHotObservable([
+        let xs2 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(230, 4),
             .next(240, 5),
             .completed(250)
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2].map { await $0.asObservable() })
         }
         
         let messages = Recorded.events(
@@ -556,24 +558,24 @@ extension ObservableConcatTest {
             ])
     }
     
-    func testConcat_EnumerableTiming() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testConcat_EnumerableTiming() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs1 = scheduler.createHotObservable([
+        let xs1 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(210, 2),
             .next(220, 3),
             .completed(230)
             ])
         
-        let xs2 = scheduler.createColdObservable([
+        let xs2 = await scheduler.createColdObservable([
             .next(50, 4),
             .next(60, 5),
             .next(70, 6),
             .completed(80)
             ])
         
-        let xs3 = scheduler.createHotObservable([
+        let xs3 = await scheduler.createHotObservable([
             .next(150, 1),
             .next(200, 2),
             .next(210, 3),
@@ -585,8 +587,8 @@ extension ObservableConcatTest {
             .completed(340)
             ])
         
-        let res = scheduler.start {
-            Observable.concat([xs1, xs2, xs3, xs2].map { $0.asObservable() })
+        let res = await scheduler.start {
+            await Observable.concat([xs1, xs2, xs3, xs2].map { await $0.asObservable() })
         }
         
         let messages = Recorded.events(
@@ -620,16 +622,16 @@ extension ObservableConcatTest {
         
     }
 
-    func testConcat_variadicElementsOverload() {
-        let elements = try! Observable.concat(Observable.just(1)).toBlocking().toArray()
+    func testConcat_variadicElementsOverload() async {
+        let elements = try! await Observable.concat(Observable.just(1)).toBlocking().toArray()
         XCTAssertEqual(elements, [1])
     }
 
 #if TRACE_RESOURCES
-    func testConcat_TailRecursionCollection() {
+    func testConcat_TailRecursionCollection() async {
         maxTailRecursiveSinkStackSize = 0
-        let elements = try! generateCollection(0) { i in
-                Observable.just(i, scheduler: CurrentThreadScheduler.instance)
+        let elements = try! await generateCollection(0) { i in
+            await Observable.just(i, scheduler: CurrentThreadScheduler.instance)
             }
             .take(100)
             .toBlocking()
@@ -639,10 +641,10 @@ extension ObservableConcatTest {
         XCTAssertEqual(maxTailRecursiveSinkStackSize, 1)
     }
 
-    func testConcat_TailRecursionSequence() {
+    func testConcat_TailRecursionSequence() async {
         maxTailRecursiveSinkStackSize = 0
-        let elements = try! generateSequence(0) { i in
-                Observable.just(i, scheduler: CurrentThreadScheduler.instance)
+        let elements = try! await generateSequence(0) { i in
+            await Observable.just(i, scheduler: CurrentThreadScheduler.instance)
             }
             .take(100)
             .toBlocking()
@@ -655,14 +657,41 @@ extension ObservableConcatTest {
 
 
     #if TRACE_RESOURCES
-        func testConcatReleasesResourcesOnComplete() {
-            _ = Observable.concat([Observable.just(1)]).subscribe()
+    func testConcatReleasesResourcesOnComplete() async {
+        _ = await Observable.concat([Observable.just(1)]).subscribe()
         }
 
-        func testConcatReleasesResourcesOnError() {
-            _ = Observable.concat([Observable<Int>.error(testError)]).subscribe()
+    func testConcatReleasesResourcesOnError() async {
+        _ = await Observable.concat([Observable<Int>.error(testError)]).subscribe()
         }
     #endif
 }
 
 
+extension LazySequence {
+    func map<U>(_ transform: @escaping (Base.Element) async -> U) async -> CustomAsyncMapSequence<Self, U> {
+        CustomAsyncMapSequence(base: self) { e in
+            await transform(e)
+        }
+    }
+}
+
+struct CustomAsyncMapSequence<Base: Sequence, Element>: AsyncSequence {
+
+    let base: Base
+    let transform: (Base.Element) async -> Element
+    
+    struct AsyncIterator: AsyncIteratorProtocol {
+        var baseIterator: Base.Iterator
+        let transform: (Base.Element) async -> Element
+        
+        mutating func next() async -> Element? {
+            guard let nextElement = baseIterator.next() else { return nil }
+            return await transform(nextElement)
+        }
+    }
+    
+    func makeAsyncIterator() -> AsyncIterator {
+        AsyncIterator(baseIterator: base.makeIterator(), transform: transform)
+    }
+}

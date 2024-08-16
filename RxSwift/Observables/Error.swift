@@ -6,7 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
+public extension ObservableType {
     /**
      Returns an observable sequence that terminates with an `error`.
 
@@ -14,20 +14,21 @@ extension ObservableType {
 
      - returns: The observable sequence that terminates with specified error.
      */
-    public static func error(_ error: Swift.Error) -> Observable<Element> {
+    static func error(_ error: Swift.Error) -> Observable<Element> {
         ErrorProducer(error: error)
     }
 }
 
-final private class ErrorProducer<Element>: Producer<Element> {
+private final class ErrorProducer<Element: Sendable>: Producer<Element> {
     private let error: Swift.Error
-    
+
     init(error: Swift.Error) {
         self.error = error
+        super.init()
     }
-    
-    override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        observer.on(.error(self.error))
+
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
+        await observer.on(.error(self.error), c.call())
         return Disposables.create()
     }
 }

@@ -6,10 +6,10 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-import XCTest
+import Dispatch
 import RxSwift
 import RxTest
-import Dispatch
+import XCTest
 
 #if os(Linux)
     import Glibc
@@ -17,7 +17,7 @@ import Dispatch
     import Foundation
 #endif
 
-class DisposableTest : RxTest {
+class DisposableTest: RxTest {
     override func setUp() {
         super.setUp()
     }
@@ -28,29 +28,28 @@ class DisposableTest : RxTest {
 }
 
 // action
-extension DisposableTest
-{
-    func testActionDisposable() {
+extension DisposableTest {
+    func testActionDisposable() async {
         var counter = 0
         
-        let disposable = Disposables.create {
+        let disposable = await Disposables.create {
             counter += 1
         }
         
         XCTAssert(counter == 0)
-        disposable.dispose()
+        await disposable.dispose()
         XCTAssert(counter == 1)
-        disposable.dispose()
+        await disposable.dispose()
         XCTAssert(counter == 1)
     }
 }
 
 // hot disposable
 extension DisposableTest {
-    func testHotObservable_Disposing() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testHotObservable_Disposing() async {
+        let scheduler = await TestScheduler(initialClock: 0)
         
-        let xs = scheduler.createHotObservable([
+        let xs = await scheduler.createHotObservable([
             .next(110, 1),
             .next(180, 2),
             .next(230, 3),
@@ -63,193 +62,192 @@ extension DisposableTest {
             .next(560, 10),
             .next(580, 11),
             .completed(600)
-            ])
+        ])
         
-        let res = scheduler.start(disposed: 400) {
+        let res = await scheduler.start(disposed: 400) {
             xs
         }
         
-        XCTAssertEqual(res.events, [
+        await assertEqual(res.events, [
             .next(230, 3),
             .next(270, 4),
             .next(340, 5),
             .next(380, 6),
-            .next(390, 7),
-            ])
+            .next(390, 7)
+        ])
         
-        XCTAssertEqual(xs.subscriptions, [
+        await assertEqual(xs.subscriptions, [
             Subscription(200, 400)
-            ])
+        ])
     }
 }
 
 // composite disposable
-extension DisposableTest
-{
-    func testCompositeDisposable_TestNormal() {
+extension DisposableTest {
+    func testCompositeDisposable_TestNormal() async {
         var numberDisposed = 0
-        let compositeDisposable = CompositeDisposable()
+        let compositeDisposable = await CompositeDisposable()
         
-        let result1 = compositeDisposable.insert(Disposables.create {
+        let result1 = await compositeDisposable.insert(Disposables.create {
             numberDisposed += 1
         })
         
-        _ = compositeDisposable.insert(Disposables.create {
+        _ = await compositeDisposable.insert(Disposables.create {
             numberDisposed += 1
         })
         
-        XCTAssertEqual(numberDisposed, 0)
-        XCTAssertEqual(compositeDisposable.count, 2)
-        XCTAssertTrue(result1 != nil)
+        await assertEqual(numberDisposed, 0)
+        await assertEqual(await compositeDisposable.count(), 2)
+        await assertTrue(result1 != nil)
         
-        compositeDisposable.dispose()
-        XCTAssertEqual(numberDisposed, 2)
-        XCTAssertEqual(compositeDisposable.count, 0)
+        await compositeDisposable.dispose()
+        await assertEqual(numberDisposed, 2)
+        await assertEqual(await compositeDisposable.count(), 0)
         
-        let result = compositeDisposable.insert(Disposables.create {
+        let result = await compositeDisposable.insert(Disposables.create {
             numberDisposed += 1
         })
 
-        XCTAssertEqual(numberDisposed, 3)
-        XCTAssertEqual(compositeDisposable.count, 0)
-        XCTAssertTrue(result == nil)
+        await assertEqual(numberDisposed, 3)
+        await assertEqual(await compositeDisposable.count(), 0)
+        await assertTrue(result == nil)
     }
     
-    func testCompositeDisposable_TestInitWithNumberOfDisposables() {
+    func testCompositeDisposable_TestInitWithNumberOfDisposables() async {
         var numberDisposed = 0
         
-        let disposable1 = Disposables.create {
+        let disposable1 = await Disposables.create {
             numberDisposed += 1
         }
-        let disposable2 = Disposables.create {
+        let disposable2 = await Disposables.create {
             numberDisposed += 1
         }
-        let disposable3 = Disposables.create {
+        let disposable3 = await Disposables.create {
             numberDisposed += 1
         }
-        let disposable4 = Disposables.create {
+        let disposable4 = await Disposables.create {
             numberDisposed += 1
         }
-        let disposable5 = Disposables.create {
+        let disposable5 = await Disposables.create {
             numberDisposed += 1
         }
 
-        let compositeDisposable = CompositeDisposable(disposable1, disposable2, disposable3, disposable4, disposable5)
+        let compositeDisposable = await CompositeDisposable(disposable1, disposable2, disposable3, disposable4, disposable5)
         
-        XCTAssertEqual(numberDisposed, 0)
-        XCTAssertEqual(compositeDisposable.count, 5)
+        await assertEqual(numberDisposed, 0)
+        await assertEqual(await compositeDisposable.count(), 5)
         
-        compositeDisposable.dispose()
-        XCTAssertEqual(numberDisposed, 5)
-        XCTAssertEqual(compositeDisposable.count, 0)
+        await compositeDisposable.dispose()
+        await assertEqual(numberDisposed, 5)
+        await assertEqual(await compositeDisposable.count(), 0)
     }
     
-    func testCompositeDisposable_TestRemoving() {
+    func testCompositeDisposable_TestRemoving() async {
         var numberDisposed = 0
-        let compositeDisposable = CompositeDisposable()
+        let compositeDisposable = await CompositeDisposable()
         
-        let result1 = compositeDisposable.insert(Disposables.create {
+        let result1 = await compositeDisposable.insert(Disposables.create {
             numberDisposed += 1
-            })
+        })
         
-        let result2 = compositeDisposable.insert(Disposables.create {
+        let result2 = await compositeDisposable.insert(Disposables.create {
             numberDisposed += 1
-            })
+        })
         
-        XCTAssertEqual(numberDisposed, 0)
-        XCTAssertEqual(compositeDisposable.count, 2)
+        await assertEqual(numberDisposed, 0)
+        await assertEqual(await compositeDisposable.count(), 2)
         XCTAssertTrue(result1 != nil)
         
-        compositeDisposable.remove(for: result2!)
+        await compositeDisposable.remove(for: result2!)
 
-        XCTAssertEqual(numberDisposed, 1)
-        XCTAssertEqual(compositeDisposable.count, 1)
+        await assertEqual(numberDisposed, 1)
+        await assertEqual(await compositeDisposable.count(), 1)
      
-        compositeDisposable.dispose()
+        await compositeDisposable.dispose()
 
-        XCTAssertEqual(numberDisposed, 2)
-        XCTAssertEqual(compositeDisposable.count, 0)
+        await assertEqual(numberDisposed, 2)
+        await assertEqual(await compositeDisposable.count(), 0)
     }
     
-    func testDisposables_TestCreateWithNumberOfDisposables() {
+    func testDisposables_TestCreateWithNumberOfDisposables() async {
         var numberDisposed = 0
         
-        let disposable1 = Disposables.create {
+        let disposable1 = await Disposables.create {
             numberDisposed += 1
         }
-        let disposable2 = Disposables.create {
+        let disposable2 = await Disposables.create {
             numberDisposed += 1
         }
-        let disposable3 = Disposables.create {
+        let disposable3 = await Disposables.create {
             numberDisposed += 1
         }
-        let disposable4 = Disposables.create {
+        let disposable4 = await Disposables.create {
             numberDisposed += 1
         }
-        let disposable5 = Disposables.create {
+        let disposable5 = await Disposables.create {
             numberDisposed += 1
         }
         
-        let disposable = Disposables.create(disposable1, disposable2, disposable3, disposable4, disposable5)
+        let disposable = await Disposables.create(disposable1, disposable2, disposable3, disposable4, disposable5)
         
-        XCTAssertEqual(numberDisposed, 0)
+        await assertEqual(numberDisposed, 0)
         
-        disposable.dispose()
-        XCTAssertEqual(numberDisposed, 5)
+        await disposable.dispose()
+        await assertEqual(numberDisposed, 5)
     }
 }
 
 // refCount disposable
 extension DisposableTest {
-    func testRefCountDisposable_RefCounting() {
-        let d = BooleanDisposable()
-        let r = RefCountDisposable(disposable: d)
+    func testRefCountDisposable_RefCounting() async {
+        let d = await BooleanDisposable()
+        let r = await RefCountDisposable(disposable: d)
         
-        XCTAssertEqual(r.isDisposed, false)
+        await assertEqual(await r.isDisposed(), false)
         
-        let d1 = r.retain()
-        let d2 = r.retain()
+        let d1 = await r.retain()
+        let d2 = await r.retain()
         
-        XCTAssertEqual(d.isDisposed, false)
+        await assertEqual(await d.isDisposed(), false)
         
-        d1.dispose()
-        XCTAssertEqual(d.isDisposed, false)
+        await d1.dispose()
+        await assertEqual(await d.isDisposed(), false)
         
-        d2.dispose()
-        XCTAssertEqual(d.isDisposed, false)
+        await d2.dispose()
+        await assertEqual(await d.isDisposed(), false)
         
-        r.dispose()
-        XCTAssertEqual(d.isDisposed, true)
+        await r.dispose()
+        await assertEqual(await d.isDisposed(), true)
         
-        let d3 = r.retain()
-        d3.dispose()
+        let d3 = await r.retain()
+        await d3.dispose()
     }
     
-    func testRefCountDisposable_PrimaryDisposesFirst() {
-        let d = BooleanDisposable()
-        let r = RefCountDisposable(disposable: d)
+    func testRefCountDisposable_PrimaryDisposesFirst() async {
+        let d = await BooleanDisposable()
+        let r = await RefCountDisposable(disposable: d)
         
-        XCTAssertEqual(r.isDisposed, false)
+        await assertEqual(await r.isDisposed(), false)
         
-        let d1 = r.retain()
-        let d2 = r.retain()
+        let d1 = await r.retain()
+        let d2 = await r.retain()
         
-        XCTAssertEqual(d.isDisposed, false)
+        await assertEqual(await d.isDisposed(), false)
         
-        d1.dispose()
-        XCTAssertEqual(d.isDisposed, false)
+        await d1.dispose()
+        await assertEqual(await d.isDisposed(), false)
         
-        r.dispose()
-        XCTAssertEqual(d.isDisposed, false)
+        await r.dispose()
+        await assertEqual(await d.isDisposed(), false)
         
-        d2.dispose()
-        XCTAssertEqual(d.isDisposed, true)
+        await d2.dispose()
+        await assertEqual(await d.isDisposed(), true)
     }
 }
 
 // scheduled disposable
 extension DisposableTest {
-    func testScheduledDisposable_correctQueue() {
+    func testScheduledDisposable_correctQueue() async {
         let expectationQueue = expectation(description: "wait")
         let label = "test label"
         let queue = DispatchQueue(label: label)
@@ -257,156 +255,163 @@ extension DisposableTest {
         queue.setSpecific(key: nameKey, value: label)
         let scheduler = ConcurrentDispatchQueueScheduler(queue: queue)
         
-        let testDisposable = Disposables.create {
-            XCTAssertEqual(DispatchQueue.getSpecific(key: nameKey), label)
+        let testDisposable = await Disposables.create {
+            await assertEqual(DispatchQueue.getSpecific(key: nameKey), label)
             expectationQueue.fulfill()
         }
 
-        let scheduledDisposable = ScheduledDisposable(scheduler: scheduler, disposable: testDisposable)
-        scheduledDisposable.dispose()
+        let scheduledDisposable = await ScheduledDisposable(scheduler: scheduler, disposable: testDisposable)
+        await scheduledDisposable.dispose()
         
-        waitForExpectations(timeout: 0.5) { error in
-            XCTAssertNil(error)
-        }
+        await fulfillment(of: [expectationQueue], timeout: 0.5)
     }
 }
 
 // serial disposable
 extension DisposableTest {
-    func testSerialDisposable_firstDisposedThenSet() {
-        let serialDisposable = SerialDisposable()
-        XCTAssertFalse(serialDisposable.isDisposed)
+    func testSerialDisposable_firstDisposedThenSet() async {
+        let serialDisposable = await SerialDisposable()
+        await assertFalse(await serialDisposable.isDisposed())
         
-        serialDisposable.dispose()
-        XCTAssertTrue(serialDisposable.isDisposed)
-        
-        let testDisposable = TestDisposable()
-        serialDisposable.disposable = testDisposable
-        XCTAssertEqual(testDisposable.count, 1)
-        
-        serialDisposable.dispose()
-        XCTAssertTrue(serialDisposable.isDisposed)
-        XCTAssertEqual(testDisposable.count, 1)
-    }
-    
-    func testSerialDisposable_firstSetThenDisposed() {
-        let serialDisposable = SerialDisposable()
-        XCTAssertFalse(serialDisposable.isDisposed)
+        await serialDisposable.dispose()
+        await assertTrue(await serialDisposable.isDisposed())
         
         let testDisposable = TestDisposable()
+        await serialDisposable.setDisposable(testDisposable)
+        await assertEqual(testDisposable.count, 1)
         
-        serialDisposable.disposable = testDisposable
-        XCTAssertEqual(testDisposable.count, 0)
-        
-        serialDisposable.dispose()
-        XCTAssertTrue(serialDisposable.isDisposed)
-        XCTAssertEqual(testDisposable.count, 1)
-        
-        serialDisposable.dispose()
-        XCTAssertTrue(serialDisposable.isDisposed)
-        XCTAssertEqual(testDisposable.count, 1)
+        await serialDisposable.dispose()
+        await assertTrue(await serialDisposable.isDisposed())
+        await assertEqual(testDisposable.count, 1)
     }
     
-    func testSerialDisposable_firstSetThenSetAnotherThenDisposed() {
-        let serialDisposable = SerialDisposable()
-        XCTAssertFalse(serialDisposable.isDisposed)
+    func testSerialDisposable_firstSetThenDisposed() async {
+        let serialDisposable = await SerialDisposable()
+        await assertFalse(await serialDisposable.isDisposed())
+        
+        let testDisposable = TestDisposable()
+        
+        await serialDisposable.setDisposable(testDisposable)
+        await assertEqual(testDisposable.count, 0)
+        
+        await serialDisposable.dispose()
+        await assertTrue(await serialDisposable.isDisposed())
+        await assertEqual(testDisposable.count, 1)
+        
+        await serialDisposable.dispose()
+        await assertTrue(await serialDisposable.isDisposed())
+        await assertEqual(testDisposable.count, 1)
+    }
+    
+    func testSerialDisposable_firstSetThenSetAnotherThenDisposed() async {
+        let serialDisposable = await SerialDisposable()
+        await assertFalse(await serialDisposable.isDisposed())
         
         let testDisposable1 = TestDisposable()
         let testDisposable2 = TestDisposable()
         
-        serialDisposable.disposable = testDisposable1
-        XCTAssertEqual(testDisposable1.count, 0)
-        XCTAssertEqual(testDisposable2.count, 0)
+        await serialDisposable.setDisposable(testDisposable1)
+        await assertEqual(testDisposable1.count, 0)
+        await assertEqual(testDisposable2.count, 0)
 
-        serialDisposable.disposable = testDisposable2
-        XCTAssertEqual(testDisposable1.count, 1)
-        XCTAssertEqual(testDisposable2.count, 0)
+        await serialDisposable.setDisposable(testDisposable2)
+        await assertEqual(testDisposable1.count, 1)
+        await assertEqual(testDisposable2.count, 0)
         
-        serialDisposable.dispose()
-        XCTAssertTrue(serialDisposable.isDisposed)
-        XCTAssertEqual(testDisposable1.count, 1)
-        XCTAssertEqual(testDisposable2.count, 1)
+        await serialDisposable.dispose()
+        await assertTrue(await serialDisposable.isDisposed())
+        await assertEqual(testDisposable1.count, 1)
+        await assertEqual(testDisposable2.count, 1)
         
-        serialDisposable.dispose()
-        XCTAssertTrue(serialDisposable.isDisposed)
-        XCTAssertEqual(testDisposable1.count, 1)
-        XCTAssertEqual(testDisposable2.count, 1)
+        await serialDisposable.dispose()
+        await assertTrue(await serialDisposable.isDisposed())
+        await assertEqual(testDisposable1.count, 1)
+        await assertEqual(testDisposable2.count, 1)
     }
 }
 
 // single assignment disposable
 extension DisposableTest {
-    func testSingleAssignmentDisposable_firstDisposedThenSet() {
-        let singleAssignmentDisposable = SingleAssignmentDisposable()
+    func testSingleAssignmentDisposable_firstDisposedThenSet() async {
+        let singleAssignmentDisposable = await SingleAssignmentDisposable()
 
-        singleAssignmentDisposable.dispose()
-
-        let testDisposable = TestDisposable()
-
-        singleAssignmentDisposable.setDisposable(testDisposable)
-
-        XCTAssertEqual(testDisposable.count, 1)
-        singleAssignmentDisposable.dispose()
-        XCTAssertEqual(testDisposable.count, 1)
-    }
-
-    func testSingleAssignmentDisposable_firstSetThenDisposed() {
-        let singleAssignmentDisposable = SingleAssignmentDisposable()
+        await singleAssignmentDisposable.dispose()
 
         let testDisposable = TestDisposable()
 
-        singleAssignmentDisposable.setDisposable(testDisposable)
+        await singleAssignmentDisposable.setDisposable(testDisposable)
 
-        XCTAssertEqual(testDisposable.count, 0)
-        singleAssignmentDisposable.dispose()
-        XCTAssertEqual(testDisposable.count, 1)
-
-        singleAssignmentDisposable.dispose()
-        XCTAssertEqual(testDisposable.count, 1)
+        await assertEqual(testDisposable.count, 1)
+        await singleAssignmentDisposable.dispose()
+        await assertEqual(testDisposable.count, 1)
     }
 
-    func testSingleAssignmentDisposable_stress() {
-        let count = AtomicInt(0)
+    func testSingleAssignmentDisposable_firstSetThenDisposed() async {
+        let singleAssignmentDisposable = await SingleAssignmentDisposable()
+
+        let testDisposable = TestDisposable()
+
+        await singleAssignmentDisposable.setDisposable(testDisposable)
+
+        await assertEqual(testDisposable.count, 0)
+        await singleAssignmentDisposable.dispose()
+        await assertEqual(testDisposable.count, 1)
+
+        await singleAssignmentDisposable.dispose()
+        await assertEqual(testDisposable.count, 1)
+    }
+
+    func testSingleAssignmentDisposable_stress() async {
+        let count = await AtomicInt(0)
 
         let queue = DispatchQueue(label: "dispose", qos: .default, attributes: [.concurrent])
 
+        var expectations: [XCTestExpectation] = []
+        expectations.reserveCapacity(1000)
         for _ in 0 ..< 100 {
             for _ in 0 ..< 10 {
                 let expectation = self.expectation(description: "1")
-                let singleAssignmentDisposable = SingleAssignmentDisposable()
-                let disposable = Disposables.create {
-                    increment(count)
+                expectations.append(expectation)
+                let singleAssignmentDisposable = await SingleAssignmentDisposable()
+                let disposable = await Disposables.create {
+                    await increment(count)
                     expectation.fulfill()
                 }
                 #if os(Linux)
                     let roll = Glibc.random() & 1
                 #else
-                    let roll = arc4random_uniform(2) 
+                    let roll = arc4random_uniform(2)
                 #endif
                 if roll == 0 {
                     queue.async {
-                        singleAssignmentDisposable.setDisposable(disposable)
+                        Task {
+                            await singleAssignmentDisposable.setDisposable(disposable)
+                        }
                     }
                     queue.async {
-                        singleAssignmentDisposable.dispose()
+                        Task {
+                            await singleAssignmentDisposable.dispose()
+                        }
                     }
                 }
                 else {
                     queue.async {
-                        singleAssignmentDisposable.dispose()
+                        Task {
+                            await singleAssignmentDisposable.dispose()
+                        }
                     }
                     queue.async {
-                        singleAssignmentDisposable.setDisposable(disposable)
+                        Task {
+                            await singleAssignmentDisposable.setDisposable(disposable)
+                        }
                     }
                 }
             }
         }
 
-        self.waitForExpectations(timeout: 1.0) { e in
-            XCTAssertNil(e)
-        }
+        await fulfillment(of: expectations, timeout: 1.0)
 
-        XCTAssertEqual(globalLoad(count), 1000)
+        await assertEqual(await globalLoad(count), 1000)
     }
 }
 

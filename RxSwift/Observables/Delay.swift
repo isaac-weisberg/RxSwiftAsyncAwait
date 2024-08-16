@@ -8,8 +8,7 @@
 
 import Foundation
 
-extension ObservableType {
-
+public extension ObservableType {
     /**
      Returns an observable sequence by the source observable sequence shifted forward in time by a specified delay. Error events from the source observable sequence are not delayed.
 
@@ -19,156 +18,98 @@ extension ObservableType {
      - parameter scheduler: Scheduler to run the subscription delay timer on.
      - returns: the source Observable shifted in time by the specified delay.
      */
-    public func delay(_ dueTime: RxTimeInterval, scheduler: SchedulerType)
+    func delay(_ dueTime: RxTimeInterval)
         -> Observable<Element> {
-            return Delay(source: self.asObservable(), dueTime: dueTime, scheduler: scheduler)
+        Delay(source: asObservable(), dueTime: dueTime)
     }
 }
 
-final private class DelaySink<Observer: ObserverType>
-    : Sink<Observer>
-    , ObserverType {
-    typealias Element = Observer.Element 
+private final actor DelaySink<Observer: ObserverType>:
+    SinkOverSingleSubscription,
+    ObserverType {
+    typealias Element = Observer.Element
     typealias Source = Observable<Element>
-    typealias DisposeKey = Bag<Disposable>.KeyType
-    
-    private let lock = RecursiveLock()
 
     private let dueTime: RxTimeInterval
-    private let scheduler: SchedulerType
-    
-    private let sourceSubscription = SingleAssignmentDisposable()
-    private let cancelable = SerialDisposable()
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
-    // is scheduled some action
-    private var active = false
-    // is "run loop" on different scheduler running
-    private var running = false
-    private var errorEvent: Event<Element>?
+    var timers: Set<IdentityHashable<SingleAssignmentDisposableContainer<DisposableTimer>>>
 
-    // state
-    private var queue = Queue<(eventTime: RxTime, event: Event<Element>)>(capacity: 0)
-    
-    init(observer: Observer, dueTime: RxTimeInterval, scheduler: SchedulerType, cancel: Cancelable) {
+    init(observer: Observer, dueTime: RxTimeInterval) async {
         self.dueTime = dueTime
-        self.scheduler = scheduler
-        super.init(observer: observer, cancel: cancel)
+        timers = Set()
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
-    // All of these complications in this method are caused by the fact that 
-    // error should be propagated immediately. Error can be potentially received on different
-    // scheduler so this process needs to be synchronized somehow.
-    //
-    // Another complication is that scheduler is potentially concurrent so internal queue is used.
-    func drainQueue(state: (), scheduler: AnyRecursiveScheduler<()>) {
-        self.lock.lock()    
-        let hasFailed = self.errorEvent != nil
-        if !hasFailed {
-            self.running = true
-        }
-        self.lock.unlock()  
-
-        if hasFailed {
-            return
-        }
-
-        var ranAtLeastOnce = false
-
-        while true {
-            self.lock.lock() 
-            let errorEvent = self.errorEvent
-
-            let eventToForwardImmediately = ranAtLeastOnce ? nil : self.queue.dequeue()?.event
-            let nextEventToScheduleOriginalTime: Date? = ranAtLeastOnce && !self.queue.isEmpty ? self.queue.peek().eventTime : nil
-
-            if errorEvent == nil {
-                if eventToForwardImmediately != nil {
-                }
-                else if nextEventToScheduleOriginalTime != nil {
-                    self.running = false
-                }
-                else {
-                    self.running = false
-                    self.active = false
-                }
-            }
-            self.lock.unlock() 
-
-            if let errorEvent = errorEvent {
-                self.forwardOn(errorEvent)
-                self.dispose()
-                return
-            }
-            else {
-                if let eventToForwardImmediately = eventToForwardImmediately {
-                    ranAtLeastOnce = true
-                    self.forwardOn(eventToForwardImmediately)
-                    if case .completed = eventToForwardImmediately {
-                        self.dispose()
-                        return
-                    }
-                }
-                else if let nextEventToScheduleOriginalTime = nextEventToScheduleOriginalTime {
-                    scheduler.schedule((), dueTime: self.dueTime.reduceWithSpanBetween(earlierDate: nextEventToScheduleOriginalTime, laterDate: self.scheduler.now))
-                    return
-                }
-                else {
-                    return
-                }
-            }
-        }
-    }
-    
-    func on(_ event: Event<Element>) {
-        if event.isStopEvent {
-            self.sourceSubscription.dispose()
-        }
-
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
-        case .error:
-            self.lock.lock()    
-            let shouldSendImmediately = !self.running
-            self.queue = Queue(capacity: 0)
-            self.errorEvent = event
-            self.lock.unlock()  
-
-            if shouldSendImmediately {
-                self.forwardOn(event)
-                self.dispose()
+        case .next(let element):
+            let disposable = SingleAssignmentDisposableContainer<DisposableTimer>()
+            let timer = DisposableTimer(dueTime) { [weak self] _ in
+                await self?.handleEventAfterTimer(disposable, event, c.call())
             }
-        default:
-            self.lock.lock()    
-            let shouldSchedule = !self.active
-            self.active = true
-            self.queue.enqueue((self.scheduler.now, event))
-            self.lock.unlock()  
+            if let rejectedTimer = disposable.setDisposable(timer) {
+                rejectedTimer.dispose()
+            } else {
+                timers.insert(IdentityHashable(inner: disposable))
+            }
+        case .error(let error):
+            let disposable = baseSink.setDisposed()
 
-            if shouldSchedule {
-                self.cancelable.disposable = self.scheduler.scheduleRecursive((), dueTime: self.dueTime, action: self.drainQueue)
+            await forwardOn(.error(error), c.call())
+
+            await disposable?.dispose()
+        case .completed:
+            let disposable = SingleAssignmentDisposableContainer<DisposableTimer>()
+            let timer = DisposableTimer(dueTime) { [weak self] _ in
+                await self?.handleEventAfterTimer(disposable, event, c.call())
+            }
+            if let rejectedTimer = disposable.setDisposable(timer) {
+                rejectedTimer.dispose()
+            } else {
+                timers.insert(IdentityHashable(inner: disposable))
             }
         }
     }
-    
-    func run(source: Observable<Element>) -> Disposable {
-        self.sourceSubscription.setDisposable(source.subscribe(self))
-        return Disposables.create(sourceSubscription, cancelable)
+
+    func handleEventAfterTimer(
+        _ timerDisposable: SingleAssignmentDisposableContainer<DisposableTimer>,
+        _ event: Event<Element>,
+        _ c: C
+    )
+        async {
+        timerDisposable.dispose()?.dispose()
+        timers.remove(IdentityHashable(inner: timerDisposable))
+        await forwardOn(event, c.call())
+    }
+
+    func dispose() async {
+        let disposable = baseSink.setDisposed()
+
+        for timer in timers {
+            rxAssert(!timer.inner.isDisposed) // when I disposed of it, I removed it
+            timer.inner.dispose()?.dispose()
+        }
+
+        await disposable?.dispose()
     }
 }
 
-final private class Delay<Element>: Producer<Element> {
+private final class Delay<Element: Sendable>: Producer<Element> {
     private let source: Observable<Element>
     private let dueTime: RxTimeInterval
-    private let scheduler: SchedulerType
-    
-    init(source: Observable<Element>, dueTime: RxTimeInterval, scheduler: SchedulerType) {
+
+    init(source: Observable<Element>, dueTime: RxTimeInterval) {
         self.source = source
         self.dueTime = dueTime
-        self.scheduler = scheduler
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        let sink = DelaySink(observer: observer, dueTime: self.dueTime, scheduler: self.scheduler, cancel: cancel)
-        let subscription = sink.run(source: self.source)
-        return (sink: sink, subscription: subscription)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element {
+        let sink = await DelaySink(observer: observer, dueTime: dueTime)
+
+        await sink.run(c.call(), source)
+        return sink
     }
 }

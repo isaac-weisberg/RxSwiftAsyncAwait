@@ -8,7 +8,7 @@
 
 import RxSwift
 
-extension ObservableType {
+public extension ObservableType {
     /**
      Creates new subscription and sends elements to publish relay(s).
      In case error occurs in debug mode, `fatalError` will be raised.
@@ -16,9 +16,23 @@ extension ObservableType {
      - parameter relays: Target publish relays for sequence elements.
      - returns: Disposable object that can be used to unsubscribe the observer.
      */
-    public func bind(to relays: PublishRelay<Element>...) -> Disposable {
-        bind(to: relays)
-    }
+
+    #if VICIOUS_TRACING
+        func bind(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            to relays: PublishRelay<Element>...
+        )
+            async -> Disposable {
+            let c = C(file, function, line)
+            return await bind(c.call(), to: relays)
+        }
+    #else
+        func bind(to relays: PublishRelay<Element>...) async -> Disposable {
+            await bind(C(), to: relays)
+        }
+    #endif
 
     /**
      Creates new subscription and sends elements to publish relay(s).
@@ -29,9 +43,23 @@ extension ObservableType {
      - parameter relays: Target publish relays for sequence elements.
      - returns: Disposable object that can be used to unsubscribe the observer.
      */
-    public func bind(to relays: PublishRelay<Element?>...) -> Disposable {
-        self.map { $0 as Element? }.bind(to: relays)
-    }
+
+    #if VICIOUS_TRACING
+        func bind(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            to relays: PublishRelay<Element?>...
+        )
+            async -> Disposable {
+            let c = C(file, function, line)
+            return await map { $0 as Element? }.bind(c.call(), to: relays)
+        }
+    #else
+        func bind(to relays: PublishRelay<Element?>...) async -> Disposable {
+            await map { $0 as Element? }.bind(C(), to: relays)
+        }
+    #endif
 
     /**
      Creates new subscription and sends elements to publish relay(s).
@@ -40,14 +68,14 @@ extension ObservableType {
      - parameter relays: Target publish relays for sequence elements.
      - returns: Disposable object that can be used to unsubscribe the observer.
      */
-    private func bind(to relays: [PublishRelay<Element>]) -> Disposable {
-        subscribe { e in
+    private func bind(_ c: C, to relays: [PublishRelay<Element>]) async -> Disposable {
+        await subscribe(c.call()) { e, c in
             switch e {
-            case let .next(element):
-                relays.forEach {
-                    $0.accept(element)
+            case .next(let element):
+                for relay in relays {
+                    await relay.accept(element, c.call())
                 }
-            case let .error(error):
+            case .error(let error):
                 rxFatalErrorInDebug("Binding error to publish relay: \(error)")
             case .completed:
                 break
@@ -62,9 +90,22 @@ extension ObservableType {
      - parameter relays: Target behavior relay for sequence elements.
      - returns: Disposable object that can be used to unsubscribe the observer.
      */
-    public func bind(to relays: BehaviorRelay<Element>...) -> Disposable {
-        self.bind(to: relays)
-    }
+    #if VICIOUS_TRACING
+        func bind(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            to relays: BehaviorRelay<Element>...
+        )
+            async -> Disposable {
+            let c = C(file, function, line)
+            return await bind(c.call(), to: relays)
+        }
+    #else
+        func bind(to relays: BehaviorRelay<Element>...) async -> Disposable {
+            await bind(C(), to: relays)
+        }
+    #endif
 
     /**
      Creates new subscription and sends elements to behavior relay(s).
@@ -75,9 +116,23 @@ extension ObservableType {
      - parameter relays: Target behavior relay for sequence elements.
      - returns: Disposable object that can be used to unsubscribe the observer.
      */
-    public func bind(to relays: BehaviorRelay<Element?>...) -> Disposable {
-        self.map { $0 as Element? }.bind(to: relays)
-    }
+
+    #if VICIOUS_TRACING
+        func bind(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            to relays: BehaviorRelay<Element?>...
+        )
+            async -> Disposable {
+            let c = C(file, function, line)
+            return await map { $0 as Element? }.bind(c.call(), to: relays)
+        }
+    #else
+        func bind(to relays: BehaviorRelay<Element?>...) async -> Disposable {
+            await map { $0 as Element? }.bind(C(), to: relays)
+        }
+    #endif
 
     /**
      Creates new subscription and sends elements to behavior relay(s).
@@ -86,14 +141,14 @@ extension ObservableType {
      - parameter relays: Target behavior relay for sequence elements.
      - returns: Disposable object that can be used to unsubscribe the observer.
      */
-    private func bind(to relays: [BehaviorRelay<Element>]) -> Disposable {
-        subscribe { e in
+    private func bind(_ c: C, to relays: [BehaviorRelay<Element>]) async -> Disposable {
+        await subscribe(c.call()) { e, c in
             switch e {
-            case let .next(element):
-                relays.forEach {
-                    $0.accept(element)
+            case .next(let element):
+                for relay in relays {
+                    await relay.accept(element, c.call())
                 }
-            case let .error(error):
+            case .error(let error):
                 rxFatalErrorInDebug("Binding error to behavior relay: \(error)")
             case .completed:
                 break
@@ -108,22 +163,48 @@ extension ObservableType {
      - parameter relays: Target replay relay for sequence elements.
      - returns: Disposable object that can be used to unsubscribe the observer.
      */
-    public func bind(to relays: ReplayRelay<Element>...) -> Disposable {
-        self.bind(to: relays)
-    }
+    #if VICIOUS_TRACING
+        func bind(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            to relays: ReplayRelay<Element>...
+        )
+            async -> Disposable {
+            let c = C(file, function, line)
+            return await bind(c.call(), to: relays)
+        }
+    #else
+        func bind(to relays: ReplayRelay<Element>...) async -> Disposable {
+            await bind(C(), to: relays)
+        }
+    #endif
 
     /**
      Creates new subscription and sends elements to replay relay(s).
-
+     
      In case error occurs in debug mode, `fatalError` will be raised.
      In case error occurs in release mode, `error` will be logged.
-
+     
      - parameter relays: Target replay relay for sequence elements.
      - returns: Disposable object that can be used to unsubscribe the observer.
      */
-    public func bind(to relays: ReplayRelay<Element?>...) -> Disposable {
-        self.map { $0 as Element? }.bind(to: relays)
-    }
+    #if VICIOUS_TRACING
+        func bind(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            to relays: ReplayRelay<Element?>...
+        )
+            async -> Disposable {
+            let c = C(file, function, line)
+            return await map { $0 as Element? }.bind(c, to: relays)
+        }
+    #else
+        func bind(to relays: ReplayRelay<Element?>...) async -> Disposable {
+            await map { $0 as Element? }.bind(C(), to: relays)
+        }
+    #endif
 
     /**
      Creates new subscription and sends elements to replay relay(s).
@@ -132,14 +213,14 @@ extension ObservableType {
      - parameter relays: Target replay relay for sequence elements.
      - returns: Disposable object that can be used to unsubscribe the observer.
      */
-    private func bind(to relays: [ReplayRelay<Element>]) -> Disposable {
-        subscribe { e in
-            switch e {
-            case let .next(element):
-                relays.forEach {
-                    $0.accept(element)
+    private func bind(_ c: C, to relays: [ReplayRelay<Element>]) async -> Disposable {
+        await subscribe(c.call()) { event, c in
+            switch event {
+            case .next(let element):
+                for relay in relays {
+                    await relay.accept(element, c.call())
                 }
-            case let .error(error):
+            case .error(let error):
                 rxFatalErrorInDebug("Binding error to behavior relay: \(error)")
             case .completed:
                 break

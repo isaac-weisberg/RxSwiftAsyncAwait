@@ -15,17 +15,17 @@ class ObservableDelaySubscriptionTest : RxTest {
 
 extension ObservableDelaySubscriptionTest {
 
-    func testDelaySubscription_TimeSpan_Simple() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelaySubscription_TimeSpan_Simple() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(50, 42),
             .next(60, 43),
             .completed(70)
             ])
 
-        let res = scheduler.start {
-            xs.delaySubscription(.seconds(30), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.delaySubscription(.seconds(30), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -39,17 +39,17 @@ extension ObservableDelaySubscriptionTest {
         ])
     }
 
-    func testDelaySubscription_TimeSpan_Error() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelaySubscription_TimeSpan_Error() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(50, 42),
             .next(60, 43),
             .error(70, testError)
             ])
 
-        let res = scheduler.start {
-            xs.delaySubscription(.seconds(30), scheduler: scheduler)
+        let res = await scheduler.start {
+            await xs.delaySubscription(.seconds(30), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -63,17 +63,17 @@ extension ObservableDelaySubscriptionTest {
             ])
     }
 
-    func testDelaySubscription_TimeSpan_Dispose() {
-        let scheduler = TestScheduler(initialClock: 0)
+    func testDelaySubscription_TimeSpan_Dispose() async {
+        let scheduler = await TestScheduler(initialClock: 0)
 
-        let xs = scheduler.createColdObservable([
+        let xs = await scheduler.createColdObservable([
             .next(50, 42),
             .next(60, 43),
             .error(70, testError)
             ])
 
-        let res = scheduler.start(disposed: 291) {
-            xs.delaySubscription(.seconds(30), scheduler: scheduler)
+        let res = await scheduler.start(disposed: 291) {
+            await xs.delaySubscription(.seconds(30), scheduler: scheduler)
         }
 
         XCTAssertEqual(res.events, [
@@ -87,16 +87,16 @@ extension ObservableDelaySubscriptionTest {
     }
 
     #if TRACE_RESOURCES
-        func testDelaySubscriptionReleasesResourcesOnComplete() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.just(1).delaySubscription(.seconds(35), scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testDelaySubscriptionReleasesResourcesOnComplete() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.just(1).delaySubscription(.seconds(35), scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
 
-        func testDelaySubscriptionReleasesResourcesOnError() {
-            let scheduler = TestScheduler(initialClock: 0)
-            _ = Observable<Int>.error(testError).delaySubscription(.seconds(35), scheduler: scheduler).subscribe()
-            scheduler.start()
+    func testDelaySubscriptionReleasesResourcesOnError() async {
+        let scheduler = await TestScheduler(initialClock: 0)
+        _ = await Observable<Int>.error(testError).delaySubscription(.seconds(35), scheduler: scheduler).subscribe()
+        await scheduler.start()
         }
     #endif
 }

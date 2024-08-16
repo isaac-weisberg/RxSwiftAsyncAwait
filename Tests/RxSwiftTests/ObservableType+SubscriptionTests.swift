@@ -15,50 +15,50 @@ class ObservableSubscriptionTest : RxTest {
 }
 
 extension ObservableSubscriptionTest {
-    func testDefaultErrorHandler() {
+    func testDefaultErrorHandler() async {
         var loggedErrors = [TestError]()
 
-        _ = Observable<Int>.error(testError).subscribe()
+        _ = await Observable<Int>.error(testError).subscribe()
         XCTAssertEqual(loggedErrors, [])
 
-        let originalErrorHandler = Hooks.defaultErrorHandler
+        let originalErrorHandler = await Hooks.getDefaultErrorHandler()
 
-        Hooks.defaultErrorHandler = { _, error in
+        await Hooks.setDefaultErrorHandler { _, error in
             loggedErrors.append(error as! TestError)
         }
 
-        _ = Observable<Int>.error(testError).subscribe()
+        _ = await Observable<Int>.error(testError).subscribe()
         XCTAssertEqual(loggedErrors, [testError])
 
-        Hooks.defaultErrorHandler = originalErrorHandler
+        await Hooks.setDefaultErrorHandler(originalErrorHandler)
 
-        _ = Observable<Int>.error(testError).subscribe()
+        _ = await Observable<Int>.error(testError).subscribe()
         XCTAssertEqual(loggedErrors, [testError])
     }
     
-    func testCustomCaptureSubscriptionCallstack() {
+    func testCustomCaptureSubscriptionCallstack() async {
         var resultCallstack = [String]()
         
-        Hooks.defaultErrorHandler = { callstack, _ in
+        await Hooks.setDefaultErrorHandler { callstack, _ in
             resultCallstack = callstack
         }
-        _ = Observable<Int>.error(testError).subscribe()
+        _ = await Observable<Int>.error(testError).subscribe()
         XCTAssertEqual(resultCallstack, [])
         
-        Hooks.customCaptureSubscriptionCallstack = {
+        await Hooks.setCustomCaptureSubscriptionCallstack {
             return ["frame1"]
         }
-        _ = Observable<Int>.error(testError).subscribe()
+        _ = await Observable<Int>.error(testError).subscribe()
         XCTAssertEqual(resultCallstack, [])
         
         Hooks.recordCallStackOnError = true
-        _ = Observable<Int>.error(testError).subscribe()
+        _ = await Observable<Int>.error(testError).subscribe()
         XCTAssertEqual(resultCallstack, ["frame1"])
         
-        Hooks.customCaptureSubscriptionCallstack = {
+        await Hooks.setCustomCaptureSubscriptionCallstack {
             return ["frame1", "frame2"]
         }
-        _ = Observable<Int>.error(testError).subscribe()
+        _ = await Observable<Int>.error(testError).subscribe()
         XCTAssertEqual(resultCallstack, ["frame1", "frame2"])
     }
 }

@@ -10,7 +10,7 @@ import RxSwift
 import RxTest
 
 final class PrimitiveMockObserver<Element> : ObserverType {
-    private let _events = Synchronized([Recorded<Event<Element>>]())
+    private let _events = Asynchronous([Recorded<Event<Element>>]())
 
     var events: [Recorded<Event<Element>>] {
         self._events.value

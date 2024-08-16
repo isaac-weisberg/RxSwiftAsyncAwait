@@ -6,8 +6,7 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-extension ObservableType {
-
+public extension ObservableType {
     /**
      Projects each element of an observable sequence into a new form.
 
@@ -17,60 +16,66 @@ extension ObservableType {
      - returns: An observable sequence whose elements are the result of invoking the transform function on each element of source.
 
      */
-    public func map<Result>(_ transform: @escaping (Element) throws -> Result)
+    func map<Result>(_ transform: @Sendable @escaping (Element) throws -> Result)
         -> Observable<Result> {
-        Map(source: self.asObservable(), transform: transform)
+        Map(source: asObservable(), transform: transform)
     }
 }
 
-final private class MapSink<SourceType, Observer: ObserverType>: Sink<Observer>, ObserverType {
-    typealias Transform = (SourceType) throws -> ResultType
+private final actor MapSink<Element: Sendable, Observer: ObserverType>: SinkOverSingleSubscription, ObserverType {
+    typealias Predicate = (Element) throws -> Observer.Element
 
-    typealias ResultType = Observer.Element 
+    private let predicate: Predicate
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
-    private let transform: Transform
+    init(predicate: @escaping Predicate, observer: Observer) {
+        self.predicate = predicate
 
-    init(transform: @escaping Transform, observer: Observer, cancel: Cancelable) {
-        self.transform = transform
-        super.init(observer: observer, cancel: cancel)
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
-    func on(_ event: Event<SourceType>) {
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next(let element):
             do {
-                let mappedElement = try self.transform(element)
-                self.forwardOn(.next(mappedElement))
-            }
-            catch let e {
-                self.forwardOn(.error(e))
-                self.dispose()
+                let newElement = try predicate(element)
+                await forwardOn(.next(newElement), c.call())
+            } catch {
+                await forwardOn(.error(error), c.call())
+                await dispose()
             }
         case .error(let error):
-            self.forwardOn(.error(error))
-            self.dispose()
+            await forwardOn(.error(error), c.call())
+            await dispose()
         case .completed:
-            self.forwardOn(.completed)
-            self.dispose()
+            await forwardOn(.completed, c.call())
+            await dispose()
         }
+    }
+
+    func dispose() async {
+        await baseSink.setDisposed()?.dispose()
     }
 }
 
-final private class Map<SourceType, ResultType>: Producer<ResultType> {
-    typealias Transform = (SourceType) throws -> ResultType
+private final class Map<Element: Sendable, ResultType: Sendable>: Producer<ResultType> {
+    typealias SourceType = Element
+    typealias Transform = @Sendable (SourceType) throws -> ResultType
 
-    private let source: Observable<SourceType>
+    private let source: Observable<Element>
 
     private let transform: Transform
 
-    init(source: Observable<SourceType>, transform: @escaping Transform) {
+    init(source: Observable<Element>, transform: @escaping Transform) {
         self.source = source
         self.transform = transform
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == ResultType {
-        let sink = MapSink(transform: self.transform, observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
-        return (sink: sink, subscription: subscription)
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == ResultType {
+        let sink = MapSink(predicate: transform, observer: observer)
+        await sink.run(c.call(), source)
+        return sink
     }
 }

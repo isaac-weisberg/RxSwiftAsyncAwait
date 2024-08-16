@@ -6,43 +6,57 @@
 //  Copyright © 2017 Krunoslav Zaher. All rights reserved.
 //
 
-private final class AsMaybeSink<Observer: ObserverType> : Sink<Observer>, ObserverType {
+private final actor AsMaybeSink<Observer: ObserverType>: SinkOverSingleSubscription, ObserverType {
     typealias Element = Observer.Element
 
     private var element: Event<Element>?
+    let baseSink: BaseSinkOverSingleSubscription<Observer>
 
-    func on(_ event: Event<Element>) {
+    init(observer: Observer) async {
+        baseSink = BaseSinkOverSingleSubscription(observer: observer)
+    }
+
+    func on(_ event: Event<Element>, _ c: C) async {
         switch event {
         case .next:
-            if self.element != nil {
-                self.forwardOn(.error(RxError.moreThanOneElement))
-                self.dispose()
+            if element != nil {
+                await forwardOn(.error(RxError.moreThanOneElement), c.call())
+                await dispose()
             }
 
-            self.element = event
+            element = event
         case .error:
-            self.forwardOn(event)
-            self.dispose()
+            await forwardOn(event, c.call())
+            await dispose()
         case .completed:
-            if let element = self.element {
-                self.forwardOn(element)
+            if let element {
+                await forwardOn(element, c.call())
             }
-            self.forwardOn(.completed)
-            self.dispose()
+            await forwardOn(.completed, c.call())
+            await dispose()
         }
+    }
+
+    func dispose() async {
+        await baseSink.setDisposed()?.dispose()
     }
 }
 
-final class AsMaybe<Element>: Producer<Element> {
+final class AsMaybe<Element: Sendable>: Producer<Element> {
     private let source: Observable<Element>
 
     init(source: Observable<Element>) {
         self.source = source
+        super.init()
     }
 
-    override func run<Observer: ObserverType>(_ observer: Observer, cancel: Cancelable) -> (sink: Disposable, subscription: Disposable) where Observer.Element == Element {
-        let sink = AsMaybeSink(observer: observer, cancel: cancel)
-        let subscription = self.source.subscribe(sink)
-        return (sink: sink, subscription: subscription)
+    override func run<Observer: ObserverType>(
+        _ c: C,
+        _ observer: Observer
+    )
+        async -> AsynchronousDisposable where Observer.Element == Element {
+        let sink = await AsMaybeSink(observer: observer)
+        await sink.run(c.call(), source)
+        return sink
     }
 }

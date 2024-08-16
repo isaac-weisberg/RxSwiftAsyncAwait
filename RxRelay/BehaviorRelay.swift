@@ -11,39 +11,42 @@ import RxSwift
 /// BehaviorRelay is a wrapper for `BehaviorSubject`.
 ///
 /// Unlike `BehaviorSubject` it can't terminate with error or completed.
-public final class BehaviorRelay<Element>: ObservableType {
+public final class BehaviorRelay<Element: Sendable>: ObservableType {
     private let subject: BehaviorSubject<Element>
 
     /// Accepts `event` and emits it to subscribers
-    public func accept(_ event: Element) {
-        self.subject.onNext(event)
+    public func accept(_ event: Element, _ c: C) async {
+        await subject.onNext(event, c.call())
     }
 
     /// Current value of behavior subject
     public var value: Element {
         // this try! is ok because subject can't error out or be disposed
-        return try! self.subject.value()
+        get async {
+            try! await subject.value
+        }
     }
 
     /// Initializes behavior relay with initial value.
     public init(value: Element) {
-        self.subject = BehaviorSubject(value: value)
+        subject = BehaviorSubject(value: value)
     }
 
     /// Subscribes observer
-    public func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        self.subject.subscribe(observer)
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+        where Observer.Element == Element {
+        await subject.subscribe(c.call(), observer)
     }
 
     /// - returns: Canonical interface for push style sequence
     public func asObservable() -> Observable<Element> {
-        self.subject.asObservable()
+        subject.asObservable()
     }
-    
+
     /// Convert to an `Infallible`
     ///
     /// - returns: `Infallible<Element>`
-    public func asInfallible() -> Infallible<Element> {
-        asInfallible(onErrorFallbackTo: .empty())
-    }
+//    public func asInfallible() async -> Infallible<Element> {
+//        await asInfallible(onErrorFallbackTo: .empty())
+//    }
 }

@@ -9,72 +9,62 @@
 /// Represents an object that is both an observable sequence as well as an observer.
 ///
 /// Each notification is broadcasted to all subscribed observers.
-public final class PublishSubject<Element>
-    : Observable<Element>
-    , SubjectType
-    , Cancelable
-    , ObserverType
-    , SynchronizedUnsubscribeType {
+public final actor PublishSubject<Element: Sendable>:
+    ObservableType,
+    SubjectType,
+    AsynchronousCancelable,
+    ObserverType,
+    AsynchronousUnsubscribeType {
     public typealias SubjectObserverType = PublishSubject<Element>
 
     typealias Observers = AnyObserver<Element>.s
     typealias DisposeKey = Observers.KeyType
-    
+
     /// Indicates whether the subject has any observers
-    public var hasObservers: Bool {
-        self.lock.performLocked { self.observers.count > 0 }
+    public func hasObservers() -> Bool {
+        observers.count > 0
     }
-    
-    private let lock = RecursiveLock()
-    
+
     // state
     private var disposed = false
     private var observers = Observers()
     private var stopped = false
     private var stoppedEvent = nil as Event<Element>?
 
-    #if DEBUG
-        private let synchronizationTracker = SynchronizationTracker()
-    #endif
-
     /// Indicates whether the subject has been isDisposed.
-    public var isDisposed: Bool {
-        self.disposed
+    public func isDisposed() -> Bool {
+        disposed
     }
-    
+
     /// Creates a subject.
-    public override init() {
-        super.init()
-        #if TRACE_RESOURCES
-            _ = Resources.incrementTotal()
-        #endif
+    public init() {
+        ObservableInit()
     }
-    
+
     /// Notifies all subscribed observers about next event.
     ///
     /// - parameter event: Event to send to the observers.
-    public func on(_ event: Event<Element>) {
-        #if DEBUG
-            self.synchronizationTracker.register(synchronizationErrorMessage: .default)
-            defer { self.synchronizationTracker.unregister() }
-        #endif
-        dispatch(self.synchronized_on(event), event)
+    public func on(_ event: Event<Element>, _ c: C) async {
+        let observers = Asynchronous_on(event)
+        for observer in observers {
+            await observer(event, c.call())
+        }
     }
 
-    func synchronized_on(_ event: Event<Element>) -> Observers {
-        self.lock.lock(); defer { self.lock.unlock() }
+    func Asynchronous_on(_ event: Event<Element>) -> Observers {
         switch event {
         case .next:
-            if self.isDisposed || self.stopped {
+            let isDisposed = isDisposed()
+            if isDisposed || stopped {
                 return Observers()
             }
-            
-            return self.observers
+
+            return observers
         case .completed, .error:
-            if self.stoppedEvent == nil {
-                self.stoppedEvent = event
-                self.stopped = true
-                let observers = self.observers
+            if stoppedEvent == nil {
+                stoppedEvent = event
+                stopped = true
+                let observers = observers
                 self.observers.removeAll()
                 return observers
             }
@@ -82,59 +72,47 @@ public final class PublishSubject<Element>
             return Observers()
         }
     }
-    
-    /**
-    Subscribes an observer to the subject.
-    
-    - parameter observer: Observer to subscribe to the subject.
-    - returns: Disposable object that can be used to unsubscribe the observer from the subject.
-    */
-    public override func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        self.lock.performLocked { self.synchronized_subscribe(observer) }
-    }
 
-    func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        if let stoppedEvent = self.stoppedEvent {
-            observer.on(stoppedEvent)
+    /**
+     Subscribes an observer to the subject.
+
+     - parameter observer: Observer to subscribe to the subject.
+     - returns: Disposable object that can be used to unsubscribe the observer from the subject.
+     */
+    
+    public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+        where Observer.Element == Element {
+        if let stoppedEvent {
+            await observer.on(stoppedEvent, c.call())
             return Disposables.create()
         }
-        
-        if self.isDisposed {
-            observer.on(.error(RxError.disposed(object: self)))
+
+        if isDisposed() {
+            await observer.on(.error(RxError.disposed(object: self)), c.call())
             return Disposables.create()
         }
-        
-        let key = self.observers.insert(observer.on)
+
+        let key = observers.insert(observer.on)
         return SubscriptionDisposable(owner: self, key: key)
     }
 
-    func synchronizedUnsubscribe(_ disposeKey: DisposeKey) {
-        self.lock.performLocked { self.synchronized_unsubscribe(disposeKey) }
+    func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) async {
+        _ = observers.removeKey(disposeKey)
     }
 
-    func synchronized_unsubscribe(_ disposeKey: DisposeKey) {
-        _ = self.observers.removeKey(disposeKey)
-    }
-    
     /// Returns observer interface for subject.
-    public func asObserver() -> PublishSubject<Element> {
+    public nonisolated func asObserver() -> PublishSubject<Element> {
         self
     }
-    
+
     /// Unsubscribe all observers and release resources.
     public func dispose() {
-        self.lock.performLocked { self.synchronized_dispose() }
+        disposed = true
+        observers.removeAll()
+        stoppedEvent = nil
     }
 
-    final func synchronized_dispose() {
-        self.disposed = true
-        self.observers.removeAll()
-        self.stoppedEvent = nil
+    deinit {
+        ObservableDeinit()
     }
-
-    #if TRACE_RESOURCES
-        deinit {
-            _ = Resources.decrementTotal()
-        }
-    #endif
 }

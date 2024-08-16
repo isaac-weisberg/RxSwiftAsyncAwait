@@ -6,17 +6,31 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-/// Base class for all disposables.
-public class DisposeBase {
-    init() {
-#if TRACE_RESOURCES
-    _ = Resources.incrementTotal()
-#endif
-    }
+func SynchronousDisposeBaseInit() {
     
-    deinit {
-#if TRACE_RESOURCES
-    _ = Resources.decrementTotal()
-#endif
-    }
+        #if TRACE_RESOURCES
+        Task {
+            _ = await Resources.incrementTotal()
+        }
+        #endif
 }
+
+func SynchronousDisposeBaseDeinit() {
+    
+        #if TRACE_RESOURCES
+            Task {
+                _ = await Resources.decrementTotal()
+            }
+        #endif
+}
+
+///// Base class for all disposables.
+//public class SynchronousDisposeBase {
+//    init() {
+//        SynchronousDisposeBaseInit()
+//    }
+//
+//    deinit {
+//        SynchronousDisposeBaseDeinit()
+//    }
+//}

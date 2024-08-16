@@ -10,8 +10,8 @@ import RxSwift
 import XCTest
 
 class ObservableSubscriptionTests : RxTest {
-    func testSubscribeOnNext() {
-        let publishSubject = PublishSubject<Int>()
+    func testSubscribeOnNext() async {
+        let publishSubject = await PublishSubject<Int>()
 
         var onNextCalled = 0
         var onErrorCalled = 0
@@ -21,7 +21,7 @@ class ObservableSubscriptionTests : RxTest {
         var lastElement: Int?
         var lastError: Swift.Error?
 
-        let subscription = publishSubject.subscribe(onNext: { n in
+        let subscription = await publishSubject.subscribe(onNext: { n in
                 lastElement = n
                 onNextCalled += 1
             }, onError: { e in
@@ -40,7 +40,7 @@ class ObservableSubscriptionTests : RxTest {
         XCTAssertTrue(onCompletedCalled == 0)
         XCTAssertTrue(onDisposedCalled == 0)
 
-        publishSubject.on(.next(1))
+        await publishSubject.on(.next(1))
 
         XCTAssertTrue(lastElement == 1)
         XCTAssertTrue(lastError == nil)
@@ -49,8 +49,8 @@ class ObservableSubscriptionTests : RxTest {
         XCTAssertTrue(onCompletedCalled == 0)
         XCTAssertTrue(onDisposedCalled == 0)
 
-        subscription.dispose()
-        publishSubject.on(.next(2))
+        await subscription.dispose()
+        await publishSubject.on(.next(2))
 
         XCTAssertTrue(lastElement == 1)
         XCTAssertTrue(lastError == nil)
@@ -60,8 +60,8 @@ class ObservableSubscriptionTests : RxTest {
         XCTAssertTrue(onDisposedCalled == 1)
     }
 
-    func testSubscribeOnError() {
-        let publishSubject = PublishSubject<Int>()
+    func testSubscribeOnError() async {
+        let publishSubject = await PublishSubject<Int>()
 
         var onNextCalled = 0
         var onErrorCalled = 0
@@ -71,7 +71,7 @@ class ObservableSubscriptionTests : RxTest {
         var lastElement: Int?
         var lastError: Swift.Error?
 
-        let subscription = publishSubject.subscribe(onNext: { n in
+        let subscription = await publishSubject.subscribe(onNext: { n in
                 lastElement = n
                 onNextCalled += 1
             }, onError: { e in
@@ -90,7 +90,7 @@ class ObservableSubscriptionTests : RxTest {
         XCTAssertTrue(onCompletedCalled == 0)
         XCTAssertTrue(onDisposedCalled == 0)
 
-        publishSubject.on(.error(testError))
+        await publishSubject.on(.error(testError))
 
         XCTAssertTrue(lastElement == nil)
         XCTAssertTrue((lastError as! TestError) == testError)
@@ -99,9 +99,9 @@ class ObservableSubscriptionTests : RxTest {
         XCTAssertTrue(onCompletedCalled == 0)
         XCTAssertTrue(onDisposedCalled == 1)
 
-        subscription.dispose()
-        publishSubject.on(.next(2))
-        publishSubject.on(.completed)
+        await subscription.dispose()
+        await publishSubject.on(.next(2))
+        await publishSubject.on(.completed)
 
         XCTAssertTrue(lastElement == nil)
         XCTAssertTrue((lastError as! TestError) == testError)
@@ -111,8 +111,8 @@ class ObservableSubscriptionTests : RxTest {
         XCTAssertTrue(onDisposedCalled == 1)
     }
 
-    func testSubscribeOnCompleted() {
-        let publishSubject = PublishSubject<Int>()
+    func testSubscribeOnCompleted() async {
+        let publishSubject = await PublishSubject<Int>()
 
         var onNextCalled = 0
         var onErrorCalled = 0
@@ -122,7 +122,7 @@ class ObservableSubscriptionTests : RxTest {
         var lastElement: Int?
         var lastError: Swift.Error?
 
-        let subscription = publishSubject.subscribe(onNext: { n in
+        let subscription = await publishSubject.subscribe(onNext: { n in
             lastElement = n
             onNextCalled += 1
             }, onError: { e in
@@ -141,7 +141,7 @@ class ObservableSubscriptionTests : RxTest {
         XCTAssertTrue(onCompletedCalled == 0)
         XCTAssertTrue(onDisposedCalled == 0)
 
-        publishSubject.on(.completed)
+        await publishSubject.on(.completed)
 
         XCTAssertTrue(lastElement == nil)
         XCTAssertTrue(lastError == nil)
@@ -150,9 +150,9 @@ class ObservableSubscriptionTests : RxTest {
         XCTAssertTrue(onCompletedCalled == 1)
         XCTAssertTrue(onDisposedCalled == 1)
 
-        subscription.dispose()
-        publishSubject.on(.next(2))
-        publishSubject.on(.error(testError))
+        await subscription.dispose()
+        await publishSubject.on(.next(2))
+        await publishSubject.on(.error(testError))
 
         XCTAssertTrue(lastElement == nil)
         XCTAssertTrue(lastError == nil)
@@ -162,8 +162,8 @@ class ObservableSubscriptionTests : RxTest {
         XCTAssertTrue(onDisposedCalled == 1)
     }
 
-    func testDisposed() {
-        let publishSubject = PublishSubject<Int>()
+    func testDisposed() async {
+        let publishSubject = await PublishSubject<Int>()
 
         var onNextCalled = 0
         var onErrorCalled = 0
@@ -173,7 +173,7 @@ class ObservableSubscriptionTests : RxTest {
         var lastElement: Int?
         var lastError: Swift.Error?
 
-        let subscription = publishSubject.subscribe(onNext: { n in
+        let subscription = await publishSubject.subscribe(onNext: { n in
             lastElement = n
             onNextCalled += 1
             }, onError: { e in
@@ -192,11 +192,11 @@ class ObservableSubscriptionTests : RxTest {
         XCTAssertTrue(onCompletedCalled == 0)
         XCTAssertTrue(onDisposedCalled == 0)
 
-        publishSubject.on(.next(1))
-        subscription.dispose()
-        publishSubject.on(.next(2))
-        publishSubject.on(.error(testError))
-        publishSubject.on(.completed)
+        await publishSubject.on(.next(1))
+        await subscription.dispose()
+        await publishSubject.on(.next(2))
+        await publishSubject.on(.error(testError))
+        await publishSubject.on(.completed)
 
         XCTAssertTrue(lastElement == 1)
         XCTAssertTrue(lastError == nil)

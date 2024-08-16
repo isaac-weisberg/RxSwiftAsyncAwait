@@ -23,22 +23,22 @@ final class MySubject<Element> : SubjectType, ObserverType where Element: Hashab
         self.disposeOn[value] = disposable
     }
     
-    func on(_ event: Event<Element>) {
-        self.observer.on(event)
+    func on(_ event: Event<Element>) async {
+        await self.observer.on(event)
         switch event {
         case .next(let value):
             if let disposable = self.disposeOn[value] {
-                disposable.dispose()
+                await disposable.dispose()
             }
         default: break
         }
     }
     
-    func subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
+    func subscribe<Observer: ObserverType>(_ observer: Observer) async -> Disposable where Observer.Element == Element {
         self.subscriptionCount += 1
         self.observer = AnyObserver(observer)
         
-        return Disposables.create {
+        return await Disposables.create {
             self.observer = AnyObserver { _ -> Void in () }
             self.disposed = true
         }

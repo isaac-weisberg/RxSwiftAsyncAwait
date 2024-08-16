@@ -36,7 +36,7 @@ extension SharedSequenceTest {
         var expectation2: XCTestExpectation!
 
         _ = backgroundScheduler.schedule(()) { _ in
-            let subscribing1 = AtomicInt(1)
+            let subscribing1 = awAtomicInt(1)
             let firstSubscriptionFuture = SingleAssignmentDisposable()
             let firstSubscription = xs.asObservable().subscribe { e in
                 if globalLoad(subscribing1) == 0 {

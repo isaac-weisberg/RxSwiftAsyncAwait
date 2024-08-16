@@ -22,14 +22,14 @@ class DisposeBagTest : RxTest {
 
 // DisposeBag insert test
 extension DisposeBagTest {
-    func testDisposeBagInsert() {
+    func testDisposeBagInsert() async {
         let disposable1 = TestDisposable()
         let disposable2 = TestDisposable()
 
-        var disposeBag: DisposeBag? = DisposeBag()
+        var disposeBag: DisposeBag? = await DisposeBag()
 
-        disposeBag?.insert(disposable1)
-        disposeBag?.insert(disposable2)
+        await disposeBag?.insert(disposable1)
+        await disposeBag?.insert(disposable2)
 
         XCTAssert(disposable1.count == 0)
         XCTAssert(disposable2.count == 0)
@@ -42,13 +42,13 @@ extension DisposeBagTest {
 
 // DisposeBag bag test
 extension DisposeBagTest {
-    func testDisposeBagVaradicInsert() {
+    func testDisposeBagVaradicInsert() async {
         let disposable1 = TestDisposable()
         let disposable2 = TestDisposable()
 
-        var disposeBag: DisposeBag? = DisposeBag()
+        var disposeBag: DisposeBag? = await DisposeBag()
 
-        disposeBag?.insert(disposable1, disposable2)
+        await disposeBag?.insert(disposable1, disposable2)
 
         XCTAssert(disposable1.count == 0)
         XCTAssert(disposable2.count == 0)
@@ -57,13 +57,13 @@ extension DisposeBagTest {
         XCTAssert(disposable2.count == 1)
     }
 
-    func testDisposeBagVaradicInsertArray() {
+    func testDisposeBagVaradicInsertArray() async {
         let disposable1 = TestDisposable()
         let disposable2 = TestDisposable()
 
-        var disposeBag: DisposeBag? = DisposeBag()
+        var disposeBag: DisposeBag? = await DisposeBag()
 
-        disposeBag?.insert([disposable1, disposable2])
+        await disposeBag?.insert([disposable1, disposable2])
 
         XCTAssert(disposable1.count == 0)
         XCTAssert(disposable2.count == 0)
@@ -98,7 +98,7 @@ extension DisposeBagTest {
         _ = disposeBag
     }
 
-    func testDisposableBuilderInsert() {
+    func testDisposableBuilderInsert() async {
         let disposable1 = TestDisposable()
         let disposable2 = TestDisposable()
         let disposable3 = TestDisposable()
@@ -109,7 +109,7 @@ extension DisposeBagTest {
             disposable2
         }
 
-        disposeBag.insert {
+        await disposeBag.insert {
             disposable3
             disposable4
         }
@@ -118,7 +118,7 @@ extension DisposeBagTest {
         XCTAssert(disposable2.count == 0)
         XCTAssert(disposable3.count == 0)
         XCTAssert(disposable4.count == 0)
-        disposeBag = DisposeBag()
+        disposeBag = await DisposeBag()
         XCTAssert(disposable1.count == 1)
         XCTAssert(disposable2.count == 1)
         XCTAssert(disposable3.count == 1)

@@ -7,7 +7,7 @@
 //
 
 import RxSwift
-import RxCocoa
+// import RxCocoa
 import RxTest
 import XCTest
 import Dispatch
@@ -22,7 +22,7 @@ class AnomaliesTest: RxTest {
 
 extension AnomaliesTest {
     func test936() {
-        func performSharingOperatorsTest(share: @escaping (Observable<Int>) -> Observable<Int>) {
+        func performSharingOperatorsTest(share: @escaping (Observable<Int>) async -> Observable<Int>) {
             let queue = DispatchQueue(
                 label: "Test",
                 attributes: .concurrent // commenting this to use a serial queue remove the issue
@@ -32,24 +32,26 @@ extension AnomaliesTest {
                 let expectation = self.expectation(description: "wait until sequence completes")
 
                 queue.async {
-                    let scheduler: SchedulerType = ConcurrentDispatchQueueScheduler(queue: queue, leeway: .milliseconds(5))
-
-                    func makeSequence(label: String, period: RxTimeInterval) -> Observable<Int> {
-                        return share(Observable<Int>.interval(period, scheduler: scheduler))
-                    }
-
-                    _ = makeSequence(label: "main", period: .milliseconds(100))
-                        .flatMapLatest { (index: Int) -> Observable<(Int, Int)> in
-                            return makeSequence(label: "nested", period: .milliseconds(20)).map { (index, $0) }
+                    Task {
+                        let scheduler: SchedulerType = ConcurrentDispatchQueueScheduler(queue: queue, leeway: .milliseconds(5))
+                        
+                        func makeSequence(label: String, period: RxTimeInterval) async -> Observable<Int> {
+                            return await share(Observable<Int>.interval(period, scheduler: scheduler))
                         }
-                        .take(10)
-                        .enumerated().map { ($0, $1.0, $1.1) }
-                        .subscribe(
-                            onNext: { _ in },
-                            onCompleted: {
-                                expectation.fulfill()
-                            } 
-                    )
+                        
+                        _ = await makeSequence(label: "main", period: .milliseconds(100))
+                            .flatMapLatest { (index: Int) -> Observable<(Int, Int)> in
+                                return await makeSequence(label: "nested", period: .milliseconds(20)).map { (index, $0) }
+                            }
+                            .take(10)
+                            .enumerated().map { ($0, $1.0, $1.1) }
+                            .subscribe(
+                                onNext: { _ in },
+                                onCompleted: {
+                                    expectation.fulfill()
+                                }
+                            )
+                    }
                 }
             }
 
@@ -59,27 +61,29 @@ extension AnomaliesTest {
         }
 
         for op in [
-                { $0.share(replay: 1) },
-                { $0.replay(1).refCount() },
-                { $0.publish().refCount() }
-            ] as [(Observable<Int>) -> Observable<Int>] {
+            { await $0.share(replay: 1) },
+            { await $0.replay(1).refCount() },
+                { await $0.publish().refCount() }
+            ] as [(Observable<Int>) async -> Observable<Int>] {
             performSharingOperatorsTest(share: op)
         }
     }
 
-    func test1323() {
-        func performSharingOperatorsTest(share: @escaping (Observable<Int>) -> Observable<Int>) {
-            _ = share(Observable<Int>.create({ observer in
-                    observer.on(.next(1))
+    func test1323() async {
+        func performSharingOperatorsTest(share: @escaping (Observable<Int>) async -> Observable<Int>) async {
+            _ = await share(Observable<Int>.create({ observer in
+                await observer.on(.next(1))
                     Thread.sleep(forTimeInterval: 0.1)
-                    observer.on(.completed)
+                await observer.on(.completed)
                     return Disposables.create()
                 })
                 .flatMap { int -> Observable<Int> in
-                    return Observable.create { observer -> Disposable in
+                    return await Observable.create { observer -> Disposable in
                         DispatchQueue.global().async {
-                            observer.onNext(int)
-                            observer.onCompleted()
+                            Task {
+                                await observer.onNext(int)
+                                await observer.onCompleted()
+                            }
                         }
                         return Disposables.create()
                     }
@@ -88,36 +92,38 @@ extension AnomaliesTest {
         }
 
         for op in [
-            { $0.share(replay: 0, scope: .whileConnected) },
-            { $0.share(replay: 0, scope: .forever) },
-            { $0.share(replay: 1, scope: .whileConnected) },
-            { $0.share(replay: 1, scope: .forever) },
-            { $0.share(replay: 2, scope: .whileConnected) },
-            { $0.share(replay: 2, scope: .forever) },
-            ] as [(Observable<Int>) -> Observable<Int>] {
-            performSharingOperatorsTest(share: op)
+            { await $0.share(replay: 0, scope: .whileConnected) },
+            { await $0.share(replay: 0, scope: .forever) },
+            { await $0.share(replay: 1, scope: .whileConnected) },
+            { await $0.share(replay: 1, scope: .forever) },
+            { await $0.share(replay: 2, scope: .whileConnected) },
+            { await $0.share(replay: 2, scope: .forever) },
+            ] as [(Observable<Int>) async -> Observable<Int>] {
+            await performSharingOperatorsTest(share: op)
         }
     }
 
-    func test1344(){
-        let disposeBag = DisposeBag()
-        let foo = Observable<Int>.create({ observer in
-                observer.on(.next(1))
+    func test1344() async {
+        let disposeBag = await DisposeBag()
+        let foo = await Observable<Int>.create({ observer in
+            await observer.on(.next(1))
                 Thread.sleep(forTimeInterval: 0.1)
-                observer.on(.completed)
+            await observer.on(.completed)
                 return Disposables.create()
             })
             .flatMap { int -> Observable<[Int]> in
-                return Observable.create { observer -> Disposable in
+                return await Observable.create { observer -> Disposable in
                     DispatchQueue.global().async {
-                        observer.onNext([int])
+                        Task {
+                            await observer.onNext([int])
+                        }
                     }
                     self.sleep(0.1)
                     return Disposables.create()
                 }
             }
 
-        Observable.merge(foo, .just([42]))
+        await Observable.merge(foo, .just([42]))
             .subscribe()
             .disposed(by: disposeBag)
     }
@@ -133,7 +139,7 @@ extension AnomaliesTest {
                         )
 
                 queue.async {
-                    func makeSequence(label: String, period: RxTimeInterval) -> Observable<Int> {
+                    @Sendable func makeSequence(label: String, period: RxTimeInterval) async -> Observable<Int> {
                         let schedulerQueue = DispatchQueue(
                             label: "Test",
                             attributes: .concurrent
@@ -141,22 +147,24 @@ extension AnomaliesTest {
 
                         let scheduler: SchedulerType = ConcurrentDispatchQueueScheduler(queue: schedulerQueue, leeway: .milliseconds(0))
 
-                        return share(Observable<Int>.interval(period, scheduler: scheduler))
+                        return await share(Observable<Int>.interval(period, scheduler: scheduler))
                     }
 
-                    _ = Observable.of(
+                    Task {
+                        _ = await Observable.of(
                             makeSequence(label: "main", period: .milliseconds(200)),
                             makeSequence(label: "nested", period: .milliseconds(300))
                         ).merge()
-                        .take(1)
-                        .subscribe(
-                            onNext: { _ in
-                                Thread.sleep(forTimeInterval: 0.4)
-                            },
-                            onCompleted: {
-                                expectation.fulfill()
-                        }
-                    )
+                            .take(1)
+                            .subscribe(
+                                onNext: { _ in
+                                    Thread.sleep(forTimeInterval: 0.4)
+                                },
+                                onCompleted: {
+                                    expectation.fulfill()
+                                }
+                            )
+                    }
                 }
             }
 
@@ -166,13 +174,13 @@ extension AnomaliesTest {
         }
 
         for op in [
-            { $0.share(replay: 0, scope: .whileConnected) },
-            { $0.share(replay: 0, scope: .forever) },
-            { $0.share(replay: 1, scope: .whileConnected) },
-            { $0.share(replay: 1, scope: .forever) },
-            { $0.share(replay: 2, scope: .whileConnected) },
-            { $0.share(replay: 2, scope: .forever) },
-            ] as [(Observable<Int>) -> Observable<Int>] {
+            { await $0.share(replay: 0, scope: .whileConnected) },
+            { await $0.share(replay: 0, scope: .forever) },
+            { await $0.share(replay: 1, scope: .whileConnected) },
+            { await $0.share(replay: 1, scope: .forever) },
+            { await await $0.share(replay: 2, scope: .whileConnected) },
+            { await await $0.share(replay: 2, scope: .forever) },
+            ] as [(Observable<Int>) async -> Observable<Int>] {
             performSharingOperatorsTest(share: op)
         }
     }

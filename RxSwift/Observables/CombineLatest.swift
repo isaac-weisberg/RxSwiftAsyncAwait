@@ -5,127 +5,140 @@
 //  Created by Krunoslav Zaher on 3/21/15.
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
-
-protocol CombineLatestProtocol: AnyObject {
-    func next(_ index: Int)
-    func fail(_ error: Swift.Error)
-    func done(_ index: Int)
-}
-
-class CombineLatestSink<Observer: ObserverType>
-    : Sink<Observer>
-    , CombineLatestProtocol {
-    typealias Element = Observer.Element 
-   
-    let lock = RecursiveLock()
-
-    private let arity: Int
-    private var numberOfValues = 0
-    private var numberOfDone = 0
-    private var hasValue: [Bool]
-    private var isDone: [Bool]
-   
-    init(arity: Int, observer: Observer, cancel: Cancelable) {
-        self.arity = arity
-        self.hasValue = [Bool](repeating: false, count: arity)
-        self.isDone = [Bool](repeating: false, count: arity)
-        
-        super.init(observer: observer, cancel: cancel)
-    }
-    
-    func getResult() throws -> Element {
-        rxAbstractMethod()
-    }
-    
-    func next(_ index: Int) {
-        if !self.hasValue[index] {
-            self.hasValue[index] = true
-            self.numberOfValues += 1
-        }
-
-        if self.numberOfValues == self.arity {
-            do {
-                let result = try self.getResult()
-                self.forwardOn(.next(result))
-            }
-            catch let e {
-                self.forwardOn(.error(e))
-                self.dispose()
-            }
-        }
-        else {
-            var allOthersDone = true
-
-            for i in 0 ..< self.arity {
-                if i != index && !self.isDone[i] {
-                    allOthersDone = false
-                    break
-                }
-            }
-            
-            if allOthersDone {
-                self.forwardOn(.completed)
-                self.dispose()
-            }
-        }
-    }
-    
-    func fail(_ error: Swift.Error) {
-        self.forwardOn(.error(error))
-        self.dispose()
-    }
-    
-    func done(_ index: Int) {
-        if self.isDone[index] {
-            return
-        }
-
-        self.isDone[index] = true
-        self.numberOfDone += 1
-
-        if self.numberOfDone == self.arity {
-            self.forwardOn(.completed)
-            self.dispose()
-        }
-    }
-}
-
-final class CombineLatestObserver<Element>
-    : ObserverType
-    , LockOwnerType
-    , SynchronizedOnType {
-    typealias ValueSetter = (Element) -> Void
-    
-    private let parent: CombineLatestProtocol
-    
-    let lock: RecursiveLock
-    private let index: Int
-    private let this: Disposable
-    private let setLatestValue: ValueSetter
-    
-    init(lock: RecursiveLock, parent: CombineLatestProtocol, index: Int, setLatestValue: @escaping ValueSetter, this: Disposable) {
-        self.lock = lock
-        self.parent = parent
-        self.index = index
-        self.this = this
-        self.setLatestValue = setLatestValue
-    }
-    
-    func on(_ event: Event<Element>) {
-        self.synchronizedOn(event)
-    }
-
-    func synchronized_on(_ event: Event<Element>) {
-        switch event {
-        case .next(let value):
-            self.setLatestValue(value)
-            self.parent.next(self.index)
-        case .error(let error):
-            self.this.dispose()
-            self.parent.fail(error)
-        case .completed:
-            self.this.dispose()
-            self.parent.done(self.index)
-        }
-    }
-}
+//
+//protocol CombineLatestProtocol: AnyObject {
+//    func next(_ c: C, _ index: Int) async
+//    func fail(_ c: C, _ error: Swift.Error) async
+//    func done(_ c: C, _ index: Int) async
+//}
+//
+//actor CombineLatestSink<Observer: ObserverType>:
+//    Sink,
+//    CombineLatestProtocol {
+//    typealias Element = Observer.Element
+//
+//    private let arity: Int
+//    private var numberOfValues = 0
+//    private var numberOfDone = 0
+//    private var hasValue: [Bool]
+//    private var isDone: [Bool]
+//    private var disposed = false
+//
+//    let baseSink: BaseSink<Observer>
+//
+//    init(arity: Int, observer: Observer) async {
+//        self.arity = arity
+//        hasValue = [Bool](repeating: false, count: arity)
+//        isDone = [Bool](repeating: false, count: arity)
+//
+//        baseSink = BaseSink(observer: observer)
+//    }
+//
+//    func getResult() async throws -> Element {
+//        rxAbstractMethod()
+//    }
+//
+//    func next(_ c: C, _ index: Int) async {
+//        if !hasValue[index] {
+//            hasValue[index] = true
+//            numberOfValues += 1
+//        }
+//
+//        if numberOfValues == arity {
+//            do {
+//                let result = try await getResult()
+//                await forwardOn(.next(result), c.call())
+//            } catch let e {
+//                await self.forwardOn(.error(e), c.call())
+//                await self.dispose()
+//            }
+//        } else {
+//            var allOthersDone = true
+//
+//            for i in 0 ..< arity {
+//                if i != index, !isDone[i] {
+//                    allOthersDone = false
+//                    break
+//                }
+//            }
+//
+//            if allOthersDone {
+//                await forwardOn(.completed, c.call())
+//                await dispose()
+//            }
+//        }
+//    }
+//
+//    func fail(_ c: C, _ error: Swift.Error) async {
+//        await forwardOn(.error(error), c.call())
+//        await dispose()
+//    }
+//
+//    func done(_ c: C, _ index: Int) async {
+//        if isDone[index] {
+//            return
+//        }
+//
+//        isDone[index] = true
+//        numberOfDone += 1
+//
+//        if numberOfDone == arity {
+//            await forwardOn(.completed, c.call())
+//            await dispose()
+//        }
+//    }
+//
+//    func dispose() async {
+//        if !disposed {
+//            disposed = true
+//        }
+//    }
+//
+//    func forwardOn(_ event: Event<Observer.Element>, _ c: C) async {
+//        if !disposed {
+//            await baseSink.observer.on(event, c.call())
+//        }
+//    }
+//}
+//
+//final class CombineLatestObserver<Element>:
+//    ObserverType,
+//    AsynchronousOnType {
+//    typealias ValueSetter = (Element) -> Void
+//
+//    private let parent: CombineLatestProtocol
+//
+//    private let index: Int
+//    private let this: AsynchronousDisposable
+//    private let setLatestValue: ValueSetter
+//
+//    init(
+//        parent: CombineLatestProtocol,
+//        index: Int,
+//        setLatestValue: @escaping ValueSetter,
+//        this: AsynchronousDisposable
+//    ) {
+//        self.parent = parent
+//        self.index = index
+//        self.this = this
+//        self.setLatestValue = setLatestValue
+//    }
+//
+//    func on(_ event: Event<Element>, _ c: C) async {
+//        await AsynchronousOn(event, c.call())
+//    }
+//
+//    func Asynchronous_on(_ event: Event<Element>, _ c: C) async {
+//        switch event {
+//        case .next(let value):
+//            setLatestValue(value)
+//            await parent.next(c.call(), index)
+//        case .error(let error):
+//            await this.dispose()
+//            await parent.fail(c.call(), error)
+//        case .completed:
+//            await this.dispose()
+//            await parent.done(c.call(), index)
+//        }
+//    }
+//}
