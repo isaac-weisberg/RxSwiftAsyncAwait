@@ -154,8 +154,6 @@ public extension ObservableType {
     }
 }
 
-import Foundation
-
 public extension Hooks {
     typealias DefaultErrorHandler = (_ subscriptionCallStack: [String], _ error: Error) -> Void
     typealias CustomCaptureSubscriptionCallstack = () -> [String]

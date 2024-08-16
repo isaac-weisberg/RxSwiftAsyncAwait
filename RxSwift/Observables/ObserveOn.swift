@@ -1,10 +1,10 @@
 public extension ObservableConvertibleType {
-    func observe<Scheduler: AsyncScheduler>(on scheduler: Scheduler) -> ObserveOn<Element, Scheduler> {
+    func observe(on scheduler: some AsyncScheduler) -> Observable<Element> {
         ObserveOn(scheduler: scheduler, source: asObservable())
     }
 }
 
-public final class ObserveOn<Element: Sendable, Scheduler: AsyncScheduler>: Observable<Element> {
+final class ObserveOn<Element: Sendable, Scheduler: AsyncScheduler>: Observable<Element> {
     let scheduler: Scheduler
     let source: Observable<Element>
 
@@ -13,13 +13,18 @@ public final class ObserveOn<Element: Sendable, Scheduler: AsyncScheduler>: Obse
         self.source = source
     }
 
-    override public func subscribe<Observer: AsyncObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+    override public func subscribe<Observer: AsyncObserverType>(
+        _ c: C,
+        _ observer: Observer
+    )
+        async -> AsynchronousDisposable
         where Observer.Element == Element {
         let sink = ObserveOnSink(scheduler: scheduler, observer: observer)
         await sink.run(c.call(), source)
         return sink
     }
 }
+
 
 // public extension SubscribeToSyncCallType {
 //    func observe<Scheduler: ActorScheduler>(on scheduler: Scheduler) -> ObserveOnAny<Scheduler, Self> {
@@ -122,17 +127,16 @@ final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
         if sourceSubscription.isDisposed {
             return
         }
-        
-        scheduler.perform(locking(disposedFlag), c.call(), { [observer] c in
+
+        scheduler.perform(locking(disposedFlag), c.call()) { [observer] c in
             await observer.on(event, c.call())
-        })
+        }
     }
 
-    
     func run(_ c: C, _ source: Observable<Element>) async {
         await sourceSubscription.setDisposable(source.subscribe(c.call(), self))?.dispose()
     }
-    
+
     public func dispose() async {
         disposedFlag.dispose()?.dispose()
         await sourceSubscription.dispose()?.dispose()
