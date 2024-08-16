@@ -1,6 +1,6 @@
 public extension ObservableConvertibleType {
-    func observe(on scheduler: some AsyncScheduler) -> Observable<Element> {
-        ObserveOn(scheduler: scheduler, source: asObservable())
+    func observe<Scheduler: AsyncScheduler>(on scheduler: Scheduler) -> Observable<Element> {
+        ObserveOn<Element, Scheduler>(scheduler: scheduler, source: asObservable())
     }
 }
 
@@ -24,7 +24,6 @@ final class ObserveOn<Element: Sendable, Scheduler: AsyncScheduler>: Observable<
         return sink
     }
 }
-
 
 // public extension SubscribeToSyncCallType {
 //    func observe<Scheduler: ActorScheduler>(on scheduler: Scheduler) -> ObserveOnAny<Scheduler, Self> {

@@ -1,3 +1,10 @@
+public extension ObservableConvertibleType {
+    func observe<Scheduler: LegacySynchronousScheduler>(on scheduler: Scheduler)
+        -> ObserveOnLegacySynchronousScheduler<Element, Scheduler> {
+        ObserveOnLegacySynchronousScheduler(source: asObservable(), scheduler: scheduler)
+    }
+}
+
 public protocol LegacySynchronousScheduler: Sendable {
     func perform(_ work: @Sendable () -> Void) async
 }
@@ -17,13 +24,6 @@ public final class WhateverLegacySynchronousScheduler: LegacySynchronousSchedule
 
     public func perform(_ work: @Sendable () -> Void) async {
         work()
-    }
-}
-
-public extension ObservableConvertibleType {
-    func observe<Scheduler: LegacySynchronousScheduler>(on scheduler: Scheduler)
-        -> ObserveOnLegacySynchronousScheduler<Element, Scheduler> {
-        ObserveOnLegacySynchronousScheduler(source: asObservable(), scheduler: scheduler)
     }
 }
 
