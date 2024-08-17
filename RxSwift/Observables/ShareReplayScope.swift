@@ -147,7 +147,7 @@ public extension ObservableType {
         case .whileConnected:
             switch replay {
             case 0: return ShareWhileConnected(source: asObservable())
-            case 1: return await ShareReplay1WhileConnected(source: asObservable()).asObservable()
+            case 1: return ShareReplay1WhileConnected(source: asObservable()).asObservable()
             default: _ = fatalError() // await multicast(makeSubject: { await ReplaySubject.create(bufferSize:
                 // replay) }).refCount()
             }
@@ -155,157 +155,96 @@ public extension ObservableType {
     }
 }
 
-private final actor ShareReplay1WhileConnectedConnection<Element>:
+private final actor ShareReplay1WhileConnectedConnection<Element: Sendable>:
     ObserverType,
     AsynchronousUnsubscribeType {
     typealias Observers = AnyObserver<Element>.s
     typealias DisposeKey = Observers.KeyType
+    private let subscription: SerialPerpetualDisposable<Disposable>
 
-    typealias Parent = ShareReplay1WhileConnected<Element>
-    private let parent: Parent
-    private let subscription: SingleAssignmentDisposable
-
-    private var disposed = false
-    fileprivate var observers = Observers()
+    private var connected = false
+    private var observers = Observers()
     private var element: Element?
+    private let source: Observable<Element>
 
-    init(parent: Parent) async {
-        self.parent = parent
-        subscription = await SingleAssignmentDisposable()
-
-        #if TRACE_RESOURCES
-            _ = await Resources.incrementTotal()
-        #endif
+    init(source: Observable<Element>) {
+        self.source = source
+        subscription = SerialPerpetualDisposable()
     }
 
-    final func on(_ event: Event<Element>, _ c: C) async {
-        let observers = await Asynchronous_on(event)
-        await dispatch(observers, event, c.call())
-    }
-
-    private final func Asynchronous_on(_ event: Event<Element>) async -> Observers {
-        if disposed {
-            return Observers()
+    func on(_ event: Event<Element>, _ c: C) async {
+        if !connected {
+            // happens, must've not disposed yet
+            return
         }
 
         switch event {
         case .next(let element):
             self.element = element
-            return observers
+            await dispatch(observers, event, c.call())
         case .error, .completed:
-            let observers = observers
-            await Asynchronous_dispose()
-            return observers
+            let observersThatWillReceiveTheEvent = observers
+            connected = false // source has completed
+            let sourceDisposable = subscription.dispose()
+            observers.removeAll()
+            await dispatch(observersThatWillReceiveTheEvent, event, c.call())
+            await sourceDisposable?.dispose()
         }
     }
 
-    final func connect() async {
-        await subscription.setDisposable(parent.source.subscribe(C(), self))
-    }
-
-    final func Asynchronous_subscribe<Observer: ObserverType>(
-        _ c: C,
-        _ observer: Observer
-    )
-        async -> AsynchronousDisposable
+    func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
         where Observer.Element == Element {
+        let observersCount = observers.count
+
+        let disposeKey = observers.insert(observer.on)
+
+        let observerDisposable = SubscriptionDisposable(owner: self, key: disposeKey)
+
         if let element {
             await observer.on(.next(element), c.call())
         }
 
-        let disposeKey = observers.insert(observer.on)
-
-        return SubscriptionDisposable(owner: self, key: disposeKey)
-    }
-
-    private final func Asynchronous_dispose() async {
-        disposed = true
-        if await parent.connection === self {
-            await parent.setConnection(nil)
+        if observersCount == 0 {
+            await subscription.replace(source.subscribe(c.call(), self))?.dispose()
+            #if TRACE_RESOURCES
+                _ = await Resources.incrementTotal()
+            #endif
         }
-        observers = Observers()
+
+        return observerDisposable
     }
 
-    final func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) async {
-        if await Asynchronous_unsubscribe(disposeKey) {
-            await subscription.dispose()
-        }
-    }
-
-    @inline(__always)
-    private final func Asynchronous_unsubscribe(_ disposeKey: DisposeKey) async -> Bool {
+    func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) async {
         // if already unsubscribed, just return
+        // PS: again, apparently, in RxSwift, it's okay for the same disposable to be disposed multiple times, quite similar to how sinks sometimes get disposed twice
         if observers.removeKey(disposeKey) == nil {
-            return false
+            return
         }
 
         if observers.count == 0 {
-            await Asynchronous_dispose()
-            return true
-        }
-
-        return false
-    }
-
-    #if TRACE_RESOURCES
-        deinit {
-            Task {
+            connected = false
+            await subscription.dispose()?.dispose()
+            #if TRACE_RESOURCES
                 _ = await Resources.decrementTotal()
-            }
+            #endif
         }
-    #endif
+    }
 }
 
 // optimized version of share replay for most common case
-private final class ShareReplay1WhileConnected<Element: Sendable>:
-    Observable<Element> {
+private final class ShareReplay1WhileConnected<Element: Sendable>: Observable<Element> {
     fileprivate typealias Connection = ShareReplay1WhileConnectedConnection<Element>
 
-    fileprivate let source: Observable<Element>
-
-    fileprivate var connection: Connection?
-    fileprivate func setConnection(_ newValue: Connection?) {
-        connection = newValue
-    }
+    fileprivate let connection: Connection
 
     init(source: Observable<Element>) {
-        self.source = source
+        connection = Connection(source: source)
         super.init()
     }
 
-    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Element {
-        let connection = await Asynchronous_subscribe(observer)
-        let count = await connection.observers.count
-
-        let disposable = await connection.Asynchronous_subscribe(c.call(), observer)
-
-        if count == 0 {
-            await connection.connect()
-        }
-
-        return disposable
-    }
-
-    @inline(__always)
-    private func Asynchronous_subscribe<Observer: ObserverType>(_ observer: Observer) async -> Connection
-        where Observer.Element == Element {
-        let connection: Connection
-
-        if let existingConnection = self.connection {
-            connection = existingConnection
-        } else {
-            connection = await ShareReplay1WhileConnectedConnection<Element>(
-                parent: self
-            )
-            self.connection = connection
-        }
-
-        return connection
-    }
-
-    deinit {
-        ObservableDeinit()
+        await connection.run(c.call(), observer)
     }
 }
 
@@ -347,7 +286,6 @@ private final actor ShareWhileConnectedConnection<Element: Sendable>:
 
     func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
         where Observer.Element == Element {
-        _ = observer
         let oldObserverCount = observers.count
 
         let disposeKey = observers.insert(observer.on)
@@ -355,13 +293,12 @@ private final actor ShareWhileConnectedConnection<Element: Sendable>:
         let observerDisposable = SubscriptionDisposable(owner: self, key: disposeKey)
 
         if oldObserverCount == 0 {
-            #if TRACE_RESOURCES
-                Task {
-                    await Resources.incrementTotal()
-                }
-            #endif
-            let sourceDisposable = await source.subscribe(C(), self)
+            connected = true
+            let sourceDisposable = await source.subscribe(c.call(), self)
             await subscription.replace(sourceDisposable)?.dispose()
+            #if TRACE_RESOURCES
+                _ = await Resources.incrementTotal()
+            #endif
         }
 
         return observerDisposable
@@ -377,16 +314,11 @@ private final actor ShareWhileConnectedConnection<Element: Sendable>:
         if observers.count == 0 {
             connected = false
             await subscription.dispose()?.dispose()
+            #if TRACE_RESOURCES
+                _ = await Resources.decrementTotal()
+            #endif
         }
     }
-
-    #if TRACE_RESOURCES
-        deinit {
-            Task {
-                _ = await Resources.decrementTotal()
-            }
-        }
-    #endif
 }
 
 // optimized version of share replay for most common case
