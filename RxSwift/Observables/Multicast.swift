@@ -9,7 +9,7 @@
 /**
  Represents an observable wrapper that can be connected and disconnected from its underlying observable sequence.
  */
-public class ConnectableObservable<Element>:
+public class ConnectableObservable<Element: Sendable>:
     Observable<Element>,
     ConnectableObservableType {
     /**
@@ -60,7 +60,7 @@ public extension ObservableType {
      - returns: A connectable observable sequence that shares a single subscription to the underlying sequence.
      */
     func publish() -> ConnectableObservable<Element> {
-        multicast { PublishSubject() }
+        multicast(replayModel: EmptyReplayModel())
     }
 }
 
@@ -77,7 +77,7 @@ public extension ObservableType {
      */
     func replay(_ bufferSize: Int)
         -> ConnectableObservable<Element> {
-        multicast { ReplaySubject.create(bufferSize: bufferSize) }
+        multicast(replayModel: ReplayBufferModel(bufferSizeLimit: bufferSize))
     }
 
     /**
@@ -91,7 +91,7 @@ public extension ObservableType {
      */
     func replayAll()
         -> ConnectableObservable<Element> {
-        multicast { ReplaySubject.createUnbounded() }
+        multicast(replayModel: ReplayBufferModel(bufferSizeLimit: nil))
     }
 }
 
@@ -109,38 +109,9 @@ public extension ConnectableObservableType {
 }
 
 public extension ObservableType {
-    /**
-     Multicasts the source sequence notifications through the specified subject to the resulting connectable observable.
-
-     Upon connection of the connectable observable, the subject is subscribed to the source exactly one, and messages are forwarded to the observers registered with the connectable observable.
-
-     For specializations with fixed subject types, see `publish` and `replay`.
-
-     - seealso: [multicast operator on reactivex.io](http://reactivex.io/documentation/operators/publish.html)
-
-     - parameter subject: Subject to push source elements into.
-     - returns: A connectable observable sequence that upon connection causes the source sequence to push results into the specified subject.
-     */
-    func multicast<Subject: SubjectType>(_ subject: Subject)
-        -> ConnectableObservable<Subject.Element> where Subject.Observer.Element == Element {
-        ConnectableObservableAdapter(source: asObservable(), makeSubject: { subject })
-    }
-
-    /**
-     Multicasts the source sequence notifications through an instantiated subject to the resulting connectable observable.
-
-     Upon connection of the connectable observable, the subject is subscribed to the source exactly one, and messages are forwarded to the observers registered with the connectable observable.
-
-     Subject is cleared on connection disposal or in case source sequence produces terminal event.
-
-     - seealso: [multicast operator on reactivex.io](http://reactivex.io/documentation/operators/publish.html)
-
-     - parameter makeSubject: Factory function used to instantiate a subject for each connection.
-     - returns: A connectable observable sequence that upon connection causes the source sequence to push results into the specified subject.
-     */
-    func multicast<Subject: SubjectType>(makeSubject: @escaping () -> Subject)
-        -> ConnectableObservable<Subject.Element> where Subject.Observer.Element == Element {
-        ConnectableObservableAdapter(source: asObservable(), makeSubject: makeSubject)
+    func multicast<ReplayModel: SubjectReplayModel>(replayModel: ReplayModel)
+        -> ConnectableObservable<ReplayModel.Element> where ReplayModel.Element == Element {
+        ConnectableObservableViaReplayModel(source: asObservable(), replayModel: replayModel)
     }
 }
 
@@ -153,11 +124,10 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
     private let sourceSubscription = SerialPerpetualDisposable<Disposable>()
     private let source: Observable<ReplayModel.Element>
 
-    private var connected = false
+    private var connection: ConnectionDisposable?
     private var replayModel: ReplayModel
     private var observers = Observers()
-
-    private var connectionId: UInt = 0
+    private var lastConnectionId: UInt = 0
 
     init(
         source: Observable<Element>,
@@ -168,7 +138,7 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        if !connected {
+        if connection == nil {
             return // okay, maybe not finished disposing source
         }
 
@@ -177,16 +147,13 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
             replayModel.add(element: element)
             await dispatch(observers, event, c.call())
         case .completed, .error:
-            let sourceDisposeable = sourceSubscription.dispose()
-            connected = false
             await dispatch(observers, event, c.call())
-
-            await sourceDisposeable?.dispose()
+            await disconnect()
         }
     }
 
     struct ConnectionDisposable: Disposable {
-        let sink: ConnectionSink<ReplayModel>
+        weak var sink: ConnectionSink<ReplayModel>?
         let id: UInt
 
         init(sink: ConnectionSink<ReplayModel>, id: UInt) {
@@ -195,18 +162,19 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
         }
 
         func dispose() async {
-            await sink.dispose(id: id)
+            await sink?.dispose(id: id)
         }
     }
 
     func connect(_ c: C) async -> ConnectionDisposable {
-        if connected {
-            fatalError()
+        if let connection {
+            return connection
         }
 
         await sourceSubscription.replace(source.subscribe(c.call(), self))?.dispose()
 
-        connectionId = connectionId + 1
+        let connectionId = lastConnectionId + 1
+        lastConnectionId = connectionId
 
         let disposable = ConnectionDisposable(sink: self, id: connectionId)
 
@@ -229,8 +197,8 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
     }
 
     func disconnect() async {
-        if connected {
-            connected = false
+        if let connection {
+            self.connection = nil
             let sourceDisposable = sourceSubscription.dispose()
             replayModel.removeAll()
             observers.removeAll()
@@ -244,13 +212,16 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
     }
 
     func dispose(id: UInt) async {
-        if id == connectionId {
+        if id == connection?.id {
             await dispose()
         }
     }
 }
 
-private final actor ConnectableObservableAdapter<ReplayModel: SubjectReplayModel>: ConnectableObservableType {
+private final class ConnectableObservableViaReplayModel<ReplayModel: SubjectReplayModel>: ConnectableObservable<
+    ReplayModel
+        .Element
+> {
     typealias Element = ReplayModel.Element
 
     // state
@@ -265,11 +236,11 @@ private final actor ConnectableObservableAdapter<ReplayModel: SubjectReplayModel
         ObservableDeinit()
     }
 
-    func connect(_ c: C) async -> Disposable {
+    override func connect(_ c: C) async -> Disposable {
         await connectionSink.connect(c.call())
     }
 
-    func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where Observer: ObserverType, ReplayModel.Element == Observer.Element {
         await connectionSink.subscribe(c.call(), observer)
     }
@@ -420,7 +391,7 @@ private final actor MulticastSink<Subject: SubjectType, Observer: ObserverType>:
     }
 }
 
-private final class Multicast<Subject: SubjectType, Result>: Producer<Result> {
+private final class Multicast<Subject: SubjectType, Result: Sendable>: Producer<Result> {
     typealias SubjectSelectorType = () throws -> Subject
     typealias SelectorType = (Observable<Subject.Element>) throws -> Observable<Result>
 

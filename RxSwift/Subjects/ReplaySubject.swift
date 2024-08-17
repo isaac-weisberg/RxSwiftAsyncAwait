@@ -193,46 +193,38 @@ final class SynchronousReplaySubjectModel<Element: Sendable> {
     }
 }
 
-protocol SubjectReplayModel: Sendable {
+public protocol SubjectReplayModel: Sendable {
     associatedtype Element: Sendable
-    
+
     mutating func add(element: Element)
     func getElementsForReplay() -> AnyIterator<Element>
     mutating func removeAll()
 }
 
-struct EmptyReplayModel<Element: Sendable>: SubjectReplayModel {
-    init() {
-        
-    }
+public struct EmptyReplayModel<Element: Sendable>: SubjectReplayModel {
+    init() {}
 
-    mutating func add(element: Element) {
-        
-    }
-    
-    func getElementsForReplay() -> AnyIterator<Element> {
+    public mutating func add(element: Element) {}
+
+    public func getElementsForReplay() -> AnyIterator<Element> {
         AnyIterator<Element> {
             nil
         }
     }
-    
-    mutating func removeAll() {
-        
-    }
+
+    public mutating func removeAll() {}
 }
 
-struct SingleElementReplayModel<Element: Sendable>: SubjectReplayModel, @unchecked Sendable {
+public struct SingleElementReplayModel<Element: Sendable>: SubjectReplayModel, @unchecked Sendable {
     private var element: Element?
 
-    init() {
-        
-    }
+    init() {}
 
-    mutating func add(element: Element) {
+    public mutating func add(element: Element) {
         self.element = element
     }
-    
-    func getElementsForReplay() -> AnyIterator<Element> {
+
+    public func getElementsForReplay() -> AnyIterator<Element> {
         var emited = false
         return AnyIterator<Element> { [element] in
             if emited {
@@ -242,13 +234,13 @@ struct SingleElementReplayModel<Element: Sendable>: SubjectReplayModel, @uncheck
             return element
         }
     }
-    
-    mutating func removeAll() {
+
+    public mutating func removeAll() {
         element = nil
     }
 }
 
-struct ReplayBufferModel<Element: Sendable>: SubjectReplayModel, @unchecked Sendable {
+public struct ReplayBufferModel<Element: Sendable>: SubjectReplayModel, @unchecked Sendable {
     private var queue: Queue<Element>
     private let bufferSizeLimit: Int?
 
@@ -257,7 +249,7 @@ struct ReplayBufferModel<Element: Sendable>: SubjectReplayModel, @unchecked Send
         queue = Queue(capacity: bufferSizeLimit ?? 0)
     }
 
-    mutating func add(element: Element) {
+    public mutating func add(element: Element) {
         if let bufferSizeLimit {
             let newBufferLength = queue.count + 1
 
@@ -270,12 +262,12 @@ struct ReplayBufferModel<Element: Sendable>: SubjectReplayModel, @unchecked Send
             queue.enqueue(element)
         }
     }
-    
-    func getElementsForReplay() -> AnyIterator<Element> {
+
+    public func getElementsForReplay() -> AnyIterator<Element> {
         queue.makeIterator()
     }
-    
-    mutating func removeAll() {
+
+    public mutating func removeAll() {
         queue.removeAll()
     }
 }
