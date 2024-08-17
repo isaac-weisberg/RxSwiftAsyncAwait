@@ -60,7 +60,7 @@ public extension ObservableType {
      - returns: A connectable observable sequence that shares a single subscription to the underlying sequence.
      */
     func publish() async -> ConnectableObservable<Element> {
-        await multicast { await PublishSubject() }
+        await multicast { PublishSubject() }
     }
 }
 
@@ -77,7 +77,7 @@ public extension ObservableType {
      */
     func replay(_ bufferSize: Int) async
         -> ConnectableObservable<Element> {
-        await multicast { await ReplaySubject.create(bufferSize: bufferSize) }
+        await multicast { ReplaySubject.create(bufferSize: bufferSize) }
     }
 
     /**
@@ -91,7 +91,7 @@ public extension ObservableType {
      */
     func replayAll() async
         -> ConnectableObservable<Element> {
-        await multicast { await ReplaySubject.createUnbounded() }
+        await multicast { ReplaySubject.createUnbounded() }
     }
 }
 
@@ -138,7 +138,7 @@ public extension ObservableType {
      - parameter makeSubject: Factory function used to instantiate a subject for each connection.
      - returns: A connectable observable sequence that upon connection causes the source sequence to push results into the specified subject.
      */
-    func multicast<Subject: SubjectType>(makeSubject: @escaping () async -> Subject) async
+    func multicast<Subject: SubjectType>(makeSubject: @escaping () -> Subject) async
         -> ConnectableObservable<Subject.Element> where Subject.Observer.Element == Element {
         await ConnectableObservableAdapter(source: asObservable(), makeSubject: makeSubject)
     }
