@@ -144,13 +144,14 @@ public extension ObservableType {
     }
 }
 
-private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverType, ObservableType, Disposable {
+private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverType, ObservableType, Disposable, AsynchronousUnsubscribeType {
     typealias Element = ReplayModel.Element
     typealias Observers = AnyObserver<Element>.s
+    typealias DisposeKey = Observers.KeyType
     // state
     private let sourceSubscription = SerialPerpetualDisposable<Disposable>()
     private let source: Observable<ReplayModel.Element>
-    
+
     private var connected = false
     private var replayModel: ReplayModel
     private var observers = Observers()
@@ -171,11 +172,11 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
         switch event {
         case .next(let element):
             replayModel.add(element: element)
-            let observersToNotify = observers
-            await dispatch(observersToNotify, event, c.call())
+            await dispatch(observers, event, c.call())
         case .completed, .error:
             let sourceDisposeable = sourceSubscription.dispose()
             connected = false
+            await dispatch(observers, event, c.call())
 
             await sourceDisposeable?.dispose()
         }
@@ -205,40 +206,28 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
         where Observer: ObserverType, Observer.Element == Element {
         let anyObserver = observer.asObserver()
 
-        let stoppedEvent = stoppedEvent
         for item in replayModel.getElementsForReplay() {
             await observer.on(.next(item), c.call())
         }
-        if let stoppedEvent {
-            await observer.on(stoppedEvent, c.call())
-            return Disposables.create()
-        } else {
-            let key = observers.insert(observer.on)
-            return SubscriptionDisposable(owner: self, key: key)
-        }
+        let key = observers.insert(observer.on)
+        return SubscriptionDisposable(owner: self, key: key)
+    }
+    
+    func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) async {
+        _ = observers.removeKey(disposeKey)
     }
 
-    func dispose() async {
+    func disconnect() async {
         connected = false
         let sourceDisposable = sourceSubscription.dispose()
         replayModel.removeAll()
         observers.removeAll()
-        
+
         await sourceDisposable?.dispose()
-//        await subscription.dispose()?.dispose()
-//        await fetchOr(disposed, 1)
-//        guard let parent else {
-//            return
-//        }
-//
-//        if parent.connection === self {
-//            parent.connection = nil
-//            parent.subject = nil
-//        }
-//        self.parent = nil
-//
-//        await subscription?.dispose()
-//        subscription = nil
+    }
+
+    func dispose() async {
+        await disconnect()
     }
 }
 
