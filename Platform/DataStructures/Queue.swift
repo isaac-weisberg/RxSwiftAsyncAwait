@@ -54,6 +54,10 @@ struct Queue<T>: Sequence {
         return storage[dequeueIndex]!
     }
     
+    mutating func removeAll() {
+        resizeTo(0)
+    }
+    
     mutating private func resizeTo(_ size: Int) {
         var newStorage = ContiguousArray<T?>(repeating: nil, count: size)
         
