@@ -17,7 +17,7 @@ public class ConnectableObservable<Element>:
 
      - returns: Disposable used to disconnect the observable wrapper from its source, causing subscribed observer to stop receiving values from the underlying observable sequence.
      */
-    public func connect() async -> Disposable {
+    public func connect(_ c: C) async -> Disposable {
         rxAbstractMethod()
     }
 }
@@ -147,12 +147,13 @@ public extension ObservableType {
 private final actor Connection<Subject: SubjectType>: ObserverType, ObservableType, Disposable {
     typealias Element = Subject.Observer.Element
     // state
-    private let subscription = SingleAssignmentDisposable()
-    private var disposed = false
+    private let subscription = SerialPerpetualDisposable<Disposable>()
+    private var connected = false
 
     private let source: Observable<Subject.Observer.Element>
     private let subject: Subject
     private let subjectObserver: Subject.Observer
+    private var observers: Bag<Disposable>
 
     init(
         source: Observable<Subject.Observer.Element>,
@@ -160,7 +161,7 @@ private final actor Connection<Subject: SubjectType>: ObserverType, ObservableTy
     ) {
         self.source = source
         self.subject = subject
-        self.subjectObserver = subject.asObserver()
+        subjectObserver = subject.asObserver()
     }
 
     func on(_ event: Event<Subject.Observer.Element>, _ c: C) async {
@@ -170,12 +171,16 @@ private final actor Connection<Subject: SubjectType>: ObserverType, ObservableTy
         if event.isStopEvent {
             await dispose()
         }
-        
+
         await subjectObserver.on(event, c.call())
     }
+    
+    var subscribedToSelf: Bool = false
 
-    func connect() async {
-
+    func connect(_ c: C) async {
+        if !subscribedToSelf {
+            await self.subject.subscribe(c.call(), self)
+        }
         if let connection = self.connection {
             return connection
         }
@@ -193,7 +198,11 @@ private final actor Connection<Subject: SubjectType>: ObserverType, ObservableTy
     }
 
     func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
-        where Observer: ObserverType, Subject.Observer.Element == Observer.Element {}
+        where Observer: ObserverType, Subject.Observer.Element == Observer.Element {
+
+        let disposable = subject.subscribe(c.call(), observer)
+        return disposable
+    }
 
     func dispose() async {
         disposed = true
@@ -230,8 +239,8 @@ private final actor ConnectableObservableAdapter<Subject: SubjectType>: Connecta
         ObservableDeinit()
     }
 
-    func connect() async -> Disposable {
-        await connection.connect()
+    func connect(_ c: C) async -> Disposable {
+        await connection.connect(c.call())
     }
 
     func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable

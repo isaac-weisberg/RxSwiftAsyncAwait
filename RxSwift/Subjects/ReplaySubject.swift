@@ -28,6 +28,9 @@ public actor ReplaySubject<Element: Sendable>:
     private let bufferSizeLimit: Int?
 
     init(bufferSizeLimit: Int?) {
+        if let bufferSizeLimit {
+            rxAssert(bufferSizeLimit > 0)
+        }
         self.bufferSizeLimit = bufferSizeLimit
         queue = Queue(capacity: bufferSizeLimit ?? 0)
         ObservableInit()
@@ -137,3 +140,53 @@ public actor ReplaySubject<Element: Sendable>:
         ObservableDeinit()
     }
 }
+
+// protocol SynchronousSubjectModel {
+//    associatedtype Element: Sendable
+//
+//    typealias Observers = AnyObserver<Element>.s
+//
+//    func on(_ event: Event<Element>) -> Observers
+// }
+//
+// final class SynchronousReplaySubjectModel<Element: Sendable>: SynchronousSubjectModel {
+//    typealias DisposeKey = Observers.KeyType
+//
+//    private var stoppedEvent = nil as Event<Element>?
+//    private var observers = Observers()
+//    private var queue: Queue<Element>
+//    private let bufferSizeLimit: Int?
+//
+//    init(bufferSizeLimit: Int?) {
+//        if let bufferSizeLimit {
+//            rxAssert(bufferSizeLimit > 0)
+//        }
+//        self.bufferSizeLimit = bufferSizeLimit
+//        queue = Queue(capacity: bufferSizeLimit ?? 0)
+//    }
+//
+//    func on(_ event: Event<Element>) -> Observers {
+//        switch event {
+//        case .next(let element):
+//            if let bufferSizeLimit {
+//                let newBufferLength = queue.count + 1
+//
+//                if newBufferLength > bufferSizeLimit {
+//                    _ = queue.dequeue()
+//                }
+//
+//                queue.enqueue(element)
+//            } else {
+//                queue.enqueue(element)
+//            }
+//            return observers
+//        case .error, .completed:
+//            stoppedEvent = event
+//            let observersToNotify = observers
+//
+//            observers.removeAll()
+//
+//            return observersToNotify
+//        }
+//    }
+// }

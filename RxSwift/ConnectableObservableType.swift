@@ -15,5 +15,5 @@ public protocol ConnectableObservableType: ObservableType {
 
      - returns: Disposable used to disconnect the observable wrapper from its source, causing subscribed observer to stop receiving values from the underlying observable sequence.
      */
-    func connect() async -> Disposable
+    func connect(_ c: C) async -> Disposable
 }
