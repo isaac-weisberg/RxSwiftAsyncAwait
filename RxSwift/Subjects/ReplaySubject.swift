@@ -141,52 +141,141 @@ public actor ReplaySubject<Element: Sendable>:
     }
 }
 
-// protocol SynchronousSubjectModel {
-//    associatedtype Element: Sendable
-//
-//    typealias Observers = AnyObserver<Element>.s
-//
-//    func on(_ event: Event<Element>) -> Observers
-// }
-//
-// final class SynchronousReplaySubjectModel<Element: Sendable>: SynchronousSubjectModel {
-//    typealias DisposeKey = Observers.KeyType
-//
-//    private var stoppedEvent = nil as Event<Element>?
-//    private var observers = Observers()
-//    private var queue: Queue<Element>
-//    private let bufferSizeLimit: Int?
-//
-//    init(bufferSizeLimit: Int?) {
-//        if let bufferSizeLimit {
-//            rxAssert(bufferSizeLimit > 0)
-//        }
-//        self.bufferSizeLimit = bufferSizeLimit
-//        queue = Queue(capacity: bufferSizeLimit ?? 0)
-//    }
-//
-//    func on(_ event: Event<Element>) -> Observers {
-//        switch event {
-//        case .next(let element):
-//            if let bufferSizeLimit {
-//                let newBufferLength = queue.count + 1
-//
-//                if newBufferLength > bufferSizeLimit {
-//                    _ = queue.dequeue()
-//                }
-//
-//                queue.enqueue(element)
-//            } else {
-//                queue.enqueue(element)
-//            }
-//            return observers
-//        case .error, .completed:
-//            stoppedEvent = event
-//            let observersToNotify = observers
-//
-//            observers.removeAll()
-//
-//            return observersToNotify
-//        }
-//    }
-// }
+final class SynchronousReplaySubjectModel<Element: Sendable> {
+    typealias DisposeKey = Observers.KeyType
+    typealias Observers = AnyObserver<Element>.s
+
+    private var stoppedEvent = nil as Event<Element>?
+    private var observers = Observers()
+    private var queue: Queue<Element>
+    private let bufferSizeLimit: Int?
+
+    var isStopped: Bool {
+        stoppedEvent != nil
+    }
+
+    init(bufferSizeLimit: Int?) {
+        if let bufferSizeLimit {
+            rxAssert(bufferSizeLimit > 0)
+        }
+        self.bufferSizeLimit = bufferSizeLimit
+        queue = Queue(capacity: bufferSizeLimit ?? 0)
+    }
+
+    func on(_ event: Event<Element>) -> Observers {
+        switch event {
+        case .next(let element):
+            if let bufferSizeLimit {
+                let newBufferLength = queue.count + 1
+
+                if newBufferLength > bufferSizeLimit {
+                    _ = queue.dequeue()
+                }
+
+                queue.enqueue(element)
+            } else {
+                queue.enqueue(element)
+            }
+            return observers
+        case .error, .completed:
+            stoppedEvent = event
+            let observersToNotify = observers
+
+            observers.removeAll()
+
+            return observersToNotify
+        }
+    }
+
+    func removeAll() {
+        observers.removeAll()
+        queue.removeAll()
+    }
+}
+
+protocol SubjectReplayModel {
+    associatedtype Element: Sendable
+    
+    mutating func add(element: Element)
+    func getElementsForReplay() -> AnyIterator<Element>
+    mutating func removeAll()
+}
+
+struct EmptyReplayModel<Element> {
+    init() {
+        
+    }
+
+    mutating func add(element: Element) {
+        
+    }
+    
+    func getElementsForReplay() -> AnyIterator<Element> {
+        AnyIterator<Element> {
+            nil
+        }
+    }
+    
+    mutating func removeAll() {
+        
+    }
+}
+
+struct SingleElementReplayModel<Element> {
+    private var element: Element?
+
+    init() {
+        
+    }
+
+    mutating func add(element: Element) {
+        self.element = element
+    }
+    
+    func getElementsForReplay() -> AnyIterator<Element> {
+        var emited = false
+        return AnyIterator<Element> { [element] in
+            if emited {
+                return nil
+            }
+            emited = true
+            return element
+        }
+    }
+    
+    mutating func removeAll() {
+        element = nil
+    }
+}
+
+struct ReplayBufferModel<Element> {
+    private var queue: Queue<Element>
+    private let bufferSizeLimit: Int?
+
+    init(bufferSizeLimit: Int?) {
+        self.bufferSizeLimit = bufferSizeLimit
+        queue = Queue(capacity: bufferSizeLimit ?? 0)
+    }
+
+    mutating func add(element: Element) {
+        if let bufferSizeLimit {
+            let newBufferLength = queue.count + 1
+
+            if newBufferLength > bufferSizeLimit {
+                _ = queue.dequeue()
+            }
+
+            queue.enqueue(element)
+        } else {
+            queue.enqueue(element)
+        }
+    }
+    
+    func getElementsForReplay() -> AnyIterator<Element> {
+        queue.makeIterator()
+    }
+    
+    mutating func removeAll() {
+        queue.removeAll()
+    }
+}

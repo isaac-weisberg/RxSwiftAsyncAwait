@@ -144,42 +144,46 @@ public extension ObservableType {
     }
 }
 
-private final actor Connection<Subject: SubjectType>: ObserverType, ObservableType, Disposable {
-    typealias Element = Subject.Observer.Element
+private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverType, ObservableType, Disposable {
+    typealias Element = ReplayModel.Element
+    typealias Observers = AnyObserver<Element>.s
     // state
-    private let subscription = SerialPerpetualDisposable<Disposable>()
+    private let sourceSubscription = SerialPerpetualDisposable<Disposable>()
+    private let source: Observable<ReplayModel.Element>
+    
     private var connected = false
-
-    private let source: Observable<Subject.Observer.Element>
-    private let subject: Subject
-    private let subjectObserver: Subject.Observer
-    private var observers: Bag<Disposable>
+    private var replayModel: ReplayModel
+    private var observers = Observers()
 
     init(
-        source: Observable<Subject.Observer.Element>,
-        subject: Subject
+        source: Observable<Element>,
+        replayModel: ReplayModel
     ) {
         self.source = source
-        self.subject = subject
-        subjectObserver = subject.asObserver()
+        self.replayModel = replayModel
     }
 
-    func on(_ event: Event<Subject.Observer.Element>, _ c: C) async {
-        if disposed {
-            return
-        }
-        if event.isStopEvent {
-            await dispose()
+    func on(_ event: Event<Element>, _ c: C) async {
+        if !connected {
+            return // okay, maybe not finished disposing source
         }
 
-        await subjectObserver.on(event, c.call())
+        switch event {
+        case .next(let element):
+            replayModel.add(element: element)
+            let observersToNotify = observers
+            await dispatch(observersToNotify, event, c.call())
+        case .completed, .error:
+            let sourceDisposeable = sourceSubscription.dispose()
+            connected = false
+
+            await sourceDisposeable?.dispose()
+        }
     }
-    
-    var subscribedToSelf: Bool = false
 
     func connect(_ c: C) async {
         if !subscribedToSelf {
-            await self.subject.subscribe(c.call(), self)
+            await subject.subscribe(c.call(), self)
         }
         if let connection = self.connection {
             return connection
@@ -198,14 +202,29 @@ private final actor Connection<Subject: SubjectType>: ObserverType, ObservableTy
     }
 
     func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
-        where Observer: ObserverType, Subject.Observer.Element == Observer.Element {
+        where Observer: ObserverType, Observer.Element == Element {
+        let anyObserver = observer.asObserver()
 
-        let disposable = subject.subscribe(c.call(), observer)
-        return disposable
+        let stoppedEvent = stoppedEvent
+        for item in replayModel.getElementsForReplay() {
+            await observer.on(.next(item), c.call())
+        }
+        if let stoppedEvent {
+            await observer.on(stoppedEvent, c.call())
+            return Disposables.create()
+        } else {
+            let key = observers.insert(observer.on)
+            return SubscriptionDisposable(owner: self, key: key)
+        }
     }
 
     func dispose() async {
-        disposed = true
+        connected = false
+        let sourceDisposable = sourceSubscription.dispose()
+        replayModel.removeAll()
+        observers.removeAll()
+        
+        await sourceDisposable?.dispose()
 //        await subscription.dispose()?.dispose()
 //        await fetchOr(disposed, 1)
 //        guard let parent else {
