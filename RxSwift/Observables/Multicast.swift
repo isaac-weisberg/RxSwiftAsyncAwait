@@ -40,8 +40,8 @@ public extension ObservableType {
         _ subjectSelector: @escaping () throws -> Subject,
         selector: @escaping (Observable<Subject.Element>) throws -> Observable<Result>
     )
-        async -> Observable<Result> where Subject.Observer.Element == Element {
-        await Multicast(
+        -> Observable<Result> where Subject.Observer.Element == Element {
+        Multicast(
             source: asObservable(),
             subjectSelector: subjectSelector,
             selector: selector
@@ -59,8 +59,8 @@ public extension ObservableType {
 
      - returns: A connectable observable sequence that shares a single subscription to the underlying sequence.
      */
-    func publish() async -> ConnectableObservable<Element> {
-        await multicast { PublishSubject() }
+    func publish() -> ConnectableObservable<Element> {
+        multicast { PublishSubject() }
     }
 }
 
@@ -75,9 +75,9 @@ public extension ObservableType {
      - parameter bufferSize: Maximum element count of the replay buffer.
      - returns: A connectable observable sequence that shares a single subscription to the underlying sequence.
      */
-    func replay(_ bufferSize: Int) async
+    func replay(_ bufferSize: Int)
         -> ConnectableObservable<Element> {
-        await multicast { ReplaySubject.create(bufferSize: bufferSize) }
+        multicast { ReplaySubject.create(bufferSize: bufferSize) }
     }
 
     /**
@@ -89,9 +89,9 @@ public extension ObservableType {
 
      - returns: A connectable observable sequence that shares a single subscription to the underlying sequence.
      */
-    func replayAll() async
+    func replayAll()
         -> ConnectableObservable<Element> {
-        await multicast { ReplaySubject.createUnbounded() }
+        multicast { ReplaySubject.createUnbounded() }
     }
 }
 
@@ -103,8 +103,8 @@ public extension ConnectableObservableType {
 
      - returns: An observable sequence that stays connected to the source as long as there is at least one subscription to the observable sequence.
      */
-    func refCount() async -> Observable<Element> {
-        await RefCount(source: self)
+    func refCount() -> Observable<Element> {
+        RefCount(source: self)
     }
 }
 
@@ -121,9 +121,9 @@ public extension ObservableType {
      - parameter subject: Subject to push source elements into.
      - returns: A connectable observable sequence that upon connection causes the source sequence to push results into the specified subject.
      */
-    func multicast<Subject: SubjectType>(_ subject: Subject) async
+    func multicast<Subject: SubjectType>(_ subject: Subject)
         -> ConnectableObservable<Subject.Element> where Subject.Observer.Element == Element {
-        await ConnectableObservableAdapter(source: asObservable(), makeSubject: { subject })
+        ConnectableObservableAdapter(source: asObservable(), makeSubject: { subject })
     }
 
     /**
@@ -138,121 +138,104 @@ public extension ObservableType {
      - parameter makeSubject: Factory function used to instantiate a subject for each connection.
      - returns: A connectable observable sequence that upon connection causes the source sequence to push results into the specified subject.
      */
-    func multicast<Subject: SubjectType>(makeSubject: @escaping () -> Subject) async
+    func multicast<Subject: SubjectType>(makeSubject: @escaping () -> Subject)
         -> ConnectableObservable<Subject.Element> where Subject.Observer.Element == Element {
-        await ConnectableObservableAdapter(source: asObservable(), makeSubject: makeSubject)
+        ConnectableObservableAdapter(source: asObservable(), makeSubject: makeSubject)
     }
 }
 
-private final class Connection<Subject: SubjectType>: ObserverType, Disposable {
+private final actor Connection<Subject: SubjectType>: ObserverType, ObservableType, Disposable {
     typealias Element = Subject.Observer.Element
-
-    private var lock: RecursiveLock
     // state
-    private var parent: ConnectableObservableAdapter<Subject>?
-    private var subscription: Disposable?
-    private var subjectObserver: Subject.Observer
+    private let subscription = SingleAssignmentDisposable()
+    private var disposed = false
 
-    private let disposed: AtomicInt
+    private let source: Observable<Subject.Observer.Element>
+    private let subject: Subject
 
     init(
-        parent: ConnectableObservableAdapter<Subject>,
-        subjectObserver: Subject.Observer,
-        lock: RecursiveLock,
-        subscription: Disposable
-    )
-    async {
-        disposed = await AtomicInt(0)
-        self.parent = parent
-        self.subscription = subscription
-        self.lock = lock
-        self.subjectObserver = subjectObserver
+        source: Observable<Subject.Observer.Element>,
+        subject: Subject
+    ) {
+        self.source = source
+        self.subject = subject
     }
 
     func on(_ event: Event<Subject.Observer.Element>, _ c: C) async {
-        if await isFlagSet(disposed, 1) {
+        if disposed {
             return
         }
         if event.isStopEvent {
             await dispose()
         }
+        
         await subjectObserver.on(event, c.call())
     }
 
-    func dispose() async {
-        await lock.performLocked {
-            await fetchOr(self.disposed, 1)
-            guard let parent = self.parent else {
-                return
-            }
+    func connect() async {
 
-            if parent.connection === self {
-                parent.connection = nil
-                parent.subject = nil
-            }
-            self.parent = nil
-
-            await self.subscription?.dispose()
-            self.subscription = nil
+        if let connection = self.connection {
+            return connection
         }
+
+        let singleAssignmentDisposable = SingleAssignmentDisposable()
+        let connection = Connection<Subject>(
+            parent: self,
+            subjectObserver: lazySubject().asObserver(),
+            subscription: singleAssignmentDisposable
+        )
+        self.connection = connection
+        let subscription = await source.subscribe(C(), connection)
+        await singleAssignmentDisposable.setDisposable(subscription)?.dispose()
+        return connection
+    }
+
+    func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Observer: ObserverType, Subject.Observer.Element == Observer.Element {}
+
+    func dispose() async {
+        disposed = true
+//        await subscription.dispose()?.dispose()
+//        await fetchOr(disposed, 1)
+//        guard let parent else {
+//            return
+//        }
+//
+//        if parent.connection === self {
+//            parent.connection = nil
+//            parent.subject = nil
+//        }
+//        self.parent = nil
+//
+//        await subscription?.dispose()
+//        subscription = nil
     }
 }
 
-private final class ConnectableObservableAdapter<Subject: SubjectType>:
-    ConnectableObservable<Subject.Element> {
+private final actor ConnectableObservableAdapter<Subject: SubjectType>: ConnectableObservableType {
+    typealias Element = Subject.Element
     typealias ConnectionType = Connection<Subject>
 
-    private let source: Observable<Subject.Observer.Element>
-    private let makeSubject: () async -> Subject
-
-    fileprivate let lock: RecursiveLock
-    fileprivate var subject: Subject?
-
     // state
-    fileprivate var connection: ConnectionType?
+    fileprivate let connection: Connection<Subject>
 
-    init(source: Observable<Subject.Observer.Element>, makeSubject: @escaping () async -> Subject) async {
-        lock = await RecursiveLock()
-        self.source = source
-        self.makeSubject = makeSubject
-        subject = nil
-        connection = nil
-        await super.init()
+    init(source: Observable<Subject.Observer.Element>, subject: Subject) {
+        connection = Connection(source: source, subject: subject)
+        ObservableInit()
     }
 
-    override func connect() async -> Disposable {
-        await lock.performLocked {
-            if let connection = self.connection {
-                return connection
-            }
-
-            let singleAssignmentDisposable = await SingleAssignmentDisposable()
-            let connection = await Connection(
-                parent: self,
-                subjectObserver: self.lazySubject().asObserver(),
-                lock: self.lock,
-                subscription: singleAssignmentDisposable
-            )
-            self.connection = connection
-            let subscription = await self.source.subscribe(C(), connection)
-            await singleAssignmentDisposable.setDisposable(subscription)
-            return connection
-        }
+    deinit {
+        ObservableDeinit()
     }
 
-    private func lazySubject() async -> Subject {
-        if let subject = self.subject {
-            return subject
-        }
-
-        let subject = await makeSubject()
-        self.subject = subject
-        return subject
+    func connect() async -> Disposable {
+        await connection.connect()
     }
 
-    override func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
+    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
         where Observer.Element == Subject.Element {
-        await lazySubject().subscribe(c.call(), observer)
+        await connection.
+            await lazySubject().subscribe(c.call(), observer)
     }
 }
 
@@ -335,7 +318,6 @@ private final actor RefCountSink<ConnectableSource: ConnectableObservableType, O
 }
 
 private final class RefCount<ConnectableSource: ConnectableObservableType>: Producer<ConnectableSource.Element> {
-    fileprivate let lock: RecursiveLock
 
     // state
     fileprivate var count = 0
@@ -344,10 +326,9 @@ private final class RefCount<ConnectableSource: ConnectableObservableType>: Prod
 
     fileprivate let source: ConnectableSource
 
-    init(source: ConnectableSource) async {
-        lock = await RecursiveLock()
+    init(source: ConnectableSource) {
         self.source = source
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(
@@ -415,12 +396,11 @@ private final class Multicast<Subject: SubjectType, Result>: Producer<Result> {
         source: Observable<Subject.Observer.Element>,
         subjectSelector: @escaping SubjectSelectorType,
         selector: @escaping SelectorType
-    )
-    async {
+    ) {
         self.source = source
         self.subjectSelector = subjectSelector
         self.selector = selector
-        await super.init()
+        super.init()
     }
 
     override func run<Observer: ObserverType>(

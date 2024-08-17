@@ -31,7 +31,6 @@ public final actor BehaviorSubject<Element: Sendable>:
     private var observers = Observers()
     private var stoppedEvent: Event<Element>?
 
-
     /// Indicates whether the subject has been disposed.
     public func isDisposed() -> Bool {
         disposed
@@ -98,11 +97,6 @@ public final actor BehaviorSubject<Element: Sendable>:
     /// - parameter observer: Observer to subscribe to the subject.
     /// - returns: Disposable object that can be used to unsubscribe the observer from the subject.
     public func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
-        where Observer.Element == Element {
-        await Asynchronous_subscribe(c.call(), observer)
-    }
-
-    func Asynchronous_subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
         where Observer.Element == Element {
         if isDisposed() {
             await observer.on(.error(RxError.disposed(object: self)), c.call())

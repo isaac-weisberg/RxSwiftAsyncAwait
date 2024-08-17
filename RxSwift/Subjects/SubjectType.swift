@@ -7,7 +7,7 @@
 //
 
 /// Represents an object that is both an observable sequence as well as an observer.
-public protocol SubjectType : ObservableType {
+public protocol SubjectType : ObservableType, Sendable {
     /// The type of the observer that represents this subject.
     ///
     /// Usually this type is type of subject itself, but it doesn't have to be.
