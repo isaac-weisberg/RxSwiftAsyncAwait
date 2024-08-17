@@ -152,6 +152,7 @@ private final actor Connection<Subject: SubjectType>: ObserverType, ObservableTy
 
     private let source: Observable<Subject.Observer.Element>
     private let subject: Subject
+    private let subjectObserver: Subject.Observer
 
     init(
         source: Observable<Subject.Observer.Element>,
@@ -159,6 +160,7 @@ private final actor Connection<Subject: SubjectType>: ObserverType, ObservableTy
     ) {
         self.source = source
         self.subject = subject
+        self.subjectObserver = subject.asObserver()
     }
 
     func on(_ event: Event<Subject.Observer.Element>, _ c: C) async {
