@@ -135,21 +135,26 @@ public extension ObservableType {
 
      - returns: An observable sequence that contains the elements of a sequence produced by multicasting the source sequence.
      */
-    func share(replay: Int = 0, scope: SubjectLifetimeScope = .whileConnected) async
+    func share(replay: Int = 0, scope: SubjectLifetimeScope = .whileConnected)
         -> Observable<Element> {
         switch scope {
         case .forever:
-            fatalError()
-//            switch replay {
-//            case 0: return await multicast(PublishSubject()).refCount()
-//            default: return await multicast(ReplaySubject.create(bufferSize: replay)).refCount()
-//            }
+            switch replay {
+            case 0:
+                return multicast(replayModel: EmptyReplayModel()).refCount()
+            case 1:
+                return multicast(replayModel: SingleElementReplayModel()).refCount()
+            default:
+                return multicast(replayModel: ReplayBufferModel(bufferSizeLimit: replay)).refCount()
+            }
         case .whileConnected:
             switch replay {
-            case 0: return ShareWhileConnected(source: asObservable())
-            case 1: return ShareReplay1WhileConnected(source: asObservable()).asObservable()
-            default: _ = fatalError() // await multicast(makeSubject: { await ReplaySubject.create(bufferSize:
-                // replay) }).refCount()
+            case 0:
+                return ShareWhileConnected(source: asObservable())
+            case 1:
+                return ShareReplay1WhileConnected(source: asObservable()).asObservable()
+            default:
+                return multicast(replayModel: ReplayBufferModel(bufferSizeLimit: replay)).refCount()
             }
         }
     }

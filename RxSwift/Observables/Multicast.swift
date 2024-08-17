@@ -36,17 +36,17 @@ public extension ObservableType {
      - parameter selector: Selector function which can use the multicasted source sequence subject to the policies enforced by the created subject.
      - returns: An observable sequence that contains the elements of a sequence produced by multicasting the source sequence within a selector function.
      */
-    func multicast<Subject: SubjectType, Result>(
-        _ subjectSelector: @escaping () throws -> Subject,
-        selector: @escaping (Observable<Subject.Element>) throws -> Observable<Result>
-    )
-        -> Observable<Result> where Subject.Observer.Element == Element {
-        Multicast(
-            source: asObservable(),
-            subjectSelector: subjectSelector,
-            selector: selector
-        )
-    }
+//    func multicast<Subject: SubjectType, Result>(
+//        _ subjectSelector: @escaping () throws -> Subject,
+//        selector: @escaping (Observable<Subject.Element>) throws -> Observable<Result>
+//    )
+//        -> Observable<Result> where Subject.Observer.Element == Element {
+//        Multicast(
+//            source: asObservable(),
+//            subjectSelector: subjectSelector,
+//            selector: selector
+//        )
+//    }
 }
 
 public extension ObservableType {
@@ -349,73 +349,73 @@ private final class RefCount<ConnectableSource: ConnectableObservableType>: Prod
     }
 }
 
-private final actor MulticastSink<Subject: SubjectType, Observer: ObserverType>: Sink, ObserverType {
-    typealias Element = Observer.Element
-    typealias ResultType = Element
-    typealias MutlicastType = Multicast<Subject, Observer.Element>
-
-    private let parent: MutlicastType
-    let baseSink: BaseSink<Observer>
-
-    init(parent: MutlicastType, observer: Observer) async {
-        self.parent = parent
-        baseSink = BaseSink(observer: observer)
-    }
-
-    func run(_ c: C) async -> Disposable {
-        do {
-            let subject = try parent.subjectSelector()
-            let connectable = await ConnectableObservableAdapter(source: parent.source, makeSubject: { subject })
-
-            let observable = try parent.selector(connectable)
-
-            let subscription = await observable.subscribe(c.call(), self)
-            let connection = await connectable.connect()
-
-            return await Disposables.create(subscription, connection)
-        } catch let e {
-            await self.forwardOn(.error(e), c.call())
-            await self.dispose()
-            return Disposables.create()
-        }
-    }
-
-    func on(_ event: Event<ResultType>, _ c: C) async {
-        await forwardOn(event, c.call())
-        switch event {
-        case .next: break
-        case .error, .completed:
-            await dispose()
-        }
-    }
-}
-
-private final class Multicast<Subject: SubjectType, Result: Sendable>: Producer<Result> {
-    typealias SubjectSelectorType = () throws -> Subject
-    typealias SelectorType = (Observable<Subject.Element>) throws -> Observable<Result>
-
-    fileprivate let source: Observable<Subject.Observer.Element>
-    fileprivate let subjectSelector: SubjectSelectorType
-    fileprivate let selector: SelectorType
-
-    init(
-        source: Observable<Subject.Observer.Element>,
-        subjectSelector: @escaping SubjectSelectorType,
-        selector: @escaping SelectorType
-    ) {
-        self.source = source
-        self.subjectSelector = subjectSelector
-        self.selector = selector
-        super.init()
-    }
-
-    override func run<Observer: ObserverType>(
-        _ c: C,
-        _ observer: Observer
-    )
-        async -> AsynchronousDisposable where Observer.Element == Result {
-        let sink = await MulticastSink(parent: self, observer: observer)
-        let subscription = await sink.run(c.call())
-        return sink
-    }
-}
+//private final actor MulticastSink<Subject: SubjectType, Observer: ObserverType>: Sink, ObserverType {
+//    typealias Element = Observer.Element
+//    typealias ResultType = Element
+//    typealias MutlicastType = Multicast<Subject, Observer.Element>
+//
+//    private let parent: MutlicastType
+//    let baseSink: BaseSink<Observer>
+//
+//    init(parent: MutlicastType, observer: Observer) async {
+//        self.parent = parent
+//        baseSink = BaseSink(observer: observer)
+//    }
+//
+//    func run(_ c: C) async -> Disposable {
+//        do {
+//            let subject = try parent.subjectSelector()
+//            let connectable = await ConnectableObservableAdapter(source: parent.source, makeSubject: { subject })
+//
+//            let observable = try parent.selector(connectable)
+//
+//            let subscription = await observable.subscribe(c.call(), self)
+//            let connection = await connectable.connect()
+//
+//            return await Disposables.create(subscription, connection)
+//        } catch let e {
+//            await self.forwardOn(.error(e), c.call())
+//            await self.dispose()
+//            return Disposables.create()
+//        }
+//    }
+//
+//    func on(_ event: Event<ResultType>, _ c: C) async {
+//        await forwardOn(event, c.call())
+//        switch event {
+//        case .next: break
+//        case .error, .completed:
+//            await dispose()
+//        }
+//    }
+//}
+//
+//private final class Multicast<Subject: SubjectType, Result: Sendable>: Producer<Result> {
+//    typealias SubjectSelectorType = () throws -> Subject
+//    typealias SelectorType = (Observable<Subject.Element>) throws -> Observable<Result>
+//
+//    fileprivate let source: Observable<Subject.Observer.Element>
+//    fileprivate let subjectSelector: SubjectSelectorType
+//    fileprivate let selector: SelectorType
+//
+//    init(
+//        source: Observable<Subject.Observer.Element>,
+//        subjectSelector: @escaping SubjectSelectorType,
+//        selector: @escaping SelectorType
+//    ) {
+//        self.source = source
+//        self.subjectSelector = subjectSelector
+//        self.selector = selector
+//        super.init()
+//    }
+//
+//    override func run<Observer: ObserverType>(
+//        _ c: C,
+//        _ observer: Observer
+//    )
+//        async -> AsynchronousDisposable where Observer.Element == Result {
+//        let sink = await MulticastSink(parent: self, observer: observer)
+//        let subscription = await sink.run(c.call())
+//        return sink
+//    }
+//}
