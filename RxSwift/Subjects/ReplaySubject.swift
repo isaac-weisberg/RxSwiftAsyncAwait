@@ -193,7 +193,7 @@ final class SynchronousReplaySubjectModel<Element: Sendable> {
     }
 }
 
-protocol SubjectReplayModel {
+protocol SubjectReplayModel: Sendable {
     associatedtype Element: Sendable
     
     mutating func add(element: Element)
@@ -201,7 +201,7 @@ protocol SubjectReplayModel {
     mutating func removeAll()
 }
 
-struct EmptyReplayModel<Element> {
+struct EmptyReplayModel<Element: Sendable>: SubjectReplayModel {
     init() {
         
     }
@@ -221,7 +221,7 @@ struct EmptyReplayModel<Element> {
     }
 }
 
-struct SingleElementReplayModel<Element> {
+struct SingleElementReplayModel<Element: Sendable>: SubjectReplayModel, @unchecked Sendable {
     private var element: Element?
 
     init() {
@@ -248,7 +248,7 @@ struct SingleElementReplayModel<Element> {
     }
 }
 
-struct ReplayBufferModel<Element> {
+struct ReplayBufferModel<Element: Sendable>: SubjectReplayModel, @unchecked Sendable {
     private var queue: Queue<Element>
     private let bufferSizeLimit: Int?
 

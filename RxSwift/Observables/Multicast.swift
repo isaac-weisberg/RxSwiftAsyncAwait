@@ -144,7 +144,8 @@ public extension ObservableType {
     }
 }
 
-private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverType, ObservableType, Disposable, AsynchronousUnsubscribeType {
+private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverType, ObservableType, Disposable,
+    AsynchronousUnsubscribeType {
     typealias Element = ReplayModel.Element
     typealias Observers = AnyObserver<Element>.s
     typealias DisposeKey = Observers.KeyType
@@ -155,6 +156,8 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
     private var connected = false
     private var replayModel: ReplayModel
     private var observers = Observers()
+
+    private var connectionId: UInt = 0
 
     init(
         source: Observable<Element>,
@@ -182,24 +185,32 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
         }
     }
 
-    func connect(_ c: C) async {
-        if !subscribedToSelf {
-            await subject.subscribe(c.call(), self)
-        }
-        if let connection = self.connection {
-            return connection
+    struct ConnectionDisposable: Disposable {
+        let sink: ConnectionSink<ReplayModel>
+        let id: UInt
+
+        init(sink: ConnectionSink<ReplayModel>, id: UInt) {
+            self.sink = sink
+            self.id = id
         }
 
-        let singleAssignmentDisposable = SingleAssignmentDisposable()
-        let connection = Connection<Subject>(
-            parent: self,
-            subjectObserver: lazySubject().asObserver(),
-            subscription: singleAssignmentDisposable
-        )
-        self.connection = connection
-        let subscription = await source.subscribe(C(), connection)
-        await singleAssignmentDisposable.setDisposable(subscription)?.dispose()
-        return connection
+        func dispose() async {
+            await sink.dispose(id: id)
+        }
+    }
+
+    func connect(_ c: C) async -> ConnectionDisposable {
+        if connected {
+            fatalError()
+        }
+
+        await sourceSubscription.replace(source.subscribe(c.call(), self))?.dispose()
+
+        connectionId = connectionId + 1
+
+        let disposable = ConnectionDisposable(sink: self, id: connectionId)
+
+        return disposable
     }
 
     func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
@@ -212,34 +223,41 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
         let key = observers.insert(observer.on)
         return SubscriptionDisposable(owner: self, key: key)
     }
-    
+
     func AsynchronousUnsubscribe(_ disposeKey: DisposeKey) async {
         _ = observers.removeKey(disposeKey)
     }
 
     func disconnect() async {
-        connected = false
-        let sourceDisposable = sourceSubscription.dispose()
-        replayModel.removeAll()
-        observers.removeAll()
+        if connected {
+            connected = false
+            let sourceDisposable = sourceSubscription.dispose()
+            replayModel.removeAll()
+            observers.removeAll()
 
-        await sourceDisposable?.dispose()
+            await sourceDisposable?.dispose()
+        }
     }
 
     func dispose() async {
         await disconnect()
     }
+
+    func dispose(id: UInt) async {
+        if id == connectionId {
+            await dispose()
+        }
+    }
 }
 
-private final actor ConnectableObservableAdapter<Subject: SubjectType>: ConnectableObservableType {
-    typealias Element = Subject.Element
-    typealias ConnectionType = Connection<Subject>
+private final actor ConnectableObservableAdapter<ReplayModel: SubjectReplayModel>: ConnectableObservableType {
+    typealias Element = ReplayModel.Element
 
     // state
-    fileprivate let connection: Connection<Subject>
+    fileprivate let connectionSink: ConnectionSink<ReplayModel>
 
-    init(source: Observable<Subject.Observer.Element>, subject: Subject) {
-        connection = Connection(source: source, subject: subject)
+    init(source: Observable<ReplayModel.Element>, replayModel: ReplayModel) {
+        connectionSink = ConnectionSink(source: source, replayModel: replayModel)
         ObservableInit()
     }
 
@@ -248,13 +266,12 @@ private final actor ConnectableObservableAdapter<Subject: SubjectType>: Connecta
     }
 
     func connect(_ c: C) async -> Disposable {
-        await connection.connect(c.call())
+        await connectionSink.connect(c.call())
     }
 
-    func subscribe<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable
-        where Observer.Element == Subject.Element {
-        await connection.
-            await lazySubject().subscribe(c.call(), observer)
+    func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Observer: ObserverType, ReplayModel.Element == Observer.Element {
+        await connectionSink.subscribe(c.call(), observer)
     }
 }
 
