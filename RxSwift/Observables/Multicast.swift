@@ -183,7 +183,6 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
 
     func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
         where Observer: ObserverType, Observer.Element == Element {
-        let anyObserver = observer.asObserver()
 
         for item in replayModel.getElementsForReplay() {
             await observer.on(.next(item), c.call())
@@ -197,8 +196,8 @@ private final actor ConnectionSink<ReplayModel: SubjectReplayModel>: ObserverTyp
     }
 
     func disconnect() async {
-        if let connection {
-            self.connection = nil
+        if connection != nil {
+            connection = nil
             let sourceDisposable = sourceSubscription.dispose()
             replayModel.removeAll()
             observers.removeAll()

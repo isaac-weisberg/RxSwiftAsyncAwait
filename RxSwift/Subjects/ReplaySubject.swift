@@ -24,15 +24,10 @@ public actor ReplaySubject<Element: Sendable>:
     private var isDisposed = false
     private var stoppedEvent = nil as Event<Element>?
     private var observers = Observers()
-    private var queue: Queue<Element>
-    private let bufferSizeLimit: Int?
+    private var replayBufferModel: ReplayBufferModel<Element>
 
     init(bufferSizeLimit: Int?) {
-        if let bufferSizeLimit {
-            rxAssert(bufferSizeLimit > 0)
-        }
-        self.bufferSizeLimit = bufferSizeLimit
-        queue = Queue(capacity: bufferSizeLimit ?? 0)
+        replayBufferModel = ReplayBufferModel(bufferSizeLimit: bufferSizeLimit)
         ObservableInit()
     }
 
@@ -57,17 +52,7 @@ public actor ReplaySubject<Element: Sendable>:
 
         switch event {
         case .next(let element):
-            if let bufferSizeLimit {
-                let newBufferLength = queue.count + 1
-
-                if newBufferLength > bufferSizeLimit {
-                    _ = queue.dequeue()
-                }
-
-                queue.enqueue(element)
-            } else {
-                queue.enqueue(element)
-            }
+            replayBufferModel.add(element: element)
             await dispatch(observers, event, c.call())
         case .error, .completed:
             stoppedEvent = event
@@ -86,10 +71,8 @@ public actor ReplaySubject<Element: Sendable>:
             return Disposables.create()
         }
 
-        let anyObserver = observer.asObserver()
-
         let stoppedEvent = stoppedEvent
-        for item in queue {
+        for item in replayBufferModel.getElementsForReplay() {
             await observer.on(.next(item), c.call())
         }
         if let stoppedEvent {
@@ -118,7 +101,7 @@ public actor ReplaySubject<Element: Sendable>:
     public func dispose() {
         isDisposed = true
         observers.removeAll()
-        queue.removeAll()
+        replayBufferModel.removeAll()
     }
 
     /// Creates new instance of `ReplaySubject` that replays at most `bufferSize` last elements of sequence.
@@ -138,58 +121,6 @@ public actor ReplaySubject<Element: Sendable>:
 
     deinit {
         ObservableDeinit()
-    }
-}
-
-final class SynchronousReplaySubjectModel<Element: Sendable> {
-    typealias DisposeKey = Observers.KeyType
-    typealias Observers = AnyObserver<Element>.s
-
-    private var stoppedEvent = nil as Event<Element>?
-    private var observers = Observers()
-    private var queue: Queue<Element>
-    private let bufferSizeLimit: Int?
-
-    var isStopped: Bool {
-        stoppedEvent != nil
-    }
-
-    init(bufferSizeLimit: Int?) {
-        if let bufferSizeLimit {
-            rxAssert(bufferSizeLimit > 0)
-        }
-        self.bufferSizeLimit = bufferSizeLimit
-        queue = Queue(capacity: bufferSizeLimit ?? 0)
-    }
-
-    func on(_ event: Event<Element>) -> Observers {
-        switch event {
-        case .next(let element):
-            if let bufferSizeLimit {
-                let newBufferLength = queue.count + 1
-
-                if newBufferLength > bufferSizeLimit {
-                    _ = queue.dequeue()
-                }
-
-                queue.enqueue(element)
-            } else {
-                queue.enqueue(element)
-            }
-            return observers
-        case .error, .completed:
-            stoppedEvent = event
-            let observersToNotify = observers
-
-            observers.removeAll()
-
-            return observersToNotify
-        }
-    }
-
-    func removeAll() {
-        observers.removeAll()
-        queue.removeAll()
     }
 }
 
