@@ -49,3 +49,32 @@ public final class SerialDisposableGeneric<Disposable> {
 }
 
 public typealias SerialDisposable = SerialDisposableGeneric<Disposable>
+
+public final class SerialPerpetualDisposable<Disposable> {
+    // state
+    private var current = nil as Disposable?
+
+    /// Initializes a new instance of the `SerialDisposable`.
+    public init() {
+        SynchronousDisposeBaseInit()
+    }
+
+    deinit {
+        SynchronousDisposeBaseDeinit()
+    }
+
+    public func replace(_ newDisposable: Disposable) -> Disposable? {
+        let oldCurrent = current
+        current = newDisposable
+        return oldCurrent
+    }
+
+    /// Disposes the underlying disposable as well as all future replacements.
+    public func dispose() -> Disposable? {
+        if let current {
+            self.current = nil
+            return current
+        }
+        return nil
+    }
+}
