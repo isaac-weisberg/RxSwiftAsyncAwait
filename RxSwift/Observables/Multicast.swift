@@ -22,6 +22,7 @@ public class ConnectableObservable<Element: Sendable>:
     }
 }
 
+// hopefully no one fucking uses this operator
 public extension ObservableType {
     /**
      Multicasts the source sequence notifications through an instantiated subject into all uses of the sequence within a selector function.
@@ -245,95 +246,58 @@ private final class ConnectableObservableViaReplayModel<ReplayModel: SubjectRepl
     }
 }
 
-private final actor RefCountSink<ConnectableSource: ConnectableObservableType, Observer: ObserverType>:
-    Sink,
-    ObserverType where ConnectableSource.Element == Observer.Element {
-    typealias Element = Observer.Element
-    typealias Parent = RefCount<ConnectableSource>
+private final actor RefCountSink<ConnectableSource: ConnectableObservableType>: Disposable {
+    typealias Element = ConnectableSource.Element
 
-    private let parent: Parent
+    private var count = 0
+    private let connectableSubscription: SerialPerpetualDisposable<Disposable>
+    private let source: ConnectableSource
 
-    private var connectionIdSnapshot: Int64 = -1
-    let baseSink: BaseSink<Observer>
-
-    init(parent: Parent, observer: Observer) async {
-        self.parent = parent
-        baseSink = BaseSink(observer: observer)
+    init(source: ConnectableSource) {
+        self.source = source
+        connectableSubscription = SerialPerpetualDisposable()
     }
 
-    func run(_ c: C) async -> Disposable {
-        let subscription = await parent.source.subscribe(c.call(), self)
-        return await parent.lock.performLocked {
-            self.connectionIdSnapshot = self.parent.connectionId
+    func handleDisposal(_ subscription: Disposable) async {
+        let newCount = count - 1
+        count = newCount
 
-            if self.baseSink.isDisposed() {
-                return Disposables.create()
-            }
+        let connectDisposable: Disposable?
+        if newCount == 0 {
+            connectDisposable = connectableSubscription.dispose()
+        } else {
+            connectDisposable = nil
+        }
+        await subscription.dispose()
+        await connectDisposable?.dispose()
+    }
 
-            if self.parent.count == 0 {
-                self.parent.count = 1
-                self.parent.connectableSubscription = await self.parent.source.connect()
-            } else {
-                self.parent.count += 1
-            }
+    func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+        where Observer.Element == Element {
+        count += 1
 
-            return await Disposables.create {
-                await subscription.dispose()
-                await self.parent.lock.performLocked {
-                    if self.parent.connectionId != self.connectionIdSnapshot {
-                        return
-                    }
-                    if self.parent.count == 1 {
-                        self.parent.count = 0
-                        guard let connectableSubscription = self.parent.connectableSubscription else {
-                            return
-                        }
+        let subscription = await source.subscribe(c.call(), observer)
 
-                        await connectableSubscription.dispose()
-                        self.parent.connectableSubscription = nil
-                    } else if self.parent.count > 1 {
-                        self.parent.count -= 1
-                    } else {
-                        rxFatalError("Something went wrong with RefCount disposing mechanism")
-                    }
-                }
-            }
+        if count == 1 {
+            await connectableSubscription.replace(source.connect(c.call()))?.dispose()
+        }
+
+        return Disposables.create {
+            await self.handleDisposal(subscription)
         }
     }
 
-    func on(_ event: Event<Element>, _ c: C) async {
-        var connectionToDisposeOf: (any Disposable)?
-        switch event {
-        case .next:
-            await forwardOn(event, c.call())
-        case .error, .completed:
-            await parent.lock.performLocked {
-                if self.parent.connectionId == self.connectionIdSnapshot {
-                    let connection = self.parent.connectableSubscription
-                    connectionToDisposeOf = connection
-                    self.parent.count = 0
-                    self.parent.connectionId = self.parent.connectionId &+ 1
-                    self.parent.connectableSubscription = nil
-                }
-            }
-            await forwardOn(event, c.call())
-            await dispose()
-        }
-        await connectionToDisposeOf?.dispose()
+    func dispose() async {
+        await connectableSubscription.dispose()?.dispose()
     }
 }
 
 private final class RefCount<ConnectableSource: ConnectableObservableType>: Producer<ConnectableSource.Element> {
 
-    // state
-    fileprivate var count = 0
-    fileprivate var connectionId: Int64 = 0
-    fileprivate var connectableSubscription = nil as Disposable?
-
-    fileprivate let source: ConnectableSource
+    let sink: RefCountSink<ConnectableSource>
 
     init(source: ConnectableSource) {
-        self.source = source
+        sink = RefCountSink(source: source)
         super.init()
     }
 
@@ -343,13 +307,12 @@ private final class RefCount<ConnectableSource: ConnectableObservableType>: Prod
     )
         async -> AsynchronousDisposable
         where Observer.Element == ConnectableSource.Element {
-        let sink = await RefCountSink(parent: self, observer: observer)
-        let subscription = await sink.run(c.call())
-        return sink
+        let disposable = await sink.run(c.call(), observer)
+        return disposable
     }
 }
 
-//private final actor MulticastSink<Subject: SubjectType, Observer: ObserverType>: Sink, ObserverType {
+// private final actor MulticastSink<Subject: SubjectType, Observer: ObserverType>: Sink, ObserverType {
 //    typealias Element = Observer.Element
 //    typealias ResultType = Element
 //    typealias MutlicastType = Multicast<Subject, Observer.Element>
@@ -388,9 +351,9 @@ private final class RefCount<ConnectableSource: ConnectableObservableType>: Prod
 //            await dispose()
 //        }
 //    }
-//}
+// }
 //
-//private final class Multicast<Subject: SubjectType, Result: Sendable>: Producer<Result> {
+// private final class Multicast<Subject: SubjectType, Result: Sendable>: Producer<Result> {
 //    typealias SubjectSelectorType = () throws -> Subject
 //    typealias SelectorType = (Observable<Subject.Element>) throws -> Observable<Result>
 //
@@ -418,4 +381,4 @@ private final class RefCount<ConnectableSource: ConnectableObservableType>: Prod
 //        let subscription = await sink.run(c.call())
 //        return sink
 //    }
-//}
+// }
