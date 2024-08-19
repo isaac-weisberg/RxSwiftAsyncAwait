@@ -52,9 +52,28 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
 
     /**
      Subscribes `observer` to receive events for this sequence.
-
+     
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
+    #if VICIOUS_TRACING
+        func subscribe(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            _ observer: @Sendable @escaping (CompletableEvent, C) async -> Void
+        )
+            async -> Disposable {
+            await subscribe(C(file, function, line), observer)
+        }
+    #else
+        func subscribe(
+            _ observer: @Sendable @escaping (CompletableEvent, C) async -> Void
+        )
+            async -> Disposable {
+            await subscribe(C(), observer)
+        }
+    #endif
+
     func subscribe(_ c: C, _ observer: @Sendable @escaping (CompletableEvent, C) async -> Void) async -> Disposable {
         await primitiveSequence.asObservable().subscribe(c.call()) { event, c in
             switch event {
@@ -107,12 +126,12 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
 
     #if VICIOUS_TRACING
         func subscribe(
-            onCompleted: (@Sendable () async -> Void)? = nil,
-            onError: (@Sendable (Swift.Error) async -> Void)? = nil,
-            onDisposed: (@Sendable () async -> Void)? = nil,
             _ file: StaticString = #file,
             _ function: StaticString = #function,
-            _ line: UInt = #line
+            _ line: UInt = #line,
+            onCompleted: (@Sendable () async -> Void)? = nil,
+            onError: (@Sendable (Swift.Error) async -> Void)? = nil,
+            onDisposed: (@Sendable () async -> Void)? = nil
         )
             async -> Disposable {
             let c = C(file, function, line)

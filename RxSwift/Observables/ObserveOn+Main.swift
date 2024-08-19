@@ -1,51 +1,84 @@
-//
-//  ObservableType+Extensions.swift
-//  RxSwift
-//
-//  Created by Krunoslav Zaher on 2/21/15.
-//  Copyright © 2015 Krunoslav Zaher. All rights reserved.
-//
+public extension ObservableConvertibleType {
+    func observe(on _: MainLegacyScheduler) -> ObserveOnMainActorObservable<Element> {
+        ObserveOnMainActorObservable(source: asObservable())
+    }
+}
 
-#if DEBUG
-    import Foundation
-#endif
+public enum MainLegacyScheduler: Sendable {
+    public static let instance = MainLegacyScheduler.asyncInstance
 
-public extension ObservableType {
+    case asyncInstance
+}
+
+public struct MainActorObserver<Element: Sendable>: ObserverType {
+    public typealias On = @MainActor @Sendable (_ event: Event<Element>, _ c: C) async -> Void
+
+    let mainActorOn: On
+
+    public init(_ mainActorOn: @escaping On) {
+        self.mainActorOn = mainActorOn
+    }
+
+    public func on(_ event: Event<Element>, _ c: C) async {
+        await mainActorOn(event, c.call())
+    }
+}
+
+public protocol MainActorObservable {
+    associatedtype Element: Sendable
+
+    func subscribe(_ c: C, _ observer: MainActorObserver<Element>) async -> Disposable
+}
+
+public final class ObserveOnMainActorObservable<
+    Element: Sendable
+>: MainActorObservable {
+    let source: Observable<Element>
+
+    init(source: Observable<Element>) {
+        self.source = source
+    }
+
+    public func subscribe(_ c: C, _ observer: MainActorObserver<Element>) async -> any Disposable {
+        await source.subscribe(c.call(), observer)
+    }
+}
+
+public extension MainActorObservable {
     /**
      Subscribes an event handler to an observable sequence.
-
+     
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-
     #if VICIOUS_TRACING
         func subscribe(
             _ file: StaticString = #file,
             _ function: StaticString = #function,
             _ line: UInt = #line,
-            _ on: @Sendable @escaping (Event<Element>, C) async -> Void
+            _ on: @MainActor @Sendable @escaping (Event<Element>, C) async -> Void
         )
-            async -> Disposable {
+            async -> AsynchronousDisposable {
             await subscribe(C(file, function, line), on)
         }
     #else
         func subscribe(
-            _ on: @Sendable @escaping (Event<Element>, C) async -> Void
+            _ on: @MainActor @Sendable @escaping (Event<Element>, C) async -> Void
         )
-            async -> Disposable {
+            async -> AsynchronousDisposable {
             await subscribe(C(), on)
         }
     #endif
 
     func subscribe(
         _ c: C,
-        _ on: @Sendable @escaping (Event<Element>, C) async -> Void
+        _ on: @MainActor @Sendable @escaping (Event<Element>, C) async -> Void
     )
         async -> AsynchronousDisposable {
-        let observer = AnyObserver<Element>(eventHandler: { e, c in
+        let observer = MainActorObserver<Element> { e, c in
             await on(e, c.call())
-        })
-        return await asObservable().subscribe(c.call(), observer)
+        }
+        return await subscribe(c.call(), observer)
     }
 
     /**
@@ -66,10 +99,10 @@ public extension ObservableType {
     func subscribe<Object: AnyObject & Sendable>(
         _ c: C,
         with object: Object,
-        onNext: (@Sendable (Object, Element) async -> Void)? = nil,
-        onError: (@Sendable (Object, Swift.Error) async -> Void)? = nil,
-        onCompleted: (@Sendable (Object) async -> Void)? = nil,
-        onDisposed: (@Sendable (Object) async -> Void)? = nil
+        onNext: (@MainActor @Sendable (Object, Element) async -> Void)? = nil,
+        onError: (@MainActor @Sendable (Object, Swift.Error) async -> Void)? = nil,
+        onCompleted: (@MainActor @Sendable (Object) async -> Void)? = nil,
+        onDisposed: (@MainActor @Sendable (Object) async -> Void)? = nil
     )
         async -> AsynchronousDisposable {
         await subscribe(
@@ -108,14 +141,15 @@ public extension ObservableType {
             _ file: StaticString = #file,
             _ function: StaticString = #function,
             _ line: UInt = #line,
-            onNext: (@Sendable (Element) async -> Void)? = nil,
-            onError: (@Sendable (Swift.Error) async -> Void)? = nil,
-            onCompleted: (@Sendable () async -> Void)? = nil,
-            onDisposed: (@Sendable () async -> Void)? = nil
+            onNext: (@MainActor @Sendable (Element) async -> Void)? = nil,
+            onError: (@MainActor @Sendable (Swift.Error) async -> Void)? = nil,
+            onCompleted: (@MainActor @Sendable () async -> Void)? = nil,
+            onDisposed: (@MainActor @Sendable () async -> Void)? = nil
         )
             async -> AsynchronousDisposable {
-            await subscribe(
-                C(file, function, line),
+            let c = C(file, function, line)
+            return await subscribe(
+                c,
                 onNext: onNext,
                 onError: onError,
                 onCompleted: onCompleted,
@@ -124,10 +158,10 @@ public extension ObservableType {
         }
     #else
         func subscribe(
-            onNext: (@Sendable (Element) async -> Void)? = nil,
-            onError: (@Sendable (Swift.Error) async -> Void)? = nil,
-            onCompleted: (@Sendable () async -> Void)? = nil,
-            onDisposed: (@Sendable () async -> Void)? = nil
+            onNext: (@MainActor @Sendable (Element) async -> Void)? = nil,
+            onError: (@MainActor @Sendable (Swift.Error) async -> Void)? = nil,
+            onCompleted: (@MainActor @Sendable () async -> Void)? = nil,
+            onDisposed: (@MainActor @Sendable () async -> Void)? = nil
         )
             async -> AsynchronousDisposable {
             await subscribe(C(), onNext: onNext, onError: onError, onCompleted: onCompleted, onDisposed: onDisposed)
@@ -136,10 +170,10 @@ public extension ObservableType {
 
     func subscribe(
         _ c: C,
-        onNext: (@Sendable (Element) async -> Void)? = nil,
-        onError: (@Sendable (Swift.Error) async -> Void)? = nil,
-        onCompleted: (@Sendable () async -> Void)? = nil,
-        onDisposed: (@Sendable () async -> Void)? = nil
+        onNext: (@MainActor @Sendable (Element) async -> Void)? = nil,
+        onError: (@MainActor @Sendable (Swift.Error) async -> Void)? = nil,
+        onCompleted: (@MainActor @Sendable () async -> Void)? = nil,
+        onDisposed: (@MainActor @Sendable () async -> Void)? = nil
     )
         async -> AsynchronousDisposable {
         let disposable: AsynchronousDisposable
@@ -152,7 +186,7 @@ public extension ObservableType {
 
         let callStack = Hooks.recordCallStackOnError ? await Hooks.getCustomCaptureSubscriptionCallstack()() : []
 
-        let observer = AnyAsyncObserver<Element>(eventHandler: { event, _ in
+        let observer = MainActorObserver<Element> { event, _ in
             switch event {
             case .next(let value):
                 await onNext?(value)
@@ -167,59 +201,12 @@ public extension ObservableType {
                 await onCompleted?()
                 await disposable.dispose()
             }
-        })
+        }
 
-        let disposableFromSub = await asObservable().subscribe(c.call(), observer)
+        let disposableFromSub = await subscribe(c.call(), observer)
         return Disposables.create {
             await disposableFromSub.dispose()
             await disposable.dispose()
         }
-    }
-}
-
-public extension Hooks {
-    typealias DefaultErrorHandler = (_ subscriptionCallStack: [String], _ error: Error) -> Void
-    typealias CustomCaptureSubscriptionCallstack = () -> [String]
-
-    private static let lock = ActualNonRecursiveLock()
-
-    private static var _defaultErrorHandler: DefaultErrorHandler = { subscriptionCallStack, error in
-        #if DEBUG
-            let serializedCallStack = subscriptionCallStack.joined(separator: "\n")
-            print("Unhandled error happened: \(error)")
-            if !serializedCallStack.isEmpty {
-                print("subscription called from:\n\(serializedCallStack)")
-            }
-        #endif
-    }
-
-    private static var _customCaptureSubscriptionCallstack: CustomCaptureSubscriptionCallstack = {
-        #if DEBUG
-            return Thread.callStackSymbols
-        #else
-            return []
-        #endif
-    }
-
-    /// Error handler called in case onError handler wasn't provided.
-    static func getDefaultErrorHandler() async -> DefaultErrorHandler {
-        await lock.performLocked {
-            self._defaultErrorHandler
-        }
-    }
-
-    static func setDefaultErrorHandler(_ newValue: @escaping DefaultErrorHandler) async {
-        await lock.performLocked {
-            self._defaultErrorHandler = newValue
-        }
-    }
-
-    /// Subscription callstack block to fetch custom callstack information.
-    static func getCustomCaptureSubscriptionCallstack() async -> CustomCaptureSubscriptionCallstack {
-        await lock.performLocked { self._customCaptureSubscriptionCallstack }
-    }
-
-    static func setCustomCaptureSubscriptionCallstack(_ newValue: @escaping CustomCaptureSubscriptionCallstack) async {
-        await lock.performLocked { self._customCaptureSubscriptionCallstack = newValue }
     }
 }

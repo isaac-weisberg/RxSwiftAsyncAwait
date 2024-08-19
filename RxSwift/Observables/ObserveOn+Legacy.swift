@@ -9,16 +9,6 @@ public protocol LegacySynchronousScheduler: Sendable {
     func perform(_ work: @Sendable () -> Void) async
 }
 
-public final class MainLegacySynchronousScheduler: LegacySynchronousScheduler {
-    public static let instance = MainLegacySynchronousScheduler()
-
-    public func perform(_ work: @Sendable () -> Void) async {
-        await MainActor.run {
-            work()
-        }
-    }
-}
-
 public final class WhateverLegacySynchronousScheduler: LegacySynchronousScheduler {
     public static let instance = WhateverLegacySynchronousScheduler()
 
@@ -37,7 +27,7 @@ public protocol SynchronouslyHandlingObservable {
 public final actor ObserveOnLegacySynchronousSchedulerSink<
     Observer: SynchronousObserver,
     Scheduler: LegacySynchronousScheduler
->: Disposable {
+>: Disposable, ObserverType {
     public typealias Element = Observer.Element
 
     let observer: Observer
@@ -49,7 +39,9 @@ public final actor ObserveOnLegacySynchronousSchedulerSink<
         self.scheduler = scheduler
     }
 
-    func run(_ c: C, _ source: Observable<Element>) {}
+    func run(_ c: C, _ source: Observable<Element>) async {
+        await sourceDisposable.setDisposable(source.subscribe(c.call(), self))?.dispose()
+    }
 
     public func on(_ event: Event<Element>, _ c: C) async {
         await scheduler.perform { @Sendable in
@@ -103,10 +95,29 @@ final class AnySynchronousObserver<Element: Sendable>: SynchronousObserver {
 public extension SynchronouslyHandlingObservable {
     /**
      Subscribes an event handler to an observable sequence.
-
+     
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
+    #if VICIOUS_TRACING
+        func subscribe(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            _ on: @Sendable @escaping (Event<Element>, C) -> Void
+        )
+            async -> AsynchronousDisposable {
+            await subscribe(C(file, function, line), on)
+        }
+    #else
+        func subscribe(
+            _ on: @Sendable @escaping (Event<Element>, C) -> Void
+        )
+            async -> AsynchronousDisposable {
+            await subscribe(C(), on)
+        }
+    #endif
+
     func subscribe(_ c: C, _ on: @Sendable @escaping (Event<Element>, C) -> Void) async -> AsynchronousDisposable {
         let observer = AnySynchronousObserver<Element> { e, c in
             on(e, c.call())
