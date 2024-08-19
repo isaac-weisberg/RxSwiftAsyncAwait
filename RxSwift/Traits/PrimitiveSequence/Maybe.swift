@@ -59,9 +59,28 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
 
     /**
      Subscribes `observer` to receive events for this sequence.
-
+     
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
+    #if VICIOUS_TRACING
+        func subscribe(
+            file: StaticString = #file,
+            function: StaticString = #function,
+            line: UInt = #line,
+            _ observer: @Sendable @escaping (MaybeEvent<Element>) async -> Void
+        )
+            async -> Disposable {
+            await subscribe(C(file, function, line), observer)
+        }
+    #else
+        func subscribe(
+            _ observer: @Sendable @escaping (MaybeEvent<Element>) async -> Void
+        )
+            async -> Disposable {
+            await subscribe(C(), observer)
+        }
+    #endif
+
     func subscribe(_ c: C, _ observer: @Sendable @escaping (MaybeEvent<Element>) async -> Void) async -> Disposable {
         await primitiveSequence.asObservable().subscribe(c.call()) { event, _ in
             switch event {
@@ -130,6 +149,44 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      gracefully completed, errored, or if the generation is canceled by disposing subscription).
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
+
+    #if VICIOUS_TRACING
+        func subscribe(
+            file: StaticString = #file,
+            function: StaticString = #function,
+            line: UInt = #line,
+            onSuccess: (@Sendable (Element) -> Void)? = nil,
+            onError: (@Sendable (Swift.Error) -> Void)? = nil,
+            onCompleted: (@Sendable () -> Void)? = nil,
+            onDisposed: (@Sendable () -> Void)? = nil
+        )
+            async -> Disposable {
+            await subscribe(
+                C(file, function, line),
+                onSuccess: onSuccess,
+                onError: onError,
+                onCompleted: onCompleted,
+                onDisposed: onDisposed
+            )
+        }
+    #else
+        func subscribe(
+            onSuccess: (@Sendable (Element) -> Void)? = nil,
+            onError: (@Sendable (Swift.Error) -> Void)? = nil,
+            onCompleted: (@Sendable () -> Void)? = nil,
+            onDisposed: (@Sendable () -> Void)? = nil
+        )
+            async -> Disposable {
+            await subscribe(
+                C(),
+                onSuccess: onSuccess,
+                onError: onError,
+                onCompleted: onCompleted,
+                onDisposed: onDisposed
+            )
+        }
+    #endif
+
     func subscribe(
         _ c: C,
         onSuccess: (@Sendable (Element) -> Void)? = nil,

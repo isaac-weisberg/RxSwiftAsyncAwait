@@ -46,9 +46,27 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
 
     /**
      Subscribes `observer` to receive events for this sequence.
-
+     
      - returns: Subscription for `observer` that can be used to cancel production of sequence elements and free resources.
      */
+    #if VICIOUS_TRACING
+        func subscribe(
+            file: StaticString = #file,
+            function: StaticString = #function,
+            line: UInt = #line,
+            _ observer: @escaping SingleObserver
+        )
+            async -> Disposable {
+            await subscribe(C(file, function, line), observer)
+        }
+    #else
+        func subscribe(
+            _ observer: @escaping SingleObserver
+        )
+            async -> Disposable {
+            await subscribe(C(), observer)
+        }
+    #endif
     func subscribe(_ c: C, _ observer: @escaping SingleObserver) async -> Disposable {
         await primitiveSequence.asObservable().subscribe(c.call()) { event, c in
 
@@ -113,12 +131,12 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      */
     #if VICIOUS_TRACING
         func subscribe(
-            onSuccess: (@Sendable (Element) -> Void)? = nil,
-            onFailure: (@Sendable (Swift.Error) -> Void)? = nil,
-            onDisposed: (@Sendable () -> Void)? = nil,
             _ file: StaticString = #file,
             _ function: StaticString = #function,
-            _ line: UInt = #line
+            _ line: UInt = #line,
+            onSuccess: (@Sendable (Element) -> Void)? = nil,
+            onFailure: (@Sendable (Swift.Error) -> Void)? = nil,
+            onDisposed: (@Sendable () -> Void)? = nil
         )
             async -> Disposable {
             let c = C(file, function, line)
