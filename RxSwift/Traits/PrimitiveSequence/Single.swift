@@ -134,9 +134,9 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
             _ file: StaticString = #file,
             _ function: StaticString = #function,
             _ line: UInt = #line,
-            onSuccess: (@Sendable (Element) -> Void)? = nil,
-            onFailure: (@Sendable (Swift.Error) -> Void)? = nil,
-            onDisposed: (@Sendable () -> Void)? = nil
+            onSuccess: (@Sendable (Element) async -> Void)? = nil,
+            onFailure: (@Sendable (Swift.Error) async -> Void)? = nil,
+            onDisposed: (@Sendable () async -> Void)? = nil
         )
             async -> Disposable {
             let c = C(file, function, line)
@@ -144,9 +144,9 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
         }
     #else
         func subscribe(
-            onSuccess: ((Element) -> Void)? = nil,
-            onFailure: ((Swift.Error) -> Void)? = nil,
-            onDisposed: (() -> Void)? = nil
+            onSuccess: (@Sendable (Element) async -> Void)? = nil,
+            onFailure: (@Sendable (Swift.Error) async -> Void)? = nil,
+            onDisposed: (@Sendable () async -> Void)? = nil
         )
             async -> Disposable {
             await subscribe(C(), onSuccess: onSuccess, onFailure: onFailure, onDisposed: onDisposed)
@@ -155,9 +155,9 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
 
     func subscribe(
         _ c: C,
-        onSuccess: (@Sendable (Element) -> Void)? = nil,
-        onFailure: (@Sendable (Swift.Error) -> Void)? = nil,
-        onDisposed: (@Sendable () -> Void)? = nil
+        onSuccess: (@Sendable (Element) async -> Void)? = nil,
+        onFailure: (@Sendable (Swift.Error) async -> Void)? = nil,
+        onDisposed: (@Sendable () async -> Void)? = nil
     )
         async -> Disposable {
         #if DEBUG
@@ -176,11 +176,11 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
         let observer: SingleObserver = { event, _ in
             switch event {
             case .success(let element):
-                onSuccess?(element)
+                await onSuccess?(element)
                 await disposable.dispose()
             case .failure(let error):
                 if let onFailure {
-                    onFailure(error)
+                    await onFailure(error)
                 } else {
                     await Hooks.getDefaultErrorHandler()(callStack, error)
                 }

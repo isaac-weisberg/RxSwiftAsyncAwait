@@ -112,29 +112,29 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
     func subscribe<Object: AnyObject & Sendable>(
         _ c: C,
         with object: Object,
-        onSuccess: (@Sendable (Object, Element) -> Void)? = nil,
-        onError: (@Sendable (Object, Swift.Error) -> Void)? = nil,
-        onCompleted: (@Sendable (Object) -> Void)? = nil,
-        onDisposed: (@Sendable (Object) -> Void)? = nil
+        onSuccess: (@Sendable (Object, Element) async -> Void)? = nil,
+        onError: (@Sendable (Object, Swift.Error) async -> Void)? = nil,
+        onCompleted: (@Sendable (Object) async -> Void)? = nil,
+        onDisposed: (@Sendable (Object) async -> Void)? = nil
     )
         async -> Disposable {
         await subscribe(
             c.call(),
             onSuccess: { [weak object] in
                 guard let object else { return }
-                onSuccess?(object, $0)
+                await onSuccess?(object, $0)
             },
             onError: { [weak object] in
                 guard let object else { return }
-                onError?(object, $0)
+                await onError?(object, $0)
             },
             onCompleted: { [weak object] in
                 guard let object else { return }
-                onCompleted?(object)
+                await onCompleted?(object)
             },
             onDisposed: { [weak object] in
                 guard let object else { return }
-                onDisposed?(object)
+                await onDisposed?(object)
             }
         )
     }
@@ -155,10 +155,10 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
             file: StaticString = #file,
             function: StaticString = #function,
             line: UInt = #line,
-            onSuccess: (@Sendable (Element) -> Void)? = nil,
-            onError: (@Sendable (Swift.Error) -> Void)? = nil,
-            onCompleted: (@Sendable () -> Void)? = nil,
-            onDisposed: (@Sendable () -> Void)? = nil
+            onSuccess: (@Sendable (Element) async -> Void)? = nil,
+            onError: (@Sendable (Swift.Error) async -> Void)? = nil,
+            onCompleted: (@Sendable () async -> Void)? = nil,
+            onDisposed: (@Sendable () async -> Void)? = nil
         )
             async -> Disposable {
             await subscribe(
@@ -171,10 +171,10 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
         }
     #else
         func subscribe(
-            onSuccess: (@Sendable (Element) -> Void)? = nil,
-            onError: (@Sendable (Swift.Error) -> Void)? = nil,
-            onCompleted: (@Sendable () -> Void)? = nil,
-            onDisposed: (@Sendable () -> Void)? = nil
+            onSuccess: (@Sendable (Element) async -> Void)? = nil,
+            onError: (@Sendable (Swift.Error) async -> Void)? = nil,
+            onCompleted: (@Sendable () async -> Void)? = nil,
+            onDisposed: (@Sendable () async -> Void)? = nil
         )
             async -> Disposable {
             await subscribe(
@@ -189,10 +189,10 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
 
     func subscribe(
         _ c: C,
-        onSuccess: (@Sendable (Element) -> Void)? = nil,
-        onError: (@Sendable (Swift.Error) -> Void)? = nil,
-        onCompleted: (@Sendable () -> Void)? = nil,
-        onDisposed: (@Sendable () -> Void)? = nil
+        onSuccess: (@Sendable (Element) async -> Void)? = nil,
+        onError: (@Sendable (Swift.Error) async -> Void)? = nil,
+        onCompleted: (@Sendable () async -> Void)? = nil,
+        onDisposed: (@Sendable () async -> Void)? = nil
     )
         async -> Disposable {
         #if DEBUG
@@ -210,17 +210,17 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
         let observer: MaybeObserver = { event in
             switch event {
             case .success(let element):
-                onSuccess?(element)
+                await onSuccess?(element)
                 await disposable.dispose()
             case .error(let error):
                 if let onError {
-                    onError(error)
+                    await onError(error)
                 } else {
                     await Hooks.getDefaultErrorHandler()(callStack, error)
                 }
                 await disposable.dispose()
             case .completed:
-                onCompleted?()
+                await onCompleted?()
                 await disposable.dispose()
             }
         }

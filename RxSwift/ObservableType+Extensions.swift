@@ -17,7 +17,31 @@ public extension ObservableType {
      - parameter on: Action to invoke for each event in the observable sequence.
      - returns: Subscription object used to unsubscribe from the observable sequence.
      */
-    func subscribe(_ c: C, _ on: @Sendable @escaping (Event<Element>, C) async -> Void) async -> AsynchronousDisposable {
+
+    #if VICIOUS_TRACING
+        func subscribe(
+            _ file: StaticString = #file,
+            _ function: StaticString = #function,
+            _ line: UInt = #line,
+            _ on: @Sendable @escaping (Event<Element>, C) async -> Void
+        )
+            async -> Disposable {
+            await subscribe(C(file, function, line), on)
+        }
+    #else
+        func subscribe(
+            _ on: @Sendable @escaping (Event<Element>, C) async -> Void
+        )
+            async -> Disposable {
+            await subscribe(C(), on)
+        }
+    #endif
+
+    func subscribe(
+        _ c: C,
+        _ on: @Sendable @escaping (Event<Element>, C) async -> Void
+    )
+        async -> AsynchronousDisposable {
         let observer = AnyObserver<Element>(eventHandler: { e, c in
             await on(e, c.call())
         })
@@ -42,29 +66,29 @@ public extension ObservableType {
     func subscribe<Object: AnyObject & Sendable>(
         _ c: C,
         with object: Object,
-        onNext: (@Sendable (Object, Element) -> Void)? = nil,
-        onError: (@Sendable (Object, Swift.Error) -> Void)? = nil,
-        onCompleted: (@Sendable (Object) -> Void)? = nil,
-        onDisposed: (@Sendable (Object) -> Void)? = nil
+        onNext: (@Sendable (Object, Element) async -> Void)? = nil,
+        onError: (@Sendable (Object, Swift.Error) async -> Void)? = nil,
+        onCompleted: (@Sendable (Object) async -> Void)? = nil,
+        onDisposed: (@Sendable (Object) async -> Void)? = nil
     )
         async -> AsynchronousDisposable {
         await subscribe(
             c.call(),
             onNext: { [weak object] in
                 guard let object else { return }
-                onNext?(object, $0)
+                await onNext?(object, $0)
             },
             onError: { [weak object] in
                 guard let object else { return }
-                onError?(object, $0)
+                await onError?(object, $0)
             },
             onCompleted: { [weak object] in
                 guard let object else { return }
-                onCompleted?(object)
+                await onCompleted?(object)
             },
             onDisposed: { [weak object] in
                 guard let object else { return }
-                onDisposed?(object)
+                await onDisposed?(object)
             }
         )
     }
