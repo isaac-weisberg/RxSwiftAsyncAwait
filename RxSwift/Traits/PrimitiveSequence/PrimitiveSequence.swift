@@ -243,18 +243,18 @@ public extension PrimitiveSequence {
      - parameter primitiveSequenceFactory: Factory function to obtain an observable sequence that depends on the obtained resource.
      - returns: An observable sequence whose lifetime controls the lifetime of the dependent resource object.
      */
-//    static func using<Resource: Disposable>(
-//        _ resourceFactory: @escaping () async throws -> Resource,
-//        primitiveSequenceFactory: @escaping (Resource) async throws -> PrimitiveSequence<Trait, Element>
-//    )
-//        async -> PrimitiveSequence<Trait, Element> {
-//        await PrimitiveSequence(raw: Observable.using(
-//            resourceFactory,
-//            observableFactory: { (resource: Resource) throws -> Observable<Element> in
-//                try await primitiveSequenceFactory(resource).asObservable()
-//            }
-//        ))
-//    }
+    static func using<Resource: Disposable>(
+        _ resourceFactory: @escaping () async throws -> Resource,
+        primitiveSequenceFactory: @escaping (Resource) async throws -> PrimitiveSequence<Trait, Element>
+    )
+        -> PrimitiveSequence<Trait, Element> {
+        PrimitiveSequence(raw: Observable.using(
+            resourceFactory,
+            observableFactory: { (resource: Resource) throws -> Observable<Element> in
+                try await primitiveSequenceFactory(resource).asObservable()
+            }
+        ))
+    }
 
     /**
      Applies a timeout policy for each element in the observable sequence. If the next element isn't received within the specified timeout duration starting from its predecessor, a TimeoutError is propagated to the observer.
