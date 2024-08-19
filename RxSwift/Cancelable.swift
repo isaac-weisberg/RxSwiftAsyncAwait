@@ -16,4 +16,4 @@ public protocol AsynchronousCancelable: AsynchronousDisposable {
     func isDisposed() async -> Bool
 }
 
-typealias Cancelable = AsynchronousCancelable
+public typealias Cancelable = AsynchronousCancelable
