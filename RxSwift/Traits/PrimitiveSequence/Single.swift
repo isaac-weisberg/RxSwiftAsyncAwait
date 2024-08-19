@@ -274,10 +274,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter predicate: A function to test each source element for a condition.
      - returns: An observable sequence that contains elements from the input sequence that satisfy the condition.
      */
-//    func filter(_ predicate: @escaping (Element) async throws -> Bool) async
-//        -> Maybe<Element> {
-//        await Maybe(raw: primitiveSequence.source.filter(predicate))
-//    }
+    func filter(_ predicate: @Sendable @escaping (Element) throws -> Bool)
+        -> Maybe<Element> {
+        Maybe(raw: primitiveSequence.source.filter(predicate))
+    }
 
     /**
      Projects each element of an observable sequence into a new form.
@@ -300,10 +300,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - returns: An observable sequence whose elements are the result of filtering the transform function for each element of the source.
 
      */
-//    func compactMap<Result>(_ transform: @escaping (Element) async throws -> Result?) async
-//        -> Maybe<Result> {
-//        await Maybe(raw: primitiveSequence.source.compactMap(transform))
-//    }
+    func compactMap<Result: Sendable>(_ transform: @Sendable @escaping (Element) throws -> Result?)
+        -> Maybe<Result> {
+        Maybe(raw: primitiveSequence.source.compactMap(transform))
+    }
 
     /**
      Projects each element of an observable sequence to an observable sequence and merges the resulting observable sequences into one observable sequence.
@@ -326,10 +326,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter selector: A transform function to apply to each element.
      - returns: An observable sequence whose elements are the result of invoking the one-to-many transform function on each element of the input sequence.
      */
-//    func flatMapMaybe<Result>(_ selector: @escaping (Element) async throws -> Maybe<Result>) async
-//        -> Maybe<Result> {
-//        await Maybe<Result>(raw: primitiveSequence.source.flatMap(selector))
-//    }
+    func flatMapMaybe<Result: Sendable>(_ selector: @Sendable @escaping (Element) throws -> Maybe<Result>)
+        -> Maybe<Result> {
+        Maybe<Result>(raw: primitiveSequence.source.flatMap(selector))
+    }
 
     /**
      Projects each element of an observable sequence to an observable sequence and merges the resulting observable sequences into one observable sequence.
@@ -399,9 +399,9 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
     /// Converts `self` to `Maybe` trait.
     ///
     /// - returns: Maybe trait that represents `self`.
-//    func asMaybe() -> Maybe<Element> {
-//        Maybe(raw: primitiveSequence.source)
-//    }
+    func asMaybe() -> Maybe<Element> {
+        Maybe(raw: primitiveSequence.source)
+    }
 
     /// Converts `self` to `Completable` trait, ignoring its emitted value if
     /// one exists.

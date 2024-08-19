@@ -39,9 +39,9 @@ public extension ObservableType {
 
      - returns: An observable sequence that emits a single element, completes when the source Observable has completed, or throws an exception if more of them are emitted.
      */
-//    func asMaybe() -> Maybe<Element> {
-//        PrimitiveSequence(raw: AsMaybe(source: asObservable()))
-//    }
+    func asMaybe() -> Maybe<Element> {
+        PrimitiveSequence(raw: AsMaybe(source: asObservable()))
+    }
 }
 
 public extension ObservableType where Element == Never {
