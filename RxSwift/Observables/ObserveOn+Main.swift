@@ -1,26 +1,36 @@
 public extension ObservableConvertibleType {
-    func observe(on _: MainLegacyScheduler) -> ObserveOnMainActorObservable<Element> {
-        ObserveOnMainActorObservable(source: asObservable())
+    func observe(on mainScheduler: some MainLegacySchedulerProtocol)
+        -> ObserveOnMainActorObservable<Element, some MainLegacySchedulerProtocol> {
+        ObserveOnMainActorObservable(source: asObservable(), scheduler: mainScheduler)
     }
 }
 
-public enum MainLegacyScheduler: Sendable {
-    public static let instance = MainLegacyScheduler.asyncInstance
-
-    case asyncInstance
+@MainActor
+public protocol MainLegacySchedulerProtocol: Sendable {
+    func perform(_ work: @Sendable @MainActor () async -> Void) async
 }
 
-public struct MainActorObserver<Element: Sendable>: ObserverType {
+@MainActor
+public struct MainLegacyScheduler: MainLegacySchedulerProtocol {
+    public static let instance = MainLegacyScheduler()
+
+    public func perform(_ work: @MainActor () async -> Void) async {
+        await work()
+    }
+}
+
+public struct MainActorObserver<Element: Sendable>: Sendable {
     public typealias On = @MainActor @Sendable (_ event: Event<Element>, _ c: C) async -> Void
 
-    let mainActorOn: On
+    let _on: On
 
-    public init(_ mainActorOn: @escaping On) {
-        self.mainActorOn = mainActorOn
+    public init(_ on: @escaping On) {
+        _on = on
     }
 
-    public func on(_ event: Event<Element>, _ c: C) async {
-        await mainActorOn(event, c.call())
+    @MainActor
+    func on(_ event: Event<Element>, _ c: C) async {
+        await _on(event, c.call())
     }
 }
 
@@ -30,17 +40,36 @@ public protocol MainActorObservable {
     func subscribe(_ c: C, _ observer: MainActorObserver<Element>) async -> Disposable
 }
 
+final class ObserveOnMainActorObserver<Element: Sendable, Scheduler: MainLegacySchedulerProtocol>: ObserverType {
+    let scheduler: Scheduler
+    let mainActorObserver: MainActorObserver<Element>
+
+    init(mainActorObserver: MainActorObserver<Element>, scheduler: Scheduler) {
+        self.mainActorObserver = mainActorObserver
+        self.scheduler = scheduler
+    }
+
+    func on(_ event: Event<Element>, _ c: C) async {
+        await scheduler.perform {
+            await mainActorObserver.on(event, c.call())
+        }
+    }
+}
+
 public final class ObserveOnMainActorObservable<
-    Element: Sendable
+    Element: Sendable,
+    Scheduler: MainLegacySchedulerProtocol
 >: MainActorObservable {
     let source: Observable<Element>
+    let scheduler: Scheduler
 
-    init(source: Observable<Element>) {
+    init(source: Observable<Element>, scheduler: Scheduler) {
         self.source = source
+        self.scheduler = scheduler
     }
 
     public func subscribe(_ c: C, _ observer: MainActorObserver<Element>) async -> any Disposable {
-        await source.subscribe(c.call(), observer)
+        await source.subscribe(c.call(), ObserveOnMainActorObserver(mainActorObserver: observer, scheduler: scheduler))
     }
 }
 
