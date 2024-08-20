@@ -5,15 +5,15 @@ public extension ObservableConvertibleType {
     }
 }
 
-@MainActor
 public protocol MainLegacySchedulerProtocol: Sendable {
+    @MainActor
     func perform(_ work: @Sendable @MainActor () async -> Void) async
 }
 
-@MainActor
 public struct MainLegacyScheduler: MainLegacySchedulerProtocol {
     public static let instance = MainLegacyScheduler()
 
+    @MainActor
     public func perform(_ work: @MainActor () async -> Void) async {
         await work()
     }
