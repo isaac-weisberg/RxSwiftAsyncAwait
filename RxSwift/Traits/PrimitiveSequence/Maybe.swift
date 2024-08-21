@@ -28,7 +28,7 @@ public typealias Maybe<Element> = PrimitiveSequence<MaybeTrait, Element>
 }
 
 public extension PrimitiveSequenceType where Trait == MaybeTrait {
-    typealias MaybeObserver = @Sendable (MaybeEvent<Element>) async -> Void
+    typealias MaybeObserver = @Sendable (MaybeEvent<Element>, C) async -> Void
 
     /**
      Creates an observable sequence from a specified subscribe method implementation.
@@ -38,10 +38,10 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(subscribe: @Sendable @escaping (@escaping MaybeObserver) async -> Disposable)
+    static func create(subscribe: @Sendable @escaping (C, @escaping MaybeObserver) async -> Disposable)
         -> PrimitiveSequence<Trait, Element> {
         let source = Observable<Element>.create { c, observer in
-            await subscribe { event in
+            await subscribe(c.call()) { event, c in
                 switch event {
                 case .success(let element):
                     await observer.on(.next(element), c.call())
@@ -67,29 +67,29 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
             file: StaticString = #file,
             function: StaticString = #function,
             line: UInt = #line,
-            _ observer: @Sendable @escaping (MaybeEvent<Element>) async -> Void
+            _ observer: @Sendable @escaping (MaybeEvent<Element>, C) async -> Void
         )
             async -> Disposable {
             await subscribe(C(file, function, line), observer)
         }
     #else
         func subscribe(
-            _ observer: @Sendable @escaping (MaybeEvent<Element>) async -> Void
+            _ observer: @Sendable @escaping (MaybeEvent<Element>, C) async -> Void
         )
             async -> Disposable {
             await subscribe(C(), observer)
         }
     #endif
 
-    func subscribe(_ c: C, _ observer: @Sendable @escaping (MaybeEvent<Element>) async -> Void) async -> Disposable {
-        await primitiveSequence.asObservable().subscribe(c.call()) { event, _ in
+    func subscribe(_ c: C, _ observer: @Sendable @escaping (MaybeEvent<Element>, C) async -> Void) async -> Disposable {
+        await primitiveSequence.asObservable().subscribe(c.call()) { event, c in
             switch event {
             case .next(let element):
-                await observer(.success(element))
+                await observer(.success(element), c.call())
             case .error(let error):
-                await observer(.error(error))
+                await observer(.error(error), c.call())
             case .completed:
-                await observer(.completed)
+                await observer(.completed, c.call())
             }
         }
     }
@@ -202,12 +202,12 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
         #endif
         let disposable: Disposable
         if let onDisposed {
-            disposable = await Disposables.create(with: onDisposed)
+            disposable = Disposables.create(with: onDisposed)
         } else {
             disposable = Disposables.create()
         }
 
-        let observer: MaybeObserver = { event in
+        let observer: MaybeObserver = { event, _ in
             switch event {
             case .success(let element):
                 await onSuccess?(element)
