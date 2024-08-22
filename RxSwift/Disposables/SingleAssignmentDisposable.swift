@@ -7,15 +7,15 @@
 //
 
 public struct DisposeAction: @unchecked Sendable {
-    typealias DisposeAction = @Sendable () -> Void
+    public typealias DisposeAction = @Sendable () -> Void
 
     private var work: DisposeAction
 
-    init(_ work: @escaping DisposeAction) {
+    public init(_ work: @escaping DisposeAction) {
         self.work = work
     }
 
-    func dispose() {
+    public func dispose() {
         work()
     }
 }
@@ -32,6 +32,7 @@ private struct DisposeState: OptionSet {
     static let disposed = DisposeState(rawValue: 1 << 0)
     static let disposableSet = DisposeState(rawValue: 1 << 1)
 }
+
 public final class SingleAssignmentDisposableContainer<Disposable>: @unchecked Sendable {
 
     // state
