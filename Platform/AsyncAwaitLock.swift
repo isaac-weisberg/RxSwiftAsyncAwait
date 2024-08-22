@@ -12,13 +12,13 @@ public protocol ActorLock: Actor {
     func perform<R>(_ work: () -> R) -> R
 }
 
-extension ActorLock {
+public extension ActorLock {
     func perform<R>(_ work: () -> R) -> R {
         work()
     }
 }
 
-extension ActorLock {
+public extension ActorLock {
     func locking<Value>(_ value: Value) -> ActorLocked<Value> {
         ActorLocked(value, self)
     }
@@ -27,12 +27,12 @@ extension ActorLock {
 public final class ActorLocked<Value: Sendable>: @unchecked Sendable {
     var value: Value
     let actor: ActorLock
-    
+
     init(_ value: Value, _ actor: ActorLock) {
         self.value = value
         self.actor = actor
     }
-    
+
     func perform<R: Sendable>(_ work: @Sendable (inout Value) -> R) async -> R {
         await actor.perform { @Sendable in
             work(&value)
@@ -46,9 +46,9 @@ public final actor ActualNonRecursiveLock {
 
     public init() {
         #if TRACE_RESOURCES
-        Task {
-            _ = await Resources.incrementTotal()
-        }
+            Task {
+                _ = await Resources.incrementTotal()
+            }
         #endif
     }
 
@@ -61,7 +61,7 @@ public final actor ActualNonRecursiveLock {
     }
 
     #if VICIOUS_TRACING
-    public func performLocked<R: Sendable>(
+        public func performLocked<R: Sendable>(
             _ work: @Sendable @escaping () async -> R,
             _ file: StaticString = #file,
             _ function: StaticString = #function,
