@@ -24,7 +24,8 @@ public typealias Completable = PrimitiveSequence<CompletableTrait, Swift.Never>
 }
 
 public extension PrimitiveSequenceType where Trait == CompletableTrait, Element == Swift.Never {
-    typealias CompletableObserver = @Sendable (CompletableEvent, C) async -> Void
+    typealias CompletableObserver = @Sendable (CompletableEvent) async -> Void
+    typealias FullCompletableObserver = @Sendable (CompletableEvent, C) async -> Void
 
     /**
      Creates an observable sequence from a specified subscribe method implementation.
@@ -34,10 +35,11 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(subscribe: @Sendable @escaping (C, @escaping CompletableObserver) async -> Disposable)
+
+    static func create(subscribe: @Sendable @escaping (@escaping CompletableObserver) async -> Disposable)
         -> PrimitiveSequence<Trait, Element> {
-        let source = Observable<Element>.create { c, observer in
-            await subscribe(c.call()) { event, c in
+        let source = Observable<Element>.ccreate { c, observer in
+            await subscribe { event in
                 switch event {
                 case .error(let error):
                     await observer.on(.error(error), c.call())
@@ -60,21 +62,21 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
             _ file: StaticString = #file,
             _ function: StaticString = #function,
             _ line: UInt = #line,
-            _ observer: @Sendable @escaping (CompletableEvent, C) async -> Void
+            _ observer: @escaping FullCompletableObserver
         )
             async -> Disposable {
             await subscribe(C(file, function, line), observer)
         }
     #else
         func subscribe(
-            _ observer: @Sendable @escaping (CompletableEvent, C) async -> Void
+            _ observer: @escaping FullCompletableObserver
         )
             async -> Disposable {
             await subscribe(C(), observer)
         }
     #endif
 
-    func subscribe(_ c: C, _ observer: @Sendable @escaping (CompletableEvent, C) async -> Void) async -> Disposable {
+    func subscribe(_ c: C, _ observer: @escaping FullCompletableObserver) async -> Disposable {
         await primitiveSequence.asObservable().subscribe(c.call()) { event, c in
             switch event {
             case .next:
@@ -178,7 +180,7 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
             disposable = Disposables.create()
         }
 
-        let observer: CompletableObserver = { event, c in
+        let observer: FullCompletableObserver = { event, c in
             _ = c
             switch event {
             case .error(let error):

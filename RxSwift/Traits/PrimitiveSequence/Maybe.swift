@@ -28,7 +28,8 @@ public typealias Maybe<Element> = PrimitiveSequence<MaybeTrait, Element>
 }
 
 public extension PrimitiveSequenceType where Trait == MaybeTrait {
-    typealias MaybeObserver = @Sendable (MaybeEvent<Element>, C) async -> Void
+    typealias MaybeObserver = @Sendable (MaybeEvent<Element>) async -> Void
+    typealias FullMaybeObserver = @Sendable (MaybeEvent<Element>, C) async -> Void
 
     /**
      Creates an observable sequence from a specified subscribe method implementation.
@@ -38,10 +39,10 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(subscribe: @Sendable @escaping (C, @escaping MaybeObserver) async -> Disposable)
+    static func create(subscribe: @Sendable @escaping (@escaping MaybeObserver) async -> Disposable)
         -> PrimitiveSequence<Trait, Element> {
-        let source = Observable<Element>.create { c, observer in
-            await subscribe(c.call()) { event, c in
+        let source = Observable<Element>.ccreate { c, observer in
+            await subscribe { event in
                 switch event {
                 case .success(let element):
                     await observer.on(.next(element), c.call())
@@ -67,21 +68,21 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
             file: StaticString = #file,
             function: StaticString = #function,
             line: UInt = #line,
-            _ observer: @Sendable @escaping (MaybeEvent<Element>, C) async -> Void
+            _ observer: @escaping FullMaybeObserver
         )
             async -> Disposable {
             await subscribe(C(file, function, line), observer)
         }
     #else
         func subscribe(
-            _ observer: @Sendable @escaping (MaybeEvent<Element>, C) async -> Void
+            _ observer: @escaping FullMaybeObserver
         )
             async -> Disposable {
             await subscribe(C(), observer)
         }
     #endif
 
-    func subscribe(_ c: C, _ observer: @Sendable @escaping (MaybeEvent<Element>, C) async -> Void) async -> Disposable {
+    func subscribe(_ c: C, _ observer: @escaping FullMaybeObserver) async -> Disposable {
         await primitiveSequence.asObservable().subscribe(c.call()) { event, c in
             switch event {
             case .next(let element):
@@ -207,7 +208,8 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
             disposable = Disposables.create()
         }
 
-        let observer: MaybeObserver = { event, _ in
+        let observer: FullMaybeObserver = { event, c in
+            _ = c
             switch event {
             case .success(let element):
                 await onSuccess?(element)

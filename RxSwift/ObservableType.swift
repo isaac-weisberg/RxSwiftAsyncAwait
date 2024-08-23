@@ -51,7 +51,7 @@ public extension ObservableType {
     func asObservable() -> Observable<Element> {
         // temporary workaround
         // return Observable.create(subscribe: self.subscribe)
-        Observable<Element>.create { c, o in await self.subscribe(c.call(), o) }
+        Observable<Element>.ccreate { c, o in await self.subscribe(c.call(), o) }
     }
 }
 //

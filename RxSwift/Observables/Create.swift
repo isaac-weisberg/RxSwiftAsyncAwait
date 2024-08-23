@@ -17,9 +17,16 @@ public extension ObservableType {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(_ subscribe: @Sendable @escaping (C, AnyAsyncObserver<Element>) async -> AsynchronousDisposable)
+    static func ccreate(_ subscribe: @Sendable @escaping (C, AnyAsyncObserver<Element>) async -> AsynchronousDisposable)
         -> Observable<Element> {
         AnonymousObservable(subscribe)
+    }
+
+    static func create(_ subscribe: @Sendable @escaping (AnyAsyncObserver<Element>) async -> AsynchronousDisposable)
+        -> Observable<Element> {
+        ccreate { _, observer in
+            await subscribe(observer)
+        }
     }
 }
 

@@ -17,7 +17,8 @@ public typealias Single<Element> = PrimitiveSequence<SingleTrait, Element>
 public typealias SingleEvent<Element> = Result<Element, Swift.Error>
 
 public extension PrimitiveSequenceType where Trait == SingleTrait {
-    typealias SingleObserver = @Sendable (SingleEvent<Element>, C) async -> Void
+    typealias SingleObserver = @Sendable (SingleEvent<Element>) async -> Void
+    typealias FullSingleObserver = @Sendable (SingleEvent<Element>, C) async -> Void
 
     /**
      Creates an observable sequence from a specified subscribe method implementation.
@@ -27,10 +28,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter subscribe: Implementation of the resulting observable sequence's `subscribe` method.
      - returns: The observable sequence with the specified implementation for the `subscribe` method.
      */
-    static func create(subscribe: @Sendable @escaping (C, @escaping SingleObserver) async -> Disposable)
+    static func create(subscribe: @Sendable @escaping (@escaping SingleObserver) async -> Disposable)
         -> Single<Element> {
-        let source = Observable<Element>.create { c, observer in
-            await subscribe(c.call()) { event, c in
+        let source = Observable<Element>.ccreate { c, observer in
+            await subscribe { event in
                 switch event {
                 case .success(let element):
                     await observer.on(.next(element), c.call())
@@ -54,20 +55,20 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
             file: StaticString = #file,
             function: StaticString = #function,
             line: UInt = #line,
-            _ observer: @escaping SingleObserver
+            _ observer: @escaping FullSingleObserver
         )
             async -> Disposable {
             await subscribe(C(file, function, line), observer)
         }
     #else
         func subscribe(
-            _ observer: @escaping SingleObserver
+            _ observer: @escaping FullSingleObserver
         )
             async -> Disposable {
             await subscribe(C(), observer)
         }
     #endif
-    func subscribe(_ c: C, _ observer: @escaping SingleObserver) async -> Disposable {
+    func subscribe(_ c: C, _ observer: @escaping FullSingleObserver) async -> Disposable {
         await primitiveSequence.asObservable().subscribe(c.call()) { event, c in
 
             switch event {
@@ -173,7 +174,8 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
             disposable = Disposables.create()
         }
 
-        let observer: SingleObserver = { event, _ in
+        let observer: FullSingleObserver = { event, c in
+            _ = c
             switch event {
             case .success(let element):
                 await onSuccess?(element)
