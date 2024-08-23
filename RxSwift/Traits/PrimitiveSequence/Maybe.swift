@@ -41,8 +41,17 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      */
     static func create(subscribe: @Sendable @escaping (@escaping MaybeObserver) async -> Disposable)
         -> PrimitiveSequence<Trait, Element> {
-        let source = Observable<Element>.ccreate { c, observer in
+        ccreate { c, observer in
             await subscribe { event in
+                await observer(event, c.call())
+            }
+        }
+    }
+
+    static func ccreate(subscribe: @Sendable @escaping (C, @escaping FullMaybeObserver) async -> Disposable)
+        -> PrimitiveSequence<Trait, Element> {
+        let source = Observable<Element>.ccreate { c, observer in
+            await subscribe(c.call()) { event, c in
                 switch event {
                 case .success(let element):
                     await observer.on(.next(element), c.call())

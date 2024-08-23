@@ -30,8 +30,17 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      */
     static func create(subscribe: @Sendable @escaping (@escaping SingleObserver) async -> Disposable)
         -> Single<Element> {
-        let source = Observable<Element>.ccreate { c, observer in
+        ccreate { c, observer in
             await subscribe { event in
+                await observer(event, c.call())
+            }
+        }
+    }
+
+    static func ccreate(subscribe: @Sendable @escaping (C, @escaping FullSingleObserver) async -> Disposable)
+        -> Single<Element> {
+        let source = Observable<Element>.ccreate { c, observer in
+            await subscribe(c.call()) { event, c in
                 switch event {
                 case .success(let element):
                     await observer.on(.next(element), c.call())

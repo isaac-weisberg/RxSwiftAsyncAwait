@@ -38,8 +38,17 @@ public extension PrimitiveSequenceType where Trait == CompletableTrait, Element 
 
     static func create(subscribe: @Sendable @escaping (@escaping CompletableObserver) async -> Disposable)
         -> PrimitiveSequence<Trait, Element> {
-        let source = Observable<Element>.ccreate { c, observer in
+        ccreate { c, observer in
             await subscribe { event in
+                await observer(event, c.call())
+            }
+        }
+    }
+
+    static func ccreate(subscribe: @Sendable @escaping (C, @escaping FullCompletableObserver) async -> Disposable)
+        -> PrimitiveSequence<Trait, Element> {
+        let source = Observable<Element>.ccreate { c, observer in
+            await subscribe(c.call()) { event, c in
                 switch event {
                 case .error(let error):
                     await observer.on(.error(error), c.call())
