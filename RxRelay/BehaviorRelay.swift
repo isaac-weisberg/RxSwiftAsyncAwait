@@ -23,7 +23,7 @@ public final class BehaviorRelay<Element: Sendable>: ObservableType {
     public var value: Element {
         // this try! is ok because subject can't error out or be disposed
         get async {
-            try! await subject.value
+            try! await subject.value()
         }
     }
 
