@@ -419,9 +419,9 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      - parameter other: Observable sequence being returned when source sequence is empty.
      - returns: Observable sequence that contains elements from switchTo sequence if source is empty, otherwise returns source sequence elements.
      */
-//    func ifEmpty(switchTo other: Maybe<Element>) -> Maybe<Element> {
-//        Maybe(raw: primitiveSequence.source.ifEmpty(switchTo: other.primitiveSequence.source))
-//    }
+    func ifEmpty(switchTo other: Maybe<Element>) -> Maybe<Element> {
+        Maybe(raw: primitiveSequence.source.ifEmpty(switchTo: other.primitiveSequence.source))
+    }
 
     /**
      Returns the elements of the specified sequence or `other` sequence if the sequence is empty.
@@ -431,9 +431,9 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
      - parameter other: Observable sequence being returned when source sequence is empty.
      - returns: Observable sequence that contains elements from switchTo sequence if source is empty, otherwise returns source sequence elements.
      */
-//    func ifEmpty(switchTo other: Single<Element>) async -> Single<Element> {
-//        await Single(raw: primitiveSequence.source.ifEmpty(switchTo: other.primitiveSequence.source))
-//    }
+    func ifEmpty(switchTo other: Single<Element>) -> Single<Element> {
+        Single(raw: primitiveSequence.source.ifEmpty(switchTo: other.primitiveSequence.source))
+    }
 
     /**
      Continues an observable sequence that is terminated by an error with a single element.
