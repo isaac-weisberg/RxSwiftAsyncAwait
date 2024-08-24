@@ -47,18 +47,16 @@ public final actor BehaviorSubject<Element: Sendable>:
     /// Gets the current value or throws an error.
     ///
     /// - returns: Latest value.
-    public var value: Element {
-        get throws {
-            if isDisposed() {
-                throw RxError.disposed(object: self)
-            }
+    public func value() throws -> Element {
+        if isDisposed() {
+            throw RxError.disposed(object: self)
+        }
 
-            if let error = stoppedEvent?.error {
-                // intentionally throw exception
-                throw error
-            } else {
-                return element
-            }
+        if let error = stoppedEvent?.error {
+            // intentionally throw exception
+            throw error
+        } else {
+            return element
         }
     }
 
