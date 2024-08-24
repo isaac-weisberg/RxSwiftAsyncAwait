@@ -25,15 +25,15 @@ public extension ActorLock {
 }
 
 public final class ActorLocked<Value: Sendable>: @unchecked Sendable {
-    var value: Value
-    let actor: ActorLock
+    public var value: Value
+    public let actor: ActorLock
 
-    init(_ value: Value, _ actor: ActorLock) {
+    public init(_ value: Value, _ actor: ActorLock) {
         self.value = value
         self.actor = actor
     }
 
-    func perform<R: Sendable>(_ work: @Sendable (inout Value) -> R) async -> R {
+    public func perform<R: Sendable>(_ work: @Sendable (inout Value) -> R) async -> R {
         await actor.perform { @Sendable in
             work(&value)
         }
