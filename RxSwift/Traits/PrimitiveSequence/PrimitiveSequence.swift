@@ -108,26 +108,26 @@ public extension PrimitiveSequence {
         -> PrimitiveSequence<Trait, Element> {
         PrimitiveSequence(raw: source.observe(on: scheduler))
     }
-    
+
     func subscribe(on scheduler: some AsyncScheduler)
         -> PrimitiveSequence<Trait, Element> {
         PrimitiveSequence(raw: source.subscribe(on: scheduler))
     }
 
-//    /**
-//     Continues an observable sequence that is terminated by an error with the observable sequence produced by the
-//     handler.
-//
-//     - seealso: [catch operator on reactivex.io](http://reactivex.io/documentation/operators/catch.html)
-//
-//     - parameter handler: Error handler function, producing another observable sequence.
-//     - returns: An observable sequence containing the source sequence's elements, followed by the elements produced by
-//     the handler's resulting observable sequence in case an error occurred.
-//     */
-//    func `catch`(_ handler: @escaping (Swift.Error) async throws -> PrimitiveSequence<Trait, Element>) async
-//        -> PrimitiveSequence<Trait, Element> {
-//        await PrimitiveSequence(raw: source.catch { try await handler($0).asObservable() })
-//    }
+    /**
+     Continues an observable sequence that is terminated by an error with the observable sequence produced by the
+     handler.
+
+     - seealso: [catch operator on reactivex.io](http://reactivex.io/documentation/operators/catch.html)
+
+     - parameter handler: Error handler function, producing another observable sequence.
+     - returns: An observable sequence containing the source sequence's elements, followed by the elements produced by
+     the handler's resulting observable sequence in case an error occurred.
+     */
+    func `catch`(_ handler: @escaping (Swift.Error) async throws -> PrimitiveSequence<Trait, Element>)
+        -> PrimitiveSequence<Trait, Element> {
+        PrimitiveSequence(raw: source.catch { try await handler($0).asObservable() })
+    }
 
     /**
      If the initial subscription to the observable sequence emits an error event, try repeating it up to the specified number of attempts (inclusive of the initial attempt) or until is succeeds. For example, if you want to retry a sequence once upon failure, you should use retry(2) (once for the initial attempt, and once for the retry).

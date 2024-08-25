@@ -420,10 +420,10 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter element: Last element in an observable sequence in case error occurs.
      - returns: An observable sequence containing the source sequence's elements, followed by the `element` in case an error occurred.
      */
-//    func catchAndReturn(_ element: Element) async
-//        -> PrimitiveSequence<Trait, Element> {
-//        await PrimitiveSequence(raw: primitiveSequence.source.catchAndReturn(element))
-//    }
+    func catchAndReturn(_ element: Element)
+        -> PrimitiveSequence<Trait, Element> {
+        PrimitiveSequence(raw: primitiveSequence.source.catchAndReturn(element))
+    }
 
     /// Converts `self` to `Maybe` trait.
     ///
