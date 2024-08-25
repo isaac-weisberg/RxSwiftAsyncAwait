@@ -37,7 +37,7 @@ public struct Reactive<Base> {
     /// Automatically synthesized binder for a key path between the reactive
     /// base and one of its properties
     /// nevermind
-    public func binder<Property>(dynamicMember keyPath: ReferenceWritableKeyPath<Base, Property>) async -> Binder<Property> where Base: AnyObject {
+    public func binder<Property>(dynamicMember keyPath: ReferenceWritableKeyPath<Base, Property>) async -> Binder<Property> where Base: AnyObject & Sendable {
         await Binder(self.base) { base, value in
             base[keyPath: keyPath] = value
         }

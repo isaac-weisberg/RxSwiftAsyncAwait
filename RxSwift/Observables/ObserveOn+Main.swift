@@ -1,6 +1,6 @@
 public extension ObservableConvertibleType {
-    func observe(on mainScheduler: some MainLegacySchedulerProtocol)
-        -> ObserveOnMainActorObservable<Element, some MainLegacySchedulerProtocol> {
+    func observe<Scheduler: MainLegacySchedulerProtocol>(on mainScheduler: Scheduler)
+        -> ObserveOnMainActorObservable<Element, Scheduler> {
         ObserveOnMainActorObservable(source: asObservable(), scheduler: mainScheduler)
     }
 }

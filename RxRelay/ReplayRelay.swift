@@ -14,6 +14,22 @@ import RxSwift
 public final class ReplayRelay<Element: Sendable>: ObservableType {
     private let subject: ReplaySubject<Element>
 
+    #if VICIOUS_TRACING
+        public func accept(
+            _ event: Element,
+            file: StaticString = #file,
+            function: StaticString = #function,
+            line: UInt = #line
+        )
+            async {
+            await subject.onNext(event, C(file, function, line))
+        }
+    #else
+        public func accept(_ event: Element) async {
+            await subject.onNext(event, C())
+        }
+    #endif
+
     /// Accepts `event` and emits it to subscribers
     public func accept(_ event: Element, _ c: C) async {
         await subject.onNext(event, c.call())
@@ -27,16 +43,16 @@ public final class ReplayRelay<Element: Sendable>: ObservableType {
     ///
     /// - parameter bufferSize: Maximal number of elements to replay to observers after subscription.
     /// - returns: New instance of replay relay.
-//    public static func create(bufferSize: Int) -> ReplayRelay<Element> {
-//        ReplayRelay(subject: ReplaySubject.create(bufferSize: bufferSize))
-//    }
+    public static func create(bufferSize: Int) -> ReplayRelay<Element> {
+        ReplayRelay(subject: ReplaySubject.create(bufferSize: bufferSize))
+    }
 
     /// Creates a new instance of `ReplayRelay` that buffers all the sent to it.
     /// To avoid filling up memory, developer needs to make sure that the use case will only ever store a 'reasonable'
     /// number of elements.
-//    public static func createUnbound() async -> ReplayRelay<Element> {
-//        await ReplayRelay(subject: ReplaySubject.createUnbounded())
-//    }
+    public static func createUnbound() async -> ReplayRelay<Element> {
+        await ReplayRelay(subject: ReplaySubject.createUnbounded())
+    }
 
     /// Subscribes observer
     public func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable

@@ -71,7 +71,7 @@ private final actor FilterSink<Observer: ObserverType>: SinkOverSingleSubscripti
     }
 }
 
-private final class Filter<Element>: Producer<Element> {
+private final class Filter<Element: Sendable>: Producer<Element> {
     typealias Predicate = @Sendable (Element) throws -> Bool
 
     private let source: Observable<Element>

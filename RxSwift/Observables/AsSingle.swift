@@ -13,7 +13,7 @@ private final actor AsSingleSink<Observer: ObserverType>: SinkOverSingleSubscrip
 
     private var element: Event<Element>?
 
-    init(observer: Observer) async {
+    init(observer: Observer) {
         baseSink = BaseSinkOverSingleSubscription(observer: observer)
     }
 
@@ -39,7 +39,7 @@ private final actor AsSingleSink<Observer: ObserverType>: SinkOverSingleSubscrip
             await dispose()
         }
     }
-    
+
     func dispose() async {
         await baseSink.setDisposed()?.dispose()
     }
@@ -58,8 +58,8 @@ final class AsSingle<Element: Sendable>: Producer<Element> {
         _ observer: Observer
     )
         async -> AsynchronousDisposable where Observer.Element == Element {
-        let sink = await AsSingleSink(observer: observer)
-        let subscription = await source.subscribe(c.call(), sink)
+        let sink = AsSingleSink(observer: observer)
+        await sink.run(c.call(), source)
         return sink
     }
 }

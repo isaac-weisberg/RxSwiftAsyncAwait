@@ -59,7 +59,7 @@ extension Bag: Sequence {
     }
 }
 
-struct BagIterator<T>: IteratorProtocol {
+struct BagIterator<T: Sendable>: IteratorProtocol {
     typealias Element = T
     let bag: Bag<T>
     let sortedKeysOfDictCount: Int

@@ -10,7 +10,7 @@ import Dispatch
 import Foundation
 
 // Type that represents time interval in the context of RxSwift.
-public struct RxTimeInterval {
+public struct RxTimeInterval: Sendable {
     static func seconds(_ value: Int) -> RxTimeInterval {
         RxTimeInterval(TimeInterval(value))
     }

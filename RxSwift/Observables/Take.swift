@@ -89,7 +89,7 @@ private final actor TakeCountSink<Observer: ObserverType>: SinkOverSingleSubscri
     }
 }
 
-private final class TakeCount<Element>: Producer<Element> {
+private final class TakeCount<Element: Sendable>: Producer<Element> {
     private let source: Observable<Element>
     fileprivate let count: Int
 
@@ -169,7 +169,7 @@ private final actor TakeTimeSink<Element, Observer: ObserverType>:
     }
 }
 
-private final class TakeTime<Element>: Producer<Element> {
+private final class TakeTime<Element: Sendable>: Producer<Element> {
     typealias TimeInterval = RxTimeInterval
 
     fileprivate let source: Observable<Element>

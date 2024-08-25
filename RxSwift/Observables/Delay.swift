@@ -43,7 +43,7 @@ private final actor DelaySink<Observer: ObserverType>:
 
     func on(_ event: Event<Element>, _ c: C) async {
         switch event {
-        case .next(let element):
+        case .next:
             let disposable = SingleAssignmentDisposableContainer<DisposableTimer>()
             let timer = DisposableTimer(dueTime) { [weak self] _ in
                 await self?.handleEventAfterTimer(disposable, event, c.call())

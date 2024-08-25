@@ -721,7 +721,7 @@ final actor TotalFlatMapSink<
                 queuedDerivedSubscriptions = nil
                 newSubscribeActions = []
                 derivedSubscriptionsAfterPotentialDequeue = derivedSubsAfterRemovingCurrent
-            case .flatMapLimited(let mergeLimited):
+            case .flatMapLimited:
                 var newQueue = state.queuedDerivedSubscriptions
                 if let dequeuedDerviedSubscription = newQueue?.dequeue() {
                     let disposable = SingleAssignmentDisposable()

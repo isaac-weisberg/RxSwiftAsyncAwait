@@ -25,7 +25,7 @@ public struct Binder<Value: Sendable>: ObserverType {
     /// - parameter target: Target object.
     /// - parameter scheduler: Scheduler used to bind the events.
     /// - parameter binding: Binding logic.
-    public init<Target: AnyObject>(_ target: Target, binding: @escaping (Target, Value) async -> Void) async {
+    public init<Target: AnyObject & Sendable>(_ target: Target, binding: @Sendable @escaping (Target, Value) async -> Void) async {
         self.binding = { [weak target] _, event in
             switch event {
             case .next(let element):

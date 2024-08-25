@@ -14,6 +14,22 @@ import RxSwift
 public final class BehaviorRelay<Element: Sendable>: ObservableType {
     private let subject: BehaviorSubject<Element>
 
+    #if VICIOUS_TRACING
+        public func accept(
+            _ event: Element,
+            file: StaticString = #file,
+            function: StaticString = #function,
+            line: UInt = #line
+        )
+            async {
+            await subject.onNext(event, C(file, function, line))
+        }
+    #else
+        public func accept(_ event: Element) async {
+            await subject.onNext(event, C())
+        }
+    #endif
+
     /// Accepts `event` and emits it to subscribers
     public func accept(_ event: Element, _ c: C) async {
         await subject.onNext(event, c.call())
