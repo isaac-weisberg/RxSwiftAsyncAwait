@@ -11,29 +11,29 @@ import Foundation
 
 // Type that represents time interval in the context of RxSwift.
 public struct RxTimeInterval: Sendable {
-    static func seconds(_ value: Int) -> RxTimeInterval {
+    public static func seconds(_ value: Int) -> RxTimeInterval {
         RxTimeInterval(TimeInterval(value))
     }
 
-    static func milliseconds(_ value: Int) -> RxTimeInterval {
+    public static func milliseconds(_ value: Int) -> RxTimeInterval {
         RxTimeInterval(TimeInterval(value) / 1000)
     }
 
-    static func microseconds(_ value: Int) -> RxTimeInterval {
+    public static func microseconds(_ value: Int) -> RxTimeInterval {
         RxTimeInterval(TimeInterval(value) / 1_000_000)
     }
 
-    static func nanoseconds(_ value: Int) -> RxTimeInterval {
+    public static func nanoseconds(_ value: Int) -> RxTimeInterval {
         RxTimeInterval(TimeInterval(value) / 1_000_000_000)
     }
 
-    let value: TimeInterval
+    public let value: TimeInterval
 
-    init(_ value: TimeInterval) {
+    public init(_ value: TimeInterval) {
         self.value = value
     }
 
-    var nanoseconds: UInt64 {
+    public var nanoseconds: UInt64 {
         UInt64(value * 1e+9)
     }
 }
