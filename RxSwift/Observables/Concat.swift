@@ -35,9 +35,9 @@ public extension ObservableType {
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat<Sequence: Swift.Sequence>(_ sequence: Sequence) -> Observable<Element>
+    static func concat<Sequence: Swift.Sequence & Sendable>(_ sequence: Sequence) -> Observable<Element>
         where Sequence.Element == Observable<Element> {
-        Concat(sources: sequence, count: nil)
+        Concat(sources: sequence)
     }
 
     /**
@@ -53,7 +53,7 @@ public extension ObservableType {
 
      - returns: An observable sequence that contains the elements of each given sequence, in sequential order.
      */
-    static func concat<Collection: Swift.Collection>(_ collection: Collection) -> Observable<Element>
+    static func concat<Collection: Swift.Collection & Sendable>(_ collection: Collection) -> Observable<Element>
         where Collection.Element == Observable<Element> {
         Concat(sources: collection)
     }
@@ -114,6 +114,7 @@ private final actor ConcatSink<Sequence: Swift.Sequence, Observer: ObserverType>
         if baseSink.disposed {
             return
         }
+
         switch event {
         case .next:
             await forwardOn(event, c.call())
