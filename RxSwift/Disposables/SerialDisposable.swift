@@ -69,7 +69,7 @@ public final class SerialPerpetualDisposable<Disposable> {
         return oldCurrent
     }
 
-    /// Disposes the underlying disposable as well as all future replacements.
+    /// Disposes the underlying disposable, but no the future replacements
     public func dispose() -> Disposable? {
         if let current {
             self.current = nil
