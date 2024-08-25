@@ -1,28 +1,49 @@
-////
-////  SchedulerType.swift
-////  RxSwift
-////
-////  Created by Krunoslav Zaher on 2/8/15.
-////  Copyright © 2015 Krunoslav Zaher. All rights reserved.
-////
 //
-//import Dispatch
-import Foundation
+//  SchedulerType.swift
+//  RxSwift
 //
-//// Type that represents time interval in the context of RxSwift.
-public typealias RxTimeInterval = TimeInterval
+//  Created by Krunoslav Zaher on 2/8/15.
+//  Copyright © 2015 Krunoslav Zaher. All rights reserved.
+//
 
-extension RxTimeInterval {
+import Dispatch
+import Foundation
+
+// Type that represents time interval in the context of RxSwift.
+public struct RxTimeInterval {
+    static func seconds(_ value: Int) -> RxTimeInterval {
+        RxTimeInterval(TimeInterval(value))
+    }
+
+    static func milliseconds(_ value: Int) -> RxTimeInterval {
+        RxTimeInterval(TimeInterval(value) / 1000)
+    }
+
+    static func microseconds(_ value: Int) -> RxTimeInterval {
+        RxTimeInterval(TimeInterval(value) / 1_000_000)
+    }
+
+    static func nanoseconds(_ value: Int) -> RxTimeInterval {
+        RxTimeInterval(TimeInterval(value) / 1_000_000_000)
+    }
+
+    let value: TimeInterval
+
+    init(_ value: TimeInterval) {
+        self.value = value
+    }
+
     var nanoseconds: UInt64 {
-        UInt64(self * 1e+9)
+        UInt64(value * 1e+9)
     }
 }
+
 //
 ///// Type that represents absolute time in the context of RxSwift.
-//public typealias RxTime = Date
+// public typealias RxTime = Date
 //
 ///// Represents an object that schedules units of work.
-//public protocol SchedulerType: ImmediateSchedulerType {
+// public protocol SchedulerType: ImmediateSchedulerType {
 //    /// - returns: Current time.
 //    var now: RxTime {
 //        get
@@ -36,7 +57,8 @@ extension RxTimeInterval {
 //     - parameter action: Action to be executed.
 //     - returns: The disposable object used to cancel the scheduled action (best effort).
 //     */
-//    func scheduleRelative<StateType>(_ state: StateType, _ c: C, dueTime: RxTimeInterval, action: @escaping (C, StateType) async -> Disposable) async -> Disposable
+//    func scheduleRelative<StateType>(_ state: StateType, _ c: C, dueTime: RxTimeInterval, action: @escaping (C,
+//    StateType) async -> Disposable) async -> Disposable
 //
 //    /**
 //     Schedules a periodic piece of work.
@@ -47,10 +69,11 @@ extension RxTimeInterval {
 //     - parameter action: Action to be executed.
 //     - returns: The disposable object used to cancel the scheduled action (best effort).
 //     */
-//    func schedulePeriodic<StateType>(_ state: StateType, _ c: C, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (C, StateType) async -> StateType) async -> Disposable
-//}
+//    func schedulePeriodic<StateType>(_ state: StateType, _ c: C, startAfter: RxTimeInterval, period: RxTimeInterval,
+//    action: @escaping (C, StateType) async -> StateType) async -> Disposable
+// }
 //
-//extension SchedulerType {
+// extension SchedulerType {
 //    /**
 //     Periodic task will be emulated using recursive scheduling.
 //
@@ -59,17 +82,20 @@ extension RxTimeInterval {
 //     - parameter period: Period for running the work periodically.
 //     - returns: The disposable object used to cancel the scheduled recurring action (best effort).
 //     */
-//    public func schedulePeriodic<StateType>(_ state: StateType, _ c: C, startAfter: RxTimeInterval, period: RxTimeInterval, action: @escaping (C, StateType) async -> StateType) async -> Disposable {
-//        let schedule = await SchedulePeriodicRecursive(scheduler: self, startAfter: startAfter, period: period, action: action, state: state)
+//    public func schedulePeriodic<StateType>(_ state: StateType, _ c: C, startAfter: RxTimeInterval, period:
+//    RxTimeInterval, action: @escaping (C, StateType) async -> StateType) async -> Disposable {
+//        let schedule = await SchedulePeriodicRecursive(scheduler: self, startAfter: startAfter, period: period,
+//        action: action, state: state)
 //
 //        return await schedule.start(c.call())
 //    }
 //
-//    func scheduleRecursive<State>(_ state: State, _ c: C, dueTime: RxTimeInterval, action: @escaping (State, C, AnyRecursiveScheduler<State>) async -> Void) async -> Disposable {
+//    func scheduleRecursive<State>(_ state: State, _ c: C, dueTime: RxTimeInterval, action: @escaping (State, C,
+//    AnyRecursiveScheduler<State>) async -> Void) async -> Disposable {
 //        let scheduler = await AnyRecursiveScheduler(scheduler: self, action: action)
 //
 //        await scheduler.schedule(state, c.call(), dueTime: dueTime)
 //
 //        return await Disposables.create(with: scheduler.dispose)
 //    }
-//}
+// }

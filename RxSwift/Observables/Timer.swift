@@ -63,7 +63,7 @@ private final actor TimerSink<Observer: ObserverType>: Sink where Observer.Eleme
         let startAfter = parent.dueTime
         timerTask = Task {
             var state: Observer.Element = 0
-            if startAfter > 0 {
+            if startAfter.value > 0 {
                 do {
                     try await Task.sleep(nanoseconds: startAfter.nanoseconds)
                 } catch {
