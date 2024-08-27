@@ -27,9 +27,9 @@ public extension ObservableType {
 
      - returns: An observable sequence that emits a single element or nil if the source observable sequence completes without emitting any items.
      */
-//    func first() -> Single<Element?> {
-//        PrimitiveSequence(raw: First(source: asObservable()))
-//    }
+    func first() -> Single<Element?> {
+        PrimitiveSequence(raw: First(source: asObservable()))
+    }
 
     /**
      The `asMaybe` operator throws a `RxError.moreThanOneElement`
