@@ -6,14 +6,16 @@
 ////  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 ////
 //
-//public extension ObservableType {
+// public extension ObservableType {
 //    /**
-//     Returns the elements from the source observable sequence that are emitted after the other observable sequence produces an element.
+//     Returns the elements from the source observable sequence that are emitted after the other observable sequence
+//     produces an element.
 //
 //     - seealso: [skipUntil operator on reactivex.io](http://reactivex.io/documentation/operators/skipuntil.html)
 //
 //     - parameter other: Observable sequence that starts propagation of elements of the source sequence.
-//     - returns: An observable sequence containing the elements of the source sequence that are emitted after the other sequence emits an item.
+//     - returns: An observable sequence containing the elements of the source sequence that are emitted after the other
+//     sequence emits an item.
 //     */
 //    func skip<Source: ObservableType>(until other: Source) async
 //        -> Observable<Element>
@@ -22,12 +24,14 @@
 //    }
 //
 //    /**
-//     Returns the elements from the source observable sequence that are emitted after the other observable sequence produces an element.
+//     Returns the elements from the source observable sequence that are emitted after the other observable sequence
+//     produces an element.
 //
 //     - seealso: [skipUntil operator on reactivex.io](http://reactivex.io/documentation/operators/skipuntil.html)
 //
 //     - parameter other: Observable sequence that starts propagation of elements of the source sequence.
-//     - returns: An observable sequence containing the elements of the source sequence that are emitted after the other sequence emits an item.
+//     - returns: An observable sequence containing the elements of the source sequence that are emitted after the other
+//     sequence emits an item.
 //     */
 //    @available(*, deprecated, renamed: "skip(until:)")
 //    func skipUntil<Source: ObservableType>(_ other: Source) async
@@ -35,12 +39,12 @@
 //    {
 //        await self.skip(until: other)
 //    }
-//}
+// }
 //
-//private final actor SkipUntilSinkOther<Other, Observer: ObserverType>:
+// private final actor SkipUntilSinkOther<Other, Observer: ObserverType>:
 //    ObserverType,
 //    AsynchronousOnType
-//{
+// {
 //    typealias Parent = SkipUntilSink<Other, Observer>
 //    typealias Element = Other
 //
@@ -80,13 +84,13 @@
 //            }
 //        }
 //    #endif
-//}
+// }
 //
-//private final actor SkipUntilSink<Other, Observer: ObserverType>:
+// private final actor SkipUntilSink<Other, Observer: ObserverType>:
 //    Sink,
 //    ObserverType,
 //    AsynchronousOnType
-//{
+// {
 //    typealias Element = Observer.Element
 //    typealias Parent = SkipUntil<Element, Other>
 //
@@ -135,9 +139,9 @@
 //
 //        return await Disposables.create(sourceSubscription, otherObserver.subscription)
 //    }
-//}
+// }
 //
-//private final class SkipUntil<Element, Other>: Producer<Element> {
+// private final class SkipUntil<Element, Other>: Producer<Element> {
 //    fileprivate let source: Observable<Element>
 //    fileprivate let other: Observable<Other>
 //
@@ -147,9 +151,10 @@
 //        await super.init()
 //    }
 //
-//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
+//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where
+//    Observer.Element == Element {
 //        let sink = await SkipUntilSink(parent: self, observer: observer)
 //        let subscription = await sink.run(c.call())
 //        return sink
 //    }
-//}
+// }
