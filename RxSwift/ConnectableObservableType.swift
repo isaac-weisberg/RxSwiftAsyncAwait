@@ -17,3 +17,21 @@ public protocol ConnectableObservableType: ObservableType {
      */
     func connect(_ c: C) async -> Disposable
 }
+
+public extension ConnectableObservableType {
+
+    #if VICIOUS_TRACING
+        func connect(
+            file: StaticString = #file,
+            function: StaticString = #function,
+            line: UInt = #line
+        )
+            async -> Disposable {
+            await connect(C(file, function, line))
+        }
+    #else
+        func connect() async -> Disposable {
+            await connect(C())
+        }
+    #endif
+}
