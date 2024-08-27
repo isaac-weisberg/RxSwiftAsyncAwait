@@ -18,7 +18,7 @@ public struct PrimitiveSequence<Trait, Element: Sendable> {
 }
 
 /// Observable sequences containing 0 or 1 element
-public protocol PrimitiveSequenceType {
+public protocol PrimitiveSequenceType: Sendable {
     /// Additional constraints
     associatedtype Trait
 
