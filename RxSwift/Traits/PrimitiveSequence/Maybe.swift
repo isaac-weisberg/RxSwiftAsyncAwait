@@ -243,6 +243,179 @@ public extension PrimitiveSequenceType where Trait == MaybeTrait {
     }
 }
 
+public extension PrimitiveSequenceObservedOnMainScheduler where Trait == MaybeTrait {
+    typealias FullMaybeObserver = @MainActor @Sendable (MaybeEvent<Element>, C) async -> Void
+    #if VICIOUS_TRACING
+        func subscribe(
+            file: StaticString = #file,
+            function: StaticString = #function,
+            line: UInt = #line,
+            _ observer: @escaping FullMaybeObserver
+        )
+            async -> Disposable {
+            await subscribe(C(file, function, line), observer)
+        }
+    #else
+        func subscribe(
+            _ observer: @escaping FullMaybeObserver
+        )
+            async -> Disposable {
+            await subscribe(C(), observer)
+        }
+    #endif
+
+    func subscribe(_ c: C, _ observer: @escaping FullMaybeObserver) async -> Disposable {
+        await source.subscribe(c.call()) { event, c in
+            switch event {
+            case .next(let element):
+                await observer(.success(element), c.call())
+            case .error(let error):
+                await observer(.error(error), c.call())
+            case .completed:
+                await observer(.completed, c.call())
+            }
+        }
+    }
+
+    /**
+     Subscribes a success handler, an error handler, and a completion handler for this sequence.
+
+     Also, take in an object and provide an unretained, safe to use (i.e. not implicitly unwrapped), reference to it along with the events emitted by the sequence.
+
+     - Note: If `object` can't be retained, none of the other closures will be invoked.
+
+     - parameter object: The object to provide an unretained reference on.
+     - parameter onSuccess: Action to invoke for each element in the observable sequence.
+     - parameter onError: Action to invoke upon errored termination of the observable sequence.
+     - parameter onCompleted: Action to invoke upon graceful termination of the observable sequence.
+     - parameter onDisposed: Action to invoke upon any type of termination of sequence (if the sequence has
+     gracefully completed, errored, or if the generation is canceled by disposing subscription).
+     - returns: Subscription object used to unsubscribe from the observable sequence.
+     */
+    func subscribe<Object: AnyObject & Sendable>(
+        _ c: C,
+        with object: Object,
+        onSuccess: (@MainActor @Sendable (Object, Element) async -> Void)? = nil,
+        onError: (@MainActor @Sendable (Object, Swift.Error) async -> Void)? = nil,
+        onCompleted: (@MainActor @Sendable (Object) async -> Void)? = nil,
+        onDisposed: (@MainActor @Sendable (Object) async -> Void)? = nil
+    )
+        async -> Disposable {
+        await subscribe(
+            c.call(),
+            onSuccess: { [weak object] in
+                guard let object else { return }
+                await onSuccess?(object, $0)
+            },
+            onError: { [weak object] in
+                guard let object else { return }
+                await onError?(object, $0)
+            },
+            onCompleted: { [weak object] in
+                guard let object else { return }
+                await onCompleted?(object)
+            },
+            onDisposed: { [weak object] in
+                guard let object else { return }
+                await onDisposed?(object)
+            }
+        )
+    }
+
+    /**
+     Subscribes a success handler, an error handler, and a completion handler for this sequence.
+
+     - parameter onSuccess: Action to invoke for each element in the observable sequence.
+     - parameter onError: Action to invoke upon errored termination of the observable sequence.
+     - parameter onCompleted: Action to invoke upon graceful termination of the observable sequence.
+     - parameter onDisposed: Action to invoke upon any type of termination of sequence (if the sequence has
+     gracefully completed, errored, or if the generation is canceled by disposing subscription).
+     - returns: Subscription object used to unsubscribe from the observable sequence.
+     */
+
+    #if VICIOUS_TRACING
+        func subscribe(
+            file: StaticString = #file,
+            function: StaticString = #function,
+            line: UInt = #line,
+            onSuccess: (@MainActor @Sendable (Element) async -> Void)? = nil,
+            onError: (@MainActor @Sendable (Swift.Error) async -> Void)? = nil,
+            onCompleted: (@MainActor @Sendable () async -> Void)? = nil,
+            onDisposed: (@MainActor @Sendable () async -> Void)? = nil
+        )
+            async -> Disposable {
+            await subscribe(
+                C(file, function, line),
+                onSuccess: onSuccess,
+                onError: onError,
+                onCompleted: onCompleted,
+                onDisposed: onDisposed
+            )
+        }
+    #else
+        func subscribe(
+            onSuccess: (@MainActor @Sendable (Element) async -> Void)? = nil,
+            onError: (@MainActor @Sendable (Swift.Error) async -> Void)? = nil,
+            onCompleted: (@MainActor @Sendable () async -> Void)? = nil,
+            onDisposed: (@MainActor @Sendable () async -> Void)? = nil
+        )
+            async -> Disposable {
+            await subscribe(
+                C(),
+                onSuccess: onSuccess,
+                onError: onError,
+                onCompleted: onCompleted,
+                onDisposed: onDisposed
+            )
+        }
+    #endif
+
+    func subscribe(
+        _ c: C,
+        onSuccess: (@MainActor @Sendable (Element) async -> Void)? = nil,
+        onError: (@MainActor @Sendable (Swift.Error) async -> Void)? = nil,
+        onCompleted: (@MainActor @Sendable () async -> Void)? = nil,
+        onDisposed: (@MainActor @Sendable () async -> Void)? = nil
+    )
+        async -> Disposable {
+        #if DEBUG
+            let callStack = Hooks.recordCallStackOnError ? Thread.callStackSymbols : []
+        #else
+            let callStack = [String]()
+        #endif
+        let disposable: Disposable
+        if let onDisposed {
+            disposable = Disposables.create(with: onDisposed)
+        } else {
+            disposable = Disposables.create()
+        }
+
+        let observer: FullMaybeObserver = { event, c in
+            _ = c
+            switch event {
+            case .success(let element):
+                await onSuccess?(element)
+                await disposable.dispose()
+            case .error(let error):
+                if let onError {
+                    await onError(error)
+                } else {
+                    await Hooks.getDefaultErrorHandler()(callStack, error)
+                }
+                await disposable.dispose()
+            case .completed:
+                await onCompleted?()
+                await disposable.dispose()
+            }
+        }
+
+        return await Disposables.create(
+            subscribe(c.call(), observer),
+            disposable
+        )
+    }
+}
+
 public extension PrimitiveSequenceType where Trait == MaybeTrait {
     /**
      Returns an observable sequence that contains a single element.

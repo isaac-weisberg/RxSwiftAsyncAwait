@@ -7,15 +7,6 @@
 //
 
 public extension ObservableType where Element: RxAbstractInteger {
-    static func interval<Scheduler: LegacySynchronousScheduler>(
-        _ period: RxTimeInterval,
-        scheduler: Scheduler
-    )
-        -> ObserveOnLegacySynchronousScheduler<Element, Scheduler> {
-        interval(period)
-            .observe(on: scheduler)
-    }
-
     static func interval<Scheduler: MainLegacySchedulerProtocol>(
         _ period: RxTimeInterval,
         scheduler: Scheduler
@@ -53,15 +44,6 @@ public extension ObservableType where Element: RxAbstractInteger {
 }
 
 public extension ObservableType where Element: RxAbstractInteger {
-    static func timer<Scheduler: LegacySynchronousScheduler>(
-        _ dueTime: RxTimeInterval,
-        period: RxTimeInterval? = nil,
-        scheduler: Scheduler
-    )
-        -> ObserveOnLegacySynchronousScheduler<Element, Scheduler> {
-        timer(dueTime, period: period)
-            .observe(on: scheduler)
-    }
 
     static func timer<Scheduler: MainLegacySchedulerProtocol>(
         _ dueTime: RxTimeInterval,

@@ -309,3 +309,22 @@ public extension PrimitiveSequenceType where Element: RxAbstractInteger {
         PrimitiveSequence(raw: Observable<Element>.timer(dueTime))
     }
 }
+
+public struct PrimitiveSequenceObservedOnMainScheduler<Trait, Source: MainActorObservable> {
+    public typealias Element = Source.Element
+    public let source: Source
+
+    public init(raw: Source) {
+        source = raw
+    }
+}
+
+public extension PrimitiveSequence {
+    func observe<Scheduler: MainLegacySchedulerProtocol>(on scheduler: Scheduler)
+        -> PrimitiveSequenceObservedOnMainScheduler<Trait, ObserveOnMainActorObservable<
+            Element,
+            Scheduler
+        >> {
+        PrimitiveSequenceObservedOnMainScheduler(raw: source.observe(on: scheduler))
+    }
+}
