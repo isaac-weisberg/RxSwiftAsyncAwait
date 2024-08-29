@@ -53,11 +53,12 @@ private final actor SubscribeOnSink<Ob: ObservableType, Scheduler: AsyncSchedule
     let sourceDisposable = SingleAssignmentDisposable()
 
     func run(_ c: C) async {
-        parent.scheduler.perform(locking(scheduleDisposable), c.call()) { c in
+        let disp = parent.scheduler.perform(c.call()) { c in
             let subscription = await self.parent.source.subscribe(c.call(), self)
 
             await self.sourceDisposable.setDisposable(subscription)?.dispose()
         }
+        scheduleDisposable.setDisposable(disp)?.dispose()
     }
 
     func dispose() async {

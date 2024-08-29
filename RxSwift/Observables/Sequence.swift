@@ -6,7 +6,7 @@
 ////  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 ////
 //
-//public extension ObservableType {
+// public extension ObservableType {
 //    // MARK: of
 //
 //    /**
@@ -18,12 +18,13 @@
 //     - parameter scheduler: Scheduler to send elements on. If `nil`, elements are sent immediately on subscription.
 //     - returns: The observable sequence whose elements are pulled from the given arguments.
 //     */
-//    static func of(_ elements: Element ..., scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async -> Observable<Element> {
+//    static func of(_ elements: Element ..., scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async
+//    -> Observable<Element> {
 //        await ObservableSequence(elements: elements, scheduler: scheduler)
 //    }
-//}
+// }
 //
-//public extension ObservableType {
+// public extension ObservableType {
 //    /**
 //     Converts an array to an observable sequence.
 //
@@ -31,7 +32,8 @@
 //
 //     - returns: The observable sequence whose elements are pulled from the given enumerable sequence.
 //     */
-//    static func from(_ array: [Element], scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async -> Observable<Element> {
+//    static func from(_ array: [Element], scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async ->
+//    Observable<Element> {
 //        await ObservableSequence(elements: array, scheduler: scheduler)
 //    }
 //
@@ -42,12 +44,14 @@
 //
 //     - returns: The observable sequence whose elements are pulled from the given enumerable sequence.
 //     */
-//    static func from<Sequence: Swift.Sequence>(_ sequence: Sequence, scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async -> Observable<Element> where Sequence.Element == Element {
+//    static func from<Sequence: Swift.Sequence>(_ sequence: Sequence, scheduler: ImmediateSchedulerType =
+//    CurrentThreadScheduler.instance) async -> Observable<Element> where Sequence.Element == Element {
 //        await ObservableSequence(elements: sequence, scheduler: scheduler)
 //    }
-//}
+// }
 //
-//private final actor ObservableSequenceSink<Sequence: Swift.Sequence, Observer: ObserverType>: Sink where Sequence.Element == Observer.Element {
+// private final actor ObservableSequenceSink<Sequence: Swift.Sequence, Observer: ObserverType>: Sink where
+// Sequence.Element == Observer.Element {
 //    typealias Parent = ObservableSequence<Sequence>
 //
 //    private let parent: Parent
@@ -59,7 +63,8 @@
 //    }
 //
 //    func run(_ c: C) async -> Disposable {
-//        return await self.parent.scheduler.scheduleRecursive(self.parent.elements.makeIterator(), c.call()) { iterator, c, recurse in
+//        return await self.parent.scheduler.scheduleRecursive(self.parent.elements.makeIterator(), c.call()) {
+//        iterator, c, recurse in
 //            var mutableIterator = iterator
 //            if let next = mutableIterator.next() {
 //                await self.forwardOn(.next(next), c.call())
@@ -71,9 +76,9 @@
 //            }
 //        }
 //    }
-//}
+// }
 //
-//private final class ObservableSequence<Sequence: Swift.Sequence>: Producer<Sequence.Element> {
+// private final class ObservableSequence<Sequence: Swift.Sequence>: Producer<Sequence.Element> {
 //    fileprivate let elements: Sequence
 //    fileprivate let scheduler: ImmediateSchedulerType
 //
@@ -83,9 +88,10 @@
 //        await super.init()
 //    }
 //
-//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where Observer.Element == Element {
+//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where
+//    Observer.Element == Element {
 //        let sink = await ObservableSequenceSink(parent: self, observer: observer)
 //        let subscription = await sink.run(c.call())
 //        return sink
 //    }
-//}
+// }

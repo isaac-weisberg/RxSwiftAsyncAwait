@@ -1,9 +1,8 @@
 public protocol AsyncScheduler: Sendable {
     func perform(
-        _ actorLockedDisposable: ActorLocked<SingleAssignmentSyncDisposable>,
         _ c: C,
         _ work: @Sendable @escaping (C) async -> Void
-    )
+    ) -> DisposeAction
 }
 
 public final class SerialNonrecursiveScheduler: AsyncScheduler {
@@ -14,15 +13,11 @@ public final class SerialNonrecursiveScheduler: AsyncScheduler {
     }
 
     public func perform(
-        _ actorLockedDisposable: ActorLocked<SingleAssignmentSyncDisposable>,
         _ c: C,
         _ work: @Sendable @escaping (C) async -> Void
-    ) {
+    ) -> DisposeAction {
         let task = Task {
             await lock.performLocked(c.call()) { @Sendable c in
-                if await actorLockedDisposable.perform({ $0.isDisposed }) {
-                    return
-                }
                 await work(c.call())
             }
         }
@@ -30,32 +25,25 @@ public final class SerialNonrecursiveScheduler: AsyncScheduler {
         let theDisposable = DisposeAction {
             task.cancel()
         }
-
-        actorLockedDisposable.value.setDisposable(theDisposable)?.dispose()
+        return theDisposable
     }
 }
 
 public final class ConcurrentAsyncScheduler: AsyncScheduler {
     public static let instance = ConcurrentAsyncScheduler()
-    
+
     public func perform(
-        _ actorLockedDisposable: ActorLocked<SingleAssignmentSyncDisposable>,
         _ c: C,
         _ work: @Sendable @escaping (C) async -> Void
-    )
-        {
+    ) -> DisposeAction {
         let task = Task {
-            if await actorLockedDisposable.perform({ $0.isDisposed }) {
-                return
-            }
             await work(c.call())
         }
-            
-            let disposable = DisposeAction {
-                task.cancel()
-            }
-            actorLockedDisposable.value.setDisposable(disposable)?.dispose()
-            
+
+        let disposable = DisposeAction {
+            task.cancel()
+        }
+        return disposable
     }
 }
 

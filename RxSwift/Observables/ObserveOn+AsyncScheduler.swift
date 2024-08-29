@@ -127,9 +127,10 @@ final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
             return
         }
 
-        scheduler.perform(locking(disposedFlag), c.call()) { [observer] c in
+        let disposeAction = scheduler.perform(c.call()) { [observer] c in
             await observer.on(event, c.call())
         }
+        disposedFlag.setDisposable(disposeAction)?.dispose()
     }
 
     func run(_ c: C, _ source: Observable<Element>) async {

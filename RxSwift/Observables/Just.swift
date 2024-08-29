@@ -52,11 +52,13 @@ private final actor JustScheduledSink<Observer: SyncObserverType>: AsynchronousD
     func run(_ c: C) async {
         let scheduler = parent.scheduler
         let element = parent.element
-        scheduler.perform(locking(disposedFlag), c.call()) { [observer] c in
+        let disposeAction = scheduler.perform(c.call()) { [observer] c in
             await observer.on(.next(element), c.call())
             await observer.on(.completed, c.call())
             await self.dispose()
         }
+
+        disposedFlag.setDisposable(disposeAction)?.dispose()
     }
 
     func perform<R>(_ work: () -> R) -> R {
