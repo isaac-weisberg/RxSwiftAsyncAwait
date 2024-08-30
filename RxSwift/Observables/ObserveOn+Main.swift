@@ -7,19 +7,26 @@ public extension ObservableConvertibleType {
 
 public protocol MainLegacySchedulerProtocol: Sendable {
     @MainActor
-    func perform(_ work: @Sendable @MainActor () async -> Void) async
+    func perform(_ c: C, _ work: @Sendable @MainActor (C) async -> Void) async
 }
 
 public struct MainLegacyScheduler: MainLegacySchedulerProtocol {
     public static let instance = MainLegacyScheduler()
 
     @MainActor
-    public func perform(_ work: @MainActor () async -> Void) async {
-        await work()
+    public func perform(_ c: C, _ work: @MainActor (C) async -> Void) async {
+        await work(c.call())
     }
 }
 
-public struct MainActorObserver<Element: Sendable>: Sendable {
+public protocol MainActorObserverType: Sendable {
+    associatedtype Element: Sendable
+
+    @MainActor
+    func on(_ event: Event<Element>, _ c: C) async
+}
+
+public struct MainActorObserver<Element: Sendable>: MainActorObserverType {
     public typealias On = @MainActor @Sendable (_ event: Event<Element>, _ c: C) async -> Void
 
     let _on: On
@@ -29,7 +36,7 @@ public struct MainActorObserver<Element: Sendable>: Sendable {
     }
 
     @MainActor
-    func on(_ event: Event<Element>, _ c: C) async {
+    public func on(_ event: Event<Element>, _ c: C) async {
         await _on(event, c.call())
     }
 }
@@ -37,7 +44,8 @@ public struct MainActorObserver<Element: Sendable>: Sendable {
 public protocol MainActorObservable {
     associatedtype Element: Sendable
 
-    func subscribe(_ c: C, _ observer: MainActorObserver<Element>) async -> Disposable
+    func subscribe<Observer: MainActorObserverType>(_ c: C, _ observer: Observer) async -> Disposable
+        where Observer.Element == Element
 }
 
 final class ObserveOnMainActorObserver<Element: Sendable, Scheduler: MainLegacySchedulerProtocol>: ObserverType {
@@ -50,9 +58,50 @@ final class ObserveOnMainActorObserver<Element: Sendable, Scheduler: MainLegacyS
     }
 
     func on(_ event: Event<Element>, _ c: C) async {
-        await scheduler.perform {
+        await scheduler.perform(c.call()) { c in
             await mainActorObserver.on(event, c.call())
         }
+    }
+}
+
+final actor ObserveOnMainActorObservableSink<
+    Element: Sendable,
+    Scheduler: MainLegacySchedulerProtocol,
+    Observer: MainActorObserverType
+>: Disposable, ObserverType where Element == Observer.Element {
+    let source: Observable<Element>
+    let scheduler: Scheduler
+    let observer: Observer
+    let sourceDisposable = SingleAssignmentDisposable()
+    let scheduleDisposable = SingleAssignmentDisposable()
+
+    init(
+        source: Observable<Element>,
+        observer: Observer,
+        scheduler: Scheduler
+    ) {
+        self.source = source
+        self.scheduler = scheduler
+        self.observer = observer
+    }
+
+    func run(_ c: C) async {
+        await sourceDisposable.setDisposable(source.subscribe(c.call(), self))?.dispose()
+    }
+
+    @MainActor
+    func on(_ event: Event<Element>, _ c: C) async {
+        await scheduler.perform(c.call()) { c in
+            await observer.on(event, c.call())
+        }
+    }
+
+    func dispose() async {
+        async let a: ()? = sourceDisposable.dispose()?.dispose()
+        async let b: ()? = scheduleDisposable.dispose()?.dispose()
+
+        await a
+        await b
     }
 }
 
@@ -68,8 +117,11 @@ public final class ObserveOnMainActorObservable<
         self.scheduler = scheduler
     }
 
-    public func subscribe(_ c: C, _ observer: MainActorObserver<Element>) async -> any Disposable {
-        await source.subscribe(c.call(), ObserveOnMainActorObserver(mainActorObserver: observer, scheduler: scheduler))
+    public func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any Disposable
+        where Observer: MainActorObserverType, Element == Observer.Element {
+        let sink = ObserveOnMainActorObservableSink(source: source, observer: observer, scheduler: scheduler)
+        await sink.run(c.call())
+        return sink
     }
 }
 

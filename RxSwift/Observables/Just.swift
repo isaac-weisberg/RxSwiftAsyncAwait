@@ -28,59 +28,18 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to send the single element on.
      - returns: An observable sequence containing the single specified element.
      */
-    static func just(_ element: Element, scheduler: AsyncScheduler) -> Observable<Element> {
-        JustScheduled(element: element, scheduler: scheduler)
-    }
-}
-
-private final actor JustScheduledSink<Observer: SyncObserverType>: AsynchronousDisposable, ActorLock {
-    typealias Parent = JustScheduled<Observer.Element>
-
-    private let parent: Parent
-    private let observer: Observer
-    private let disposedFlag = SingleAssignmentSyncDisposable()
-
-    init(parent: Parent, observer: Observer) {
-        self.parent = parent
-        self.observer = observer
+    static func just(_ element: Element, scheduler: some AsyncScheduler) -> Observable<Element> {
+        just(element)
+            .assumeSyncAndReemitAll(on: scheduler, predictedEventCount: 2)
     }
 
-    func dispose() {
-        disposedFlag.dispose()?.dispose()
-    }
-
-    func run(_ c: C) async {
-        let scheduler = parent.scheduler
-        let element = parent.element
-        let disposeAction = scheduler.perform(c.call()) { [observer] c in
-            await observer.on(.next(element), c.call())
-            await observer.on(.completed, c.call())
-            await self.dispose()
-        }
-
-        disposedFlag.setDisposable(disposeAction)?.dispose()
-    }
-
-    func perform<R>(_ work: () -> R) -> R {
-        work()
-    }
-}
-
-private final class JustScheduled<Element: Sendable>: Observable<Element>, @unchecked Sendable {
-    fileprivate let scheduler: AsyncScheduler
-    fileprivate let element: Element
-
-    init(element: Element, scheduler: AsyncScheduler) {
-        self.scheduler = scheduler
-        self.element = element
-        super.init()
-    }
-
-    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any Disposable
-        where Element == Observer.Element, Observer: ObserverType {
-        let sink = JustScheduledSink(parent: self, observer: observer)
-        await sink.run(c.call())
-        return sink
+    static func just(
+        _ element: Element,
+        scheduler: some MainLegacySchedulerProtocol
+    )
+        -> AssumeSyncAndReemitAllOnMainScheduler<Observable<Element>, some MainLegacySchedulerProtocol> {
+        just(element)
+            .assumeSyncAndReemitAll(on: scheduler, predictedEventCount: 2)
     }
 }
 
@@ -97,5 +56,187 @@ private final class Just<Element: Sendable>: Observable<Element> {
         await observer.on(.next(element), c.call())
         await observer.on(.completed, c.call())
         return Disposables.create()
+    }
+}
+
+extension ObservableType {
+    func assumeSyncAndReemitAll<Scheduler: AsyncScheduler>(
+        on scheduler: Scheduler,
+        predictedEventCount: Int
+    ) -> Observable<Element> {
+        AssumeSyncAndReemitAllOnAsyncScheduler<Self, Scheduler>(
+            self,
+            scheduler,
+            predictedEventCount: predictedEventCount
+        )
+    }
+}
+
+final class AssumeSyncAndReemitAllOnAsyncScheduler<
+    Source: ObservableType,
+    Scheduler: AsyncScheduler
+>: Observable<Source.Element> {
+    let source: Source
+    let predictedEventCount: Int
+    let scheduler: Scheduler
+
+    init(_ source: Source, _ scheduler: Scheduler, predictedEventCount: Int) {
+        self.source = source
+        self.scheduler = scheduler
+        self.predictedEventCount = predictedEventCount
+    }
+
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any Disposable
+        where Element == Observer.Element, Observer: ObserverType {
+        let sink = AssumeSyncAndReemitAllOnAsyncSchedulerSink(
+            source,
+            predictedEventCount: predictedEventCount,
+            scheduler,
+            observer
+        )
+        await sink.run(c.call())
+        return sink
+    }
+}
+
+final actor AssumeSyncAndReemitAllOnAsyncSchedulerSink<
+    Source: ObservableType,
+    Scheduler: AsyncScheduler,
+    Observer: ObserverType
+>: Sink, ObserverType, Disposable where Observer.Element == Source.Element {
+    typealias Element = Source.Element
+
+    let source: Source
+    let predictedEventCount: Int
+    let scheduler: Scheduler
+    let baseSink: BaseSink<Observer>
+    var events: [Event<Element>]
+
+    let scheduleDisposable = SingleAssignmentSyncDisposable()
+
+    init(_ source: Source, predictedEventCount: Int, _ scheduler: Scheduler, _ observer: Observer) {
+        self.source = source
+        self.predictedEventCount = predictedEventCount
+        self.scheduler = scheduler
+        baseSink = BaseSink(observer: observer)
+        events = []
+
+        events.reserveCapacity(predictedEventCount)
+    }
+
+    func run(_ c: C) async {
+        await source.subscribe(c.call(), self).dispose()
+
+        let events = events
+        assert(events.last?.isStopEvent == true)
+
+        let disposeAction = scheduler.perform(c.call()) { c in
+            for event in events {
+                await self.forwardOn(event, c.call())
+            }
+        }
+
+        scheduleDisposable.setDisposable(disposeAction)?.dispose()
+    }
+
+    func on(_ event: Event<Element>, _ c: C) async {
+        events.append(event)
+    }
+
+    func dispose() async {
+        baseSink.setDisposed()
+        scheduleDisposable.dispose()?.dispose()
+    }
+}
+
+extension ObservableType {
+    func assumeSyncAndReemitAll<Scheduler: MainLegacySchedulerProtocol>(
+        on scheduler: Scheduler,
+        predictedEventCount: Int
+    ) -> AssumeSyncAndReemitAllOnMainScheduler<Self, Scheduler> {
+        AssumeSyncAndReemitAllOnMainScheduler<Self, Scheduler>(
+            self,
+            scheduler,
+            predictedEventCount: predictedEventCount
+        )
+    }
+}
+
+public final class AssumeSyncAndReemitAllOnMainScheduler<
+    Source: ObservableType,
+    Scheduler: MainLegacySchedulerProtocol
+>: MainActorObservable {
+    public typealias Element = Source.Element
+
+    let source: Source
+    let predictedEventCount: Int
+    let scheduler: Scheduler
+
+    init(_ source: Source, _ scheduler: Scheduler, predictedEventCount: Int) {
+        self.source = source
+        self.scheduler = scheduler
+        self.predictedEventCount = predictedEventCount
+    }
+
+    public func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any Disposable
+        where Observer: MainActorObserverType,
+        Element == Observer.Element {
+        let sink = AssumeSyncAndReemitAllOnMainSchedulerSink(
+            source,
+            predictedEventCount: predictedEventCount,
+            scheduler,
+            observer
+        )
+        await sink.run(c.call())
+        return sink
+    }
+}
+
+final actor AssumeSyncAndReemitAllOnMainSchedulerSink<
+    Source: ObservableType,
+    Scheduler: MainLegacySchedulerProtocol,
+    Observer: MainActorObserverType
+>: ObserverType, Disposable where Observer.Element == Source.Element {
+    typealias Element = Source.Element
+
+    let source: Source
+    let predictedEventCount: Int
+    let scheduler: Scheduler
+    let observer: Observer
+    var events: [Event<Element>]
+    var disposed = false
+
+    init(_ source: Source, predictedEventCount: Int, _ scheduler: Scheduler, _ observer: Observer) {
+        self.source = source
+        self.predictedEventCount = predictedEventCount
+        self.scheduler = scheduler
+        self.observer = observer
+        events = []
+
+        events.reserveCapacity(predictedEventCount)
+    }
+
+    func run(_ c: C) async {
+        await source.subscribe(c.call(), self).dispose()
+
+        let events = events
+        assert(events.last?.isStopEvent == true)
+
+        await scheduler.perform(c.call()) { c in
+            if await disposed {
+                return
+            }
+            for event in events {
+                await self.observer.on(event, c.call())
+            }
+        }
+    }
+
+    func on(_ event: Event<Element>, _ c: C) async {
+        events.append(event)
+    }
+
+    func dispose() async {
+        disposed = true
     }
 }

@@ -1,97 +1,89 @@
-////
-////  Sequence.swift
-////  RxSwift
-////
-////  Created by Krunoslav Zaher on 11/14/15.
-////  Copyright © 2015 Krunoslav Zaher. All rights reserved.
-////
 //
-// public extension ObservableType {
-//    // MARK: of
+//  Sequence.swift
+//  RxSwift
 //
-//    /**
-//     This method creates a new Observable instance with a variable number of elements.
+//  Created by Krunoslav Zaher on 11/14/15.
+//  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
-//     - seealso: [from operator on reactivex.io](http://reactivex.io/documentation/operators/from.html)
-//
-//     - parameter elements: Elements to generate.
-//     - parameter scheduler: Scheduler to send elements on. If `nil`, elements are sent immediately on subscription.
-//     - returns: The observable sequence whose elements are pulled from the given arguments.
-//     */
-//    static func of(_ elements: Element ..., scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async
-//    -> Observable<Element> {
-//        await ObservableSequence(elements: elements, scheduler: scheduler)
-//    }
-// }
-//
-// public extension ObservableType {
-//    /**
-//     Converts an array to an observable sequence.
-//
-//     - seealso: [from operator on reactivex.io](http://reactivex.io/documentation/operators/from.html)
-//
-//     - returns: The observable sequence whose elements are pulled from the given enumerable sequence.
-//     */
-//    static func from(_ array: [Element], scheduler: ImmediateSchedulerType = CurrentThreadScheduler.instance) async ->
-//    Observable<Element> {
-//        await ObservableSequence(elements: array, scheduler: scheduler)
-//    }
-//
-//    /**
-//     Converts a sequence to an observable sequence.
-//
-//     - seealso: [from operator on reactivex.io](http://reactivex.io/documentation/operators/from.html)
-//
-//     - returns: The observable sequence whose elements are pulled from the given enumerable sequence.
-//     */
-//    static func from<Sequence: Swift.Sequence>(_ sequence: Sequence, scheduler: ImmediateSchedulerType =
-//    CurrentThreadScheduler.instance) async -> Observable<Element> where Sequence.Element == Element {
-//        await ObservableSequence(elements: sequence, scheduler: scheduler)
-//    }
-// }
-//
-// private final actor ObservableSequenceSink<Sequence: Swift.Sequence, Observer: ObserverType>: Sink where
-// Sequence.Element == Observer.Element {
-//    typealias Parent = ObservableSequence<Sequence>
-//
-//    private let parent: Parent
-//    let baseSink: BaseSink<Observer>
-//
-//    init(parent: Parent, observer: Observer) async {
-//        self.parent = parent
-//        self.baseSink = BaseSink(observer: observer)
-//    }
-//
-//    func run(_ c: C) async -> Disposable {
-//        return await self.parent.scheduler.scheduleRecursive(self.parent.elements.makeIterator(), c.call()) {
-//        iterator, c, recurse in
-//            var mutableIterator = iterator
-//            if let next = mutableIterator.next() {
-//                await self.forwardOn(.next(next), c.call())
-//                await recurse(mutableIterator)
-//            }
-//            else {
-//                await self.forwardOn(.completed, c.call())
-//                await self.dispose()
-//            }
-//        }
-//    }
-// }
-//
-// private final class ObservableSequence<Sequence: Swift.Sequence>: Producer<Sequence.Element> {
-//    fileprivate let elements: Sequence
-//    fileprivate let scheduler: ImmediateSchedulerType
-//
-//    init(elements: Sequence, scheduler: ImmediateSchedulerType) async {
-//        self.elements = elements
-//        self.scheduler = scheduler
-//        await super.init()
-//    }
-//
-//    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where
-//    Observer.Element == Element {
-//        let sink = await ObservableSequenceSink(parent: self, observer: observer)
-//        let subscription = await sink.run(c.call())
-//        return sink
-//    }
-// }
+
+public extension ObservableType {
+    // MARK: of
+
+    /**
+     This method creates a new Observable instance with a variable number of elements.
+
+     - seealso: [from operator on reactivex.io](http://reactivex.io/documentation/operators/from.html)
+
+     - parameter elements: Elements to generate.
+     - parameter scheduler: Scheduler to send elements on. If `nil`, elements are sent immediately on subscription.
+     - returns: The observable sequence whose elements are pulled from the given arguments.
+     */
+    static func of(_ elements: Element ...) -> Observable<Element> {
+        ObservableSequence(elements: elements)
+    }
+
+    static func of(_ elements: Element ..., scheduler: some AsyncScheduler) -> Observable<Element> {
+        from(elements, scheduler: scheduler)
+    }
+
+    static func of(
+        _ elements: Element ...,
+        scheduler: some MainLegacySchedulerProtocol
+    )
+        -> AssumeSyncAndReemitAllOnMainScheduler<Observable<Element>, some MainLegacySchedulerProtocol> {
+        from(elements, scheduler: scheduler)
+    }
+}
+
+public extension ObservableType {
+    /**
+     Converts a sequence to an observable sequence.
+
+     - seealso: [from operator on reactivex.io](http://reactivex.io/documentation/operators/from.html)
+
+     - returns: The observable sequence whose elements are pulled from the given enumerable sequence.
+     */
+    static func from<Sequence: Swift.Sequence>(_ sequence: Sequence) -> Observable<Element>
+        where Sequence.Element == Element {
+        ObservableSequence(elements: sequence)
+    }
+
+    static func from<Sequence: Swift.Sequence>(
+        _ sequence: Sequence,
+        scheduler: some AsyncScheduler
+    ) -> Observable<Element>
+        where Sequence.Element == Element {
+        from(sequence)
+            .assumeSyncAndReemitAll(on: scheduler, predictedEventCount: sequence.underestimatedCount)
+    }
+
+    static func from<Sequence: Swift.Sequence>(
+        _ sequence: Sequence,
+        scheduler: some MainLegacySchedulerProtocol
+    ) -> AssumeSyncAndReemitAllOnMainScheduler<Observable<Element>, some MainLegacySchedulerProtocol>
+        where Sequence.Element == Element {
+        from(sequence)
+            .assumeSyncAndReemitAll(on: scheduler, predictedEventCount: sequence.underestimatedCount)
+    }
+}
+
+private final class ObservableSequence<Sequence: Swift.Sequence>: Producer<Sequence.Element>
+    where Sequence.Element: Sendable {
+    fileprivate let elements: Sequence
+
+    init(elements: Sequence) {
+        self.elements = elements
+        super.init()
+    }
+
+    override func run<Observer: ObserverType>(_ c: C, _ observer: Observer) async -> AsynchronousDisposable where
+        Observer.Element == Element {
+
+        for element in elements {
+            await observer.on(.next(element), c.call())
+        }
+        await observer.on(.completed, c.call())
+
+        return Disposables.create {}
+    }
+}
