@@ -50,7 +50,7 @@ public final class SerialDisposableGeneric<Disposable> {
 
 public typealias SerialDisposable = SerialDisposableGeneric<Disposable>
 
-public final class SerialPerpetualDisposable<Disposable> {
+public final class SerialPerpetualDisposable<Disposable>: @unchecked Sendable {
     // state
     private var current = nil as Disposable?
 

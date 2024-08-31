@@ -136,8 +136,10 @@ final class DisposableTimer: @unchecked Sendable {
     }
 
     func dispose() {
-        rxAssert(!disposed)
-        task?.cancel()
-        task = nil
+        if !disposed {
+            disposed = true
+            task?.cancel()
+            task = nil
+        }
     }
 }
