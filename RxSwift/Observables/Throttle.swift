@@ -28,6 +28,24 @@ public extension ObservableType {
             emitLatestElementOnceWindowRunsOut: emitLatestElementOnceWindowRunsOut
         )
     }
+
+    func throttle(
+        _ dueTime: RxTimeInterval,
+        emitLatestElementOnceWindowRunsOut: Bool = true,
+        scheduler: some AsyncScheduler
+    ) -> Observable<Element> {
+        throttle(dueTime, emitLatestElementOnceWindowRunsOut: emitLatestElementOnceWindowRunsOut)
+            .observe(on: scheduler)
+    }
+
+    func throttle(
+        _ dueTime: RxTimeInterval,
+        emitLatestElementOnceWindowRunsOut: Bool = true,
+        scheduler: some MainLegacySchedulerProtocol
+    ) -> ObserveOnMainActorObservable<Element, some MainLegacySchedulerProtocol> {
+        throttle(dueTime, emitLatestElementOnceWindowRunsOut: emitLatestElementOnceWindowRunsOut)
+            .observe(on: scheduler)
+    }
 }
 
 private final actor ThrottleSink<Observer: ObserverType>: Sink, ObserverType {
