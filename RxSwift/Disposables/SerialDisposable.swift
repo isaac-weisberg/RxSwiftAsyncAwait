@@ -78,3 +78,35 @@ public final class SerialPerpetualDisposable<Disposable>: @unchecked Sendable {
         return nil
     }
 }
+
+public final actor ClassicSerialDisposable: Cancelable {
+    var disposed = false
+    var disposable: Disposable?
+
+    public init() {}
+
+    public func isDisposed() async -> Bool {
+        disposed
+    }
+
+    func replace(_ disposable: Disposable) async {
+        if disposed {
+            await disposable.dispose()
+            return
+        }
+
+        self.disposable = disposable
+    }
+
+    public func dispose() async {
+        if !disposed {
+            disposed = true
+
+            let d = disposable
+            disposable = nil
+
+            await d?.dispose()
+        }
+    }
+
+}
