@@ -79,3 +79,46 @@ private final class Map<Element: Sendable, ResultType: Sendable>: Producer<Resul
         return sink
     }
 }
+
+extension ObservableType {
+    func thinMap<Result>(_ transform: @Sendable @escaping (Element) -> Result)
+        -> ThinMap<Self, Result> {
+        ThinMap(self, transform)
+    }
+}
+
+final class ThinMap<Source: ObservableType, Result: Sendable>: Observable<Result>, @unchecked Sendable {
+    typealias Element = Result
+    typealias Transform = @Sendable (Source.Element) -> Result
+
+    struct ThinMapObserver<Observer: ObserverType>: ObserverType where Observer.Element == Result {
+        let transform: Transform
+        let observer: Observer
+
+        func on(_ event: Event<Source.Element>, _ c: C) async {
+            switch event {
+            case .next(let element):
+                let result = transform(element)
+                await observer.on(.next(result), c.call())
+            case .error(let error):
+                await observer.on(.error(error), c.call())
+            case .completed:
+                await observer.on(.completed, c.call())
+            }
+
+        }
+    }
+
+    let source: Source
+    let transform: Transform
+
+    init(_ source: Source, _ transform: @escaping Transform) {
+        self.source = source
+        self.transform = transform
+    }
+
+    override func subscribe<Observer>(_ c: C, _ observer: Observer) async -> any AsynchronousDisposable
+        where Observer: ObserverType, Element == Observer.Element {
+        await source.subscribe(c.call(), ThinMapObserver(transform: transform, observer: observer))
+    }
+}

@@ -165,7 +165,7 @@ func decrementChecked(_ i: inout Int) throws -> Int {
 #endif
 
 /// RxSwift global hooks
-public enum Hooks {
+public enum Hooks: @unchecked Sendable {
     // Should capture call stack
-    public static var recordCallStackOnError = false
+    nonisolated(unsafe) public static var recordCallStackOnError = false
 }

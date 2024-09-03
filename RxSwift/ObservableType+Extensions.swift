@@ -178,12 +178,12 @@ public extension ObservableType {
 }
 
 public extension Hooks {
-    typealias DefaultErrorHandler = (_ subscriptionCallStack: [String], _ error: Error) -> Void
-    typealias CustomCaptureSubscriptionCallstack = () -> [String]
+    typealias DefaultErrorHandler = @Sendable (_ subscriptionCallStack: [String], _ error: Error) -> Void
+    typealias CustomCaptureSubscriptionCallstack = @Sendable () -> [String]
 
     private static let lock = ActualNonRecursiveLock()
 
-    private static var _defaultErrorHandler: DefaultErrorHandler = { subscriptionCallStack, error in
+    nonisolated(unsafe) private static var _defaultErrorHandler: DefaultErrorHandler = { subscriptionCallStack, error in
         #if DEBUG
             let serializedCallStack = subscriptionCallStack.joined(separator: "\n")
             print("Unhandled error happened: \(error)")
@@ -193,7 +193,7 @@ public extension Hooks {
         #endif
     }
 
-    private static var _customCaptureSubscriptionCallstack: CustomCaptureSubscriptionCallstack = {
+    nonisolated(unsafe) private static var _customCaptureSubscriptionCallstack: CustomCaptureSubscriptionCallstack = {
         #if DEBUG
             return Thread.callStackSymbols
         #else
@@ -202,24 +202,24 @@ public extension Hooks {
     }
 
     /// Error handler called in case onError handler wasn't provided.
-    static func getDefaultErrorHandler() async -> DefaultErrorHandler {
+    nonisolated(unsafe) static func getDefaultErrorHandler() async -> DefaultErrorHandler {
         await lock.performLocked {
             self._defaultErrorHandler
         }
     }
 
-    static func setDefaultErrorHandler(_ newValue: @escaping DefaultErrorHandler) async {
+    nonisolated(unsafe) static func setDefaultErrorHandler(_ newValue: @escaping DefaultErrorHandler) async {
         await lock.performLocked {
             self._defaultErrorHandler = newValue
         }
     }
 
     /// Subscription callstack block to fetch custom callstack information.
-    static func getCustomCaptureSubscriptionCallstack() async -> CustomCaptureSubscriptionCallstack {
+    nonisolated(unsafe) static func getCustomCaptureSubscriptionCallstack() async -> CustomCaptureSubscriptionCallstack {
         await lock.performLocked { self._customCaptureSubscriptionCallstack }
     }
 
-    static func setCustomCaptureSubscriptionCallstack(_ newValue: @escaping CustomCaptureSubscriptionCallstack) async {
+    nonisolated(unsafe) static func setCustomCaptureSubscriptionCallstack(_ newValue: @escaping CustomCaptureSubscriptionCallstack) async {
         await lock.performLocked { self._customCaptureSubscriptionCallstack = newValue }
     }
 }

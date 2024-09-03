@@ -214,11 +214,9 @@
 		C820A9181EB4DA5A00D431BC /* AsMaybe.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A8211EB4DA5900D431BC /* AsMaybe.swift */; };
 		C820A91C1EB4DA5A00D431BC /* AsSingle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A8221EB4DA5900D431BC /* AsSingle.swift */; };
 		C820A9201EB4DA5A00D431BC /* AddRef.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A8231EB4DA5900D431BC /* AddRef.swift */; };
-		C820A9241EB4DA5A00D431BC /* CombineLatest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A8241EB4DA5900D431BC /* CombineLatest.swift */; };
 		C820A9281EB4DA5A00D431BC /* CombineLatest+arity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A8251EB4DA5900D431BC /* CombineLatest+arity.swift */; };
 		C820A9301EB4DA5A00D431BC /* Producer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A8271EB4DA5900D431BC /* Producer.swift */; };
 		C820A9341EB4DA5A00D431BC /* Sink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A8281EB4DA5900D431BC /* Sink.swift */; };
-		C820A9381EB4DA5A00D431BC /* Zip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A8291EB4DA5900D431BC /* Zip.swift */; };
 		C820A93C1EB4DA5A00D431BC /* Zip+arity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A82A1EB4DA5900D431BC /* Zip+arity.swift */; };
 		C820A94A1EB4E75E00D431BC /* Observable+AmbTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A9491EB4E75E00D431BC /* Observable+AmbTests.swift */; };
 		C820A94B1EB4E75E00D431BC /* Observable+AmbTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C820A9491EB4E75E00D431BC /* Observable+AmbTests.swift */; };
@@ -880,12 +878,10 @@
 		C820A8211EB4DA5900D431BC /* AsMaybe.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AsMaybe.swift; sourceTree = "<group>"; };
 		C820A8221EB4DA5900D431BC /* AsSingle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AsSingle.swift; sourceTree = "<group>"; };
 		C820A8231EB4DA5900D431BC /* AddRef.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddRef.swift; sourceTree = "<group>"; };
-		C820A8241EB4DA5900D431BC /* CombineLatest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CombineLatest.swift; sourceTree = "<group>"; };
 		C820A8251EB4DA5900D431BC /* CombineLatest+arity.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "CombineLatest+arity.swift"; sourceTree = "<group>"; };
 		C820A8261EB4DA5900D431BC /* CombineLatest+arity.tt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "CombineLatest+arity.tt"; sourceTree = "<group>"; };
 		C820A8271EB4DA5900D431BC /* Producer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Producer.swift; sourceTree = "<group>"; };
 		C820A8281EB4DA5900D431BC /* Sink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Sink.swift; sourceTree = "<group>"; };
-		C820A8291EB4DA5900D431BC /* Zip.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Zip.swift; sourceTree = "<group>"; };
 		C820A82A1EB4DA5900D431BC /* Zip+arity.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Zip+arity.swift"; sourceTree = "<group>"; };
 		C820A82B1EB4DA5900D431BC /* Zip+arity.tt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "Zip+arity.tt"; sourceTree = "<group>"; };
 		C820A9491EB4E75E00D431BC /* Observable+AmbTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Observable+AmbTests.swift"; sourceTree = "<group>"; };
@@ -1306,7 +1302,6 @@
 				C820A8221EB4DA5900D431BC /* AsSingle.swift */,
 				C820A7EB1EB4DA5900D431BC /* Buffer.swift */,
 				C820A8011EB4DA5900D431BC /* Catch.swift */,
-				C820A8241EB4DA5900D431BC /* CombineLatest.swift */,
 				C820A8251EB4DA5900D431BC /* CombineLatest+arity.swift */,
 				C820A8261EB4DA5900D431BC /* CombineLatest+arity.tt */,
 				C820A80C1EB4DA5900D431BC /* CombineLatest+Collection.swift */,
@@ -1367,7 +1362,6 @@
 				C820A8111EB4DA5900D431BC /* Using.swift */,
 				C820A7EA1EB4DA5900D431BC /* Window.swift */,
 				C820A8051EB4DA5900D431BC /* WithLatestFrom.swift */,
-				C820A8291EB4DA5900D431BC /* Zip.swift */,
 				C820A82A1EB4DA5900D431BC /* Zip+arity.swift */,
 				C820A82B1EB4DA5900D431BC /* Zip+arity.tt */,
 				C820A80B1EB4DA5900D431BC /* Zip+Collection.swift */,
@@ -2780,7 +2774,6 @@
 				786DED6E24F84623008C4FAC /* Infallible+Operators.swift in Sources */,
 				C8550B4B1D95A41400A6FCFE /* Reactive.swift in Sources */,
 				CB883B451BE256D4000AC2EE /* BooleanDisposable.swift in Sources */,
-				C820A9241EB4DA5A00D431BC /* CombineLatest.swift in Sources */,
 				C86781881DB814AD00B2029A /* Bag+Rx.swift in Sources */,
 				1D858B6629E57EE900CD6814 /* Infallible+CombineLatest+Collection.swift in Sources */,
 				C820A8881EB4DA5A00D431BC /* Materialize.swift in Sources */,
@@ -2823,7 +2816,6 @@
 				C8C3DA0F1B939767004D233E /* CurrentThreadScheduler.swift in Sources */,
 				C8093D851B8A72BE0088E94D /* Rx.swift in Sources */,
 				C820A84C1EB4DA5900D431BC /* Take.swift in Sources */,
-				C820A9381EB4DA5A00D431BC /* Zip.swift in Sources */,
 				C8093DA51B8A72BE0088E94D /* SubjectType.swift in Sources */,
 				C820A9341EB4DA5A00D431BC /* Sink.swift in Sources */,
 				C8FA89171C30409900CD3A17 /* HistoricalScheduler.swift in Sources */,
@@ -3556,7 +3548,7 @@
 				SUPPORTS_MACCATALYST = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2,3,4";
 				TVOS_DEPLOYMENT_TARGET = 11.0;
 				VALIDATE_PRODUCT = YES;
@@ -3738,7 +3730,7 @@
 				SUPPORTS_MACCATALYST = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2,3,4";
 				TVOS_DEPLOYMENT_TARGET = 11.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -3804,7 +3796,7 @@
 				SUPPORTS_MACCATALYST = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2,3,4";
 				TVOS_DEPLOYMENT_TARGET = 11.0;
 				VALIDATE_PRODUCT = YES;
