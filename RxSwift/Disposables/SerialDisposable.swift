@@ -89,7 +89,7 @@ public final actor ClassicSerialDisposable: Cancelable {
         disposed
     }
 
-    func replace(_ disposable: Disposable) async {
+    public func replace(_ disposable: Disposable) async {
         if disposed {
             await disposable.dispose()
             return
