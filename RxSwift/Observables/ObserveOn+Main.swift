@@ -1,5 +1,5 @@
 public extension ObservableConvertibleType {
-    func observe<Scheduler: MainLegacySchedulerProtocol>(on mainScheduler: Scheduler)
+    func observe(on mainScheduler: MainLegacySchedulerProtocol)
         -> ObserveOnMainActorObservable<Element> {
         ObserveOnMainActorObservable(source: asObservable(), scheduler: mainScheduler)
     }
@@ -12,6 +12,7 @@ public protocol MainLegacySchedulerProtocol: Sendable {
 
 public struct MainLegacyScheduler: MainLegacySchedulerProtocol {
     public static let instance = MainLegacyScheduler()
+    public static let asyncInstance = instance
 
     @MainActor
     public func perform(_ c: C, _ work: @MainActor (C) async -> Void) async {

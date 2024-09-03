@@ -35,9 +35,9 @@ public extension ObservableType {
 
     static func just(
         _ element: Element,
-        scheduler: some MainLegacySchedulerProtocol
+        scheduler: MainLegacySchedulerProtocol
     )
-        -> AssumeSyncAndReemitAllOnMainScheduler<Observable<Element>, some MainLegacySchedulerProtocol> {
+        -> AssumeSyncAndReemitAllOnMainScheduler<Observable<Element>> {
         just(element)
             .assumeSyncAndReemitAll(on: scheduler, predictedEventCount: 2)
     }
@@ -60,11 +60,11 @@ private final class Just<Element: Sendable>: Observable<Element> {
 }
 
 extension ObservableType {
-    func assumeSyncAndReemitAll<Scheduler: AsyncScheduler>(
-        on scheduler: Scheduler,
+    func assumeSyncAndReemitAll(
+        on scheduler: AsyncScheduler,
         predictedEventCount: Int
     ) -> Observable<Element> {
-        AssumeSyncAndReemitAllOnAsyncScheduler<Self, Scheduler>(
+        AssumeSyncAndReemitAllOnAsyncScheduler<Self>(
             self,
             scheduler,
             predictedEventCount: predictedEventCount
@@ -73,14 +73,13 @@ extension ObservableType {
 }
 
 final class AssumeSyncAndReemitAllOnAsyncScheduler<
-    Source: ObservableType,
-    Scheduler: AsyncScheduler
+    Source: ObservableType
 >: Observable<Source.Element> {
     let source: Source
     let predictedEventCount: Int
-    let scheduler: Scheduler
+    let scheduler: AsyncScheduler
 
-    init(_ source: Source, _ scheduler: Scheduler, predictedEventCount: Int) {
+    init(_ source: Source, _ scheduler: AsyncScheduler, predictedEventCount: Int) {
         self.source = source
         self.scheduler = scheduler
         self.predictedEventCount = predictedEventCount
@@ -101,20 +100,19 @@ final class AssumeSyncAndReemitAllOnAsyncScheduler<
 
 final actor AssumeSyncAndReemitAllOnAsyncSchedulerSink<
     Source: ObservableType,
-    Scheduler: AsyncScheduler,
     Observer: ObserverType
 >: Sink, ObserverType, Disposable where Observer.Element == Source.Element {
     typealias Element = Source.Element
 
     let source: Source
     let predictedEventCount: Int
-    let scheduler: Scheduler
+    let scheduler: AsyncScheduler
     let baseSink: BaseSink<Observer>
     var events: [Event<Element>]
 
     let scheduleDisposable = SingleAssignmentSyncDisposable()
 
-    init(_ source: Source, predictedEventCount: Int, _ scheduler: Scheduler, _ observer: Observer) {
+    init(_ source: Source, predictedEventCount: Int, _ scheduler: AsyncScheduler, _ observer: Observer) {
         self.source = source
         self.predictedEventCount = predictedEventCount
         self.scheduler = scheduler
@@ -150,11 +148,11 @@ final actor AssumeSyncAndReemitAllOnAsyncSchedulerSink<
 }
 
 extension ObservableType {
-    func assumeSyncAndReemitAll<Scheduler: MainLegacySchedulerProtocol>(
-        on scheduler: Scheduler,
+    func assumeSyncAndReemitAll(
+        on scheduler: MainLegacySchedulerProtocol,
         predictedEventCount: Int
-    ) -> AssumeSyncAndReemitAllOnMainScheduler<Self, Scheduler> {
-        AssumeSyncAndReemitAllOnMainScheduler<Self, Scheduler>(
+    ) -> AssumeSyncAndReemitAllOnMainScheduler<Self> {
+        AssumeSyncAndReemitAllOnMainScheduler<Self>(
             self,
             scheduler,
             predictedEventCount: predictedEventCount
@@ -163,16 +161,15 @@ extension ObservableType {
 }
 
 public final class AssumeSyncAndReemitAllOnMainScheduler<
-    Source: ObservableType,
-    Scheduler: MainLegacySchedulerProtocol
+    Source: ObservableType
 >: MainActorObservable {
     public typealias Element = Source.Element
 
     let source: Source
     let predictedEventCount: Int
-    let scheduler: Scheduler
+    let scheduler: MainLegacySchedulerProtocol
 
-    init(_ source: Source, _ scheduler: Scheduler, predictedEventCount: Int) {
+    init(_ source: Source, _ scheduler: MainLegacySchedulerProtocol, predictedEventCount: Int) {
         self.source = source
         self.scheduler = scheduler
         self.predictedEventCount = predictedEventCount
@@ -194,19 +191,18 @@ public final class AssumeSyncAndReemitAllOnMainScheduler<
 
 final actor AssumeSyncAndReemitAllOnMainSchedulerSink<
     Source: ObservableType,
-    Scheduler: MainLegacySchedulerProtocol,
     Observer: MainActorObserverType
 >: ObserverType, Disposable where Observer.Element == Source.Element {
     typealias Element = Source.Element
 
     let source: Source
     let predictedEventCount: Int
-    let scheduler: Scheduler
+    let scheduler: MainLegacySchedulerProtocol
     let observer: Observer
     var events: [Event<Element>]
     var disposed = false
 
-    init(_ source: Source, predictedEventCount: Int, _ scheduler: Scheduler, _ observer: Observer) {
+    init(_ source: Source, predictedEventCount: Int, _ scheduler: MainLegacySchedulerProtocol, _ observer: Observer) {
         self.source = source
         self.predictedEventCount = predictedEventCount
         self.scheduler = scheduler

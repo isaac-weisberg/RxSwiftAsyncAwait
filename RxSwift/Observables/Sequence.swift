@@ -28,9 +28,9 @@ public extension ObservableType {
 
     static func of(
         _ elements: Element ...,
-        scheduler: some MainLegacySchedulerProtocol
+        scheduler: MainLegacySchedulerProtocol
     )
-        -> AssumeSyncAndReemitAllOnMainScheduler<Observable<Element>, some MainLegacySchedulerProtocol> {
+        -> AssumeSyncAndReemitAllOnMainScheduler<Observable<Element>> {
         from(elements, scheduler: scheduler)
     }
 }
@@ -59,8 +59,8 @@ public extension ObservableType {
 
     static func from<Sequence: Swift.Sequence>(
         _ sequence: Sequence,
-        scheduler: some MainLegacySchedulerProtocol
-    ) -> AssumeSyncAndReemitAllOnMainScheduler<Observable<Element>, some MainLegacySchedulerProtocol>
+        scheduler: MainLegacySchedulerProtocol
+    ) -> AssumeSyncAndReemitAllOnMainScheduler<Observable<Element>>
         where Sequence.Element == Element {
         from(sequence)
             .assumeSyncAndReemitAll(on: scheduler, predictedEventCount: sequence.underestimatedCount)
