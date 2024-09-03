@@ -32,7 +32,7 @@ public extension ObservableType {
     func throttle(
         _ dueTime: RxTimeInterval,
         emitLatestElementOnceWindowRunsOut: Bool = true,
-        scheduler: some AsyncScheduler
+        scheduler: any AsyncScheduler
     ) -> Observable<Element> {
         throttle(dueTime, emitLatestElementOnceWindowRunsOut: emitLatestElementOnceWindowRunsOut)
             .observe(on: scheduler)
@@ -41,8 +41,8 @@ public extension ObservableType {
     func throttle(
         _ dueTime: RxTimeInterval,
         emitLatestElementOnceWindowRunsOut: Bool = true,
-        scheduler: some MainLegacySchedulerProtocol
-    ) -> ObserveOnMainActorObservable<Element, some MainLegacySchedulerProtocol> {
+        scheduler: any MainLegacySchedulerProtocol
+    ) -> ObserveOnMainActorObservable<Element> {
         throttle(dueTime, emitLatestElementOnceWindowRunsOut: emitLatestElementOnceWindowRunsOut)
             .observe(on: scheduler)
     }

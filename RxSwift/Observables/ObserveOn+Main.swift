@@ -1,6 +1,6 @@
 public extension ObservableConvertibleType {
     func observe<Scheduler: MainLegacySchedulerProtocol>(on mainScheduler: Scheduler)
-        -> ObserveOnMainActorObservable<Element, Scheduler> {
+        -> ObserveOnMainActorObservable<Element> {
         ObserveOnMainActorObservable(source: asObservable(), scheduler: mainScheduler)
     }
 }
@@ -66,11 +66,10 @@ final class ObserveOnMainActorObserver<Element: Sendable, Scheduler: MainLegacyS
 
 final actor ObserveOnMainActorObservableSink<
     Element: Sendable,
-    Scheduler: MainLegacySchedulerProtocol,
     Observer: MainActorObserverType
 >: Disposable, ObserverType where Element == Observer.Element {
     let source: Observable<Element>
-    let scheduler: Scheduler
+    let scheduler: MainLegacySchedulerProtocol
     let observer: Observer
     let sourceDisposable = SingleAssignmentDisposable()
     let scheduleDisposable = SingleAssignmentDisposable()
@@ -78,7 +77,7 @@ final actor ObserveOnMainActorObservableSink<
     init(
         source: Observable<Element>,
         observer: Observer,
-        scheduler: Scheduler
+        scheduler: MainLegacySchedulerProtocol
     ) {
         self.source = source
         self.scheduler = scheduler
@@ -106,13 +105,12 @@ final actor ObserveOnMainActorObservableSink<
 }
 
 public final class ObserveOnMainActorObservable<
-    Element: Sendable,
-    Scheduler: MainLegacySchedulerProtocol
+    Element: Sendable
 >: MainActorObservable {
     let source: Observable<Element>
-    let scheduler: Scheduler
+    let scheduler: MainLegacySchedulerProtocol
 
-    init(source: Observable<Element>, scheduler: Scheduler) {
+    init(source: Observable<Element>, scheduler: MainLegacySchedulerProtocol) {
         self.source = source
         self.scheduler = scheduler
     }

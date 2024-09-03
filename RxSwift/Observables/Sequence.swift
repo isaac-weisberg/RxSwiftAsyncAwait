@@ -22,7 +22,7 @@ public extension ObservableType {
         ObservableSequence(elements: elements)
     }
 
-    static func of(_ elements: Element ..., scheduler: some AsyncScheduler) -> Observable<Element> {
+    static func of(_ elements: Element ..., scheduler: any AsyncScheduler) -> Observable<Element> {
         from(elements, scheduler: scheduler)
     }
 
@@ -50,7 +50,7 @@ public extension ObservableType {
 
     static func from<Sequence: Swift.Sequence>(
         _ sequence: Sequence,
-        scheduler: some AsyncScheduler
+        scheduler: any AsyncScheduler
     ) -> Observable<Element>
         where Sequence.Element == Element {
         from(sequence)

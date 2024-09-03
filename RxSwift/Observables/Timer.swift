@@ -11,14 +11,14 @@ public extension ObservableType where Element: RxAbstractInteger {
         _ period: RxTimeInterval,
         scheduler: Scheduler
     )
-        -> ObserveOnMainActorObservable<Element, Scheduler> {
+        -> ObserveOnMainActorObservable<Element> {
         interval(period)
             .observe(on: scheduler)
     }
 
     static func interval(
         _ period: RxTimeInterval,
-        scheduler: some AsyncScheduler
+        scheduler: any AsyncScheduler
     )
         -> Observable<Element> {
         interval(period)
@@ -50,7 +50,7 @@ public extension ObservableType where Element: RxAbstractInteger {
         period: RxTimeInterval? = nil,
         scheduler: Scheduler
     )
-        -> ObserveOnMainActorObservable<Element, Scheduler> {
+        -> ObserveOnMainActorObservable<Element> {
         timer(dueTime, period: period)
             .observe(on: scheduler)
     }
@@ -58,7 +58,7 @@ public extension ObservableType where Element: RxAbstractInteger {
     static func timer(
         _ dueTime: RxTimeInterval,
         period: RxTimeInterval? = nil,
-        scheduler: some AsyncScheduler
+        scheduler: any AsyncScheduler
     )
         -> Observable<Element> {
         timer(dueTime, period: period)

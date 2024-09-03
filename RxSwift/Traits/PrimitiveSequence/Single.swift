@@ -381,7 +381,7 @@ public extension PrimitiveSequenceType where Trait == SingleTrait {
      - parameter scheduler: Scheduler to send the single element on.
      - returns: An observable sequence containing the single specified element.
      */
-    static func just(_ element: Element, scheduler: some AsyncScheduler) -> Single<Element> {
+    static func just(_ element: Element, scheduler: any AsyncScheduler) -> Single<Element> {
         Single(raw: Observable.just(element, scheduler: scheduler))
     }
 

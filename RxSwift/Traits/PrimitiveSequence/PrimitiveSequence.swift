@@ -104,12 +104,12 @@ public extension PrimitiveSequence {
      - parameter scheduler: Scheduler to notify observers on.
      - returns: The source sequence whose observations happen on the specified scheduler.
      */
-    func observe(on scheduler: some AsyncScheduler)
+    func observe(on scheduler: any AsyncScheduler)
         -> PrimitiveSequence<Trait, Element> {
         PrimitiveSequence(raw: source.observe(on: scheduler))
     }
 
-    func subscribe(on scheduler: some AsyncScheduler)
+    func subscribe(on scheduler: any AsyncScheduler)
         -> PrimitiveSequence<Trait, Element> {
         PrimitiveSequence(raw: source.subscribe(on: scheduler))
     }
@@ -265,10 +265,22 @@ public extension PrimitiveSequence {
      - parameter scheduler: Scheduler to run the timeout timer on.
      - returns: An observable sequence with a `RxError.timeout` in case of a timeout.
      */
-//    func timeout(_ dueTime: RxTimeInterval, scheduler: SchedulerType) async
-//        -> PrimitiveSequence<Trait, Element> {
-//        await PrimitiveSequence<Trait, Element>(raw: primitiveSequence.source.timeout(dueTime, scheduler: scheduler))
-//    }
+    func timeout(_ dueTime: RxTimeInterval)
+        -> PrimitiveSequence<Trait, Element> {
+        PrimitiveSequence<Trait, Element>(raw: primitiveSequence.source.timeout(dueTime))
+    }
+
+    func timeout(_ dueTime: RxTimeInterval, scheduler: any AsyncScheduler)
+        -> PrimitiveSequence<Trait, Element> {
+        PrimitiveSequence<Trait, Element>(raw: primitiveSequence.source.timeout(dueTime, scheduler: scheduler))
+    }
+
+    func timeout(_ dueTime: RxTimeInterval, scheduler: any MainLegacySchedulerProtocol)
+        -> PrimitiveSequenceObservedOnMainScheduler<Trait, ObserveOnMainActorObservable<Element>> {
+        PrimitiveSequenceObservedOnMainScheduler(
+            raw: primitiveSequence.source.timeout(dueTime, scheduler: scheduler)
+        )
+    }
 
     /**
      Applies a timeout policy for each element in the observable sequence, using the specified scheduler to run timeout timers. If the next element isn't received within the specified timeout duration starting from its predecessor, the other observable sequence is used to produce future messages from that point on.
@@ -280,18 +292,39 @@ public extension PrimitiveSequence {
      - parameter scheduler: Scheduler to run the timeout timer on.
      - returns: The source sequence switching to the other sequence in case of a timeout.
      */
-//    func timeout(
-//        _ dueTime: RxTimeInterval,
-//        other: PrimitiveSequence<Trait, Element>,
-//        scheduler: SchedulerType
-//    )
-//        async -> PrimitiveSequence<Trait, Element> {
-//        await PrimitiveSequence<Trait, Element>(raw: primitiveSequence.source.timeout(
-//            dueTime,
-//            other: other.source,
-//            scheduler: scheduler
-//        ))
-//    }
+    func timeout(
+        _ dueTime: RxTimeInterval,
+        other: PrimitiveSequence<Trait, Element>
+    ) -> PrimitiveSequence<Trait, Element> {
+        PrimitiveSequence<Trait, Element>(raw: primitiveSequence.source.timeout(
+            dueTime,
+            other: other.source
+        ))
+    }
+
+    func timeout(
+        _ dueTime: RxTimeInterval,
+        other: PrimitiveSequence<Trait, Element>,
+        scheduler: any AsyncScheduler
+    ) -> PrimitiveSequence<Trait, Element> {
+        PrimitiveSequence<Trait, Element>(raw: primitiveSequence.source.timeout(
+            dueTime,
+            other: other.source,
+            scheduler: scheduler
+        ))
+    }
+
+    func timeout(
+        _ dueTime: RxTimeInterval,
+        other: PrimitiveSequence<Trait, Element>,
+        scheduler: any MainLegacySchedulerProtocol
+    ) -> PrimitiveSequenceObservedOnMainScheduler<Trait, ObserveOnMainActorObservable<Element>> {
+        PrimitiveSequenceObservedOnMainScheduler(raw: primitiveSequence.source.timeout(
+            dueTime,
+            other: other.source,
+            scheduler: scheduler
+        ))
+    }
 }
 
 public extension PrimitiveSequenceType where Element: RxAbstractInteger {
@@ -320,10 +353,9 @@ public struct PrimitiveSequenceObservedOnMainScheduler<Trait, Source: MainActorO
 }
 
 public extension PrimitiveSequence {
-    func observe<Scheduler: MainLegacySchedulerProtocol>(on scheduler: Scheduler)
+    func observe(on scheduler: MainLegacySchedulerProtocol)
         -> PrimitiveSequenceObservedOnMainScheduler<Trait, ObserveOnMainActorObservable<
-            Element,
-            Scheduler
+            Element
         >> {
         PrimitiveSequenceObservedOnMainScheduler(raw: source.observe(on: scheduler))
     }

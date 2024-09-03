@@ -22,16 +22,16 @@ public extension ObservableConvertibleType {
      - parameter scheduler: Scheduler to perform subscription and unsubscription actions on.
      - returns: The source sequence whose subscriptions and unsubscriptions happen on the specified scheduler.
      */
-    func subscribe(on scheduler: some AsyncScheduler)
+    func subscribe(on scheduler: any AsyncScheduler)
         -> Observable<Element> {
         SubscribeOn(source: asObservable(), scheduler: scheduler)
     }
 }
 
-private final actor SubscribeOnSink<Ob: ObservableType, Scheduler: AsyncScheduler, Observer: ObserverType>: Sink,
+private final actor SubscribeOnSink<Ob: ObservableType, Observer: ObserverType>: Sink,
     ObserverType, ActorLock where Ob.Element == Observer.Element {
     typealias Element = Observer.Element
-    typealias Parent = SubscribeOn<Ob, Scheduler>
+    typealias Parent = SubscribeOn<Ob>
 
     let parent: Parent
     let baseSink: BaseSink<Observer>
@@ -72,11 +72,11 @@ private final actor SubscribeOnSink<Ob: ObservableType, Scheduler: AsyncSchedule
     }
 }
 
-private final class SubscribeOn<Ob: ObservableType, Scheduler: AsyncScheduler>: Producer<Ob.Element> {
+private final class SubscribeOn<Ob: ObservableType>: Producer<Ob.Element> {
     let source: Ob
-    let scheduler: Scheduler
+    let scheduler: AsyncScheduler
 
-    init(source: Ob, scheduler: Scheduler) {
+    init(source: Ob, scheduler: AsyncScheduler) {
         self.source = source
         self.scheduler = scheduler
         super.init()

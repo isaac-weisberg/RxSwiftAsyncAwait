@@ -1,14 +1,14 @@
 public extension ObservableConvertibleType {
-    func observe<Scheduler: AsyncScheduler>(on scheduler: Scheduler) -> Observable<Element> {
-        ObserveOn<Element, Scheduler>(scheduler: scheduler, source: asObservable())
+    func observe(on scheduler: AsyncScheduler) -> Observable<Element> {
+        ObserveOn<Element>(scheduler: scheduler, source: asObservable())
     }
 }
 
-final class ObserveOn<Element: Sendable, Scheduler: AsyncScheduler>: Observable<Element> {
-    let scheduler: Scheduler
+final class ObserveOn<Element: Sendable>: Observable<Element> {
+    let scheduler: AsyncScheduler
     let source: Observable<Element>
 
-    init(scheduler: Scheduler, source: Observable<Element>) {
+    init(scheduler: AsyncScheduler, source: Observable<Element>) {
         self.scheduler = scheduler
         self.source = source
     }

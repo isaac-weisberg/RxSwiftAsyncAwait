@@ -28,7 +28,7 @@ public extension ObservableType {
      - parameter scheduler: Scheduler to send the single element on.
      - returns: An observable sequence containing the single specified element.
      */
-    static func just(_ element: Element, scheduler: some AsyncScheduler) -> Observable<Element> {
+    static func just(_ element: Element, scheduler: any AsyncScheduler) -> Observable<Element> {
         just(element)
             .assumeSyncAndReemitAll(on: scheduler, predictedEventCount: 2)
     }
