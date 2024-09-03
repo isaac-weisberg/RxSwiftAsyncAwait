@@ -94,3 +94,33 @@ public final class SingleAssignmentDisposableContainer<Disposable>: @unchecked S
 
 public typealias SingleAssignmentDisposable = SingleAssignmentDisposableContainer<Disposable>
 public typealias SingleAssignmentSyncDisposable = SingleAssignmentDisposableContainer<DisposeAction>
+
+public final actor ClassicSingleAssignmentDisposable: Cancelable {
+    var disposed = false
+    var disposable: Disposable?
+
+    public func isDisposed() -> Bool {
+        disposed
+    }
+
+    public init() {}
+
+    public func setDisposable(_ disposable: Disposable) async {
+        if disposed {
+            await disposable.dispose()
+            return
+        }
+
+        self.disposable = disposable
+    }
+
+    public func dispose() async {
+        if !disposed {
+            disposed = true
+            let d = disposable
+            disposable = nil
+
+            await d?.dispose()
+        }
+    }
+}
