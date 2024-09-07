@@ -6,13 +6,14 @@
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-protocol SynchronizedOnType: AnyObject, ObserverType, Lock {
+protocol SynchronizedOnType: AnyObject, ObserverType, PerformLock {
     func synchronized_on(_ event: Event<Element>)
 }
 
 extension SynchronizedOnType {
     func synchronizedOn(_ event: Event<Element>) {
-        self.lock(); defer { self.unlock() }
-        self.synchronized_on(event)
+        self.performLockedRecursive {
+            self.synchronized_on(event)
+        }
     }
 }

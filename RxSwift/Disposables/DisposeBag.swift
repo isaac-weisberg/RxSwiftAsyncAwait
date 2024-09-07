@@ -29,7 +29,7 @@ In case explicit disposal is necessary, there is also `CompositeDisposable`.
 */
 public final class DisposeBag: DisposeBase {
     
-    private var lock = SpinLock()
+    private var lock = NonRecursiveLock()
     
     // state
     private var disposables = [Disposable]()
