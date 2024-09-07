@@ -11,7 +11,14 @@ public extension AsynchronousDisposable {
     ///
     /// - parameter bag: `DisposeBag` to add `self` to.
     func disposed(by bag: DisposeBag) async {
-        await bag.insert(self)
+        await bag.actualDisposeBag.insert(self)
+    }
+
+    func disposed(by bag: DisposeBag) {
+        let disposeBag = bag.actualDisposeBag
+        Task {
+            await disposeBag.insert(self)
+        }
     }
 }
 
@@ -46,7 +53,7 @@ public final actor DisposeBagUnderThehood: Sendable {
 
     // state
     fileprivate var disposables = [AsynchronousDisposable]()
-    fileprivate var isDisposed = false
+    private var isDisposed = false
 
     /// Constructs new empty dispose bag.
     public init() {
@@ -56,9 +63,19 @@ public final actor DisposeBagUnderThehood: Sendable {
     deinit {
         SynchronousDisposeBaseDeinit()
     }
-    
-    fileprivate func append(_ disposables: [AsynchronousDisposable]) {
+
+    fileprivate func uncheckedAppend(_ disposables: [AsynchronousDisposable]) {
         self.disposables.append(contentsOf: disposables)
+    }
+
+    fileprivate func insertDisposables(_ disposables: [AsynchronousDisposable]) async {
+        if isDisposed {
+            for disposable in disposables {
+                await disposable.dispose()
+            }
+        } else {
+            uncheckedAppend(disposables)
+        }
     }
 
     /// Adds `disposable` to be disposed when dispose bag is being deinited.
@@ -114,7 +131,7 @@ public extension DisposeBag {
     /// Convenience init allows an array of disposables to be gathered for disposal.
     convenience init(disposing disposables: [AsynchronousDisposable]) async {
         self.init()
-        await actualDisposeBag.append(disposables)
+        await actualDisposeBag.uncheckedAppend(disposables)
     }
 
     /// Convenience function allows a list of disposables to be gathered for disposal.
@@ -129,13 +146,7 @@ public extension DisposeBag {
 
     /// Convenience function allows an array of disposables to be gathered for disposal.
     func insert(_ disposables: [AsynchronousDisposable]) async {
-        if await actualDisposeBag.isDisposed {
-            for disposable in disposables {
-                await disposable.dispose()
-            }
-        } else {
-            await actualDisposeBag.append(disposables)
-        }
+        await actualDisposeBag.insertDisposables(disposables)
     }
 
     /// A function builder accepting a list of Disposables and returning them as an array.
