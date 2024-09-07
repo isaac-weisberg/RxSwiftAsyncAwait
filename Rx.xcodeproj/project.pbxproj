@@ -114,6 +114,10 @@
 		A2FD4E9D225D050A00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
 		A2FD4E9E225D050B00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
 		A2FD4E9F225D050B00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
+		A4F01FA32C8CFDB7007950D0 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4F01FA22C8CFDB7007950D0 /* Queue.swift */; };
+		A4F01FA62C8CFDDD007950D0 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4F01FA52C8CFDDD007950D0 /* Queue.swift */; };
+		A4F01FA72C8CFDDD007950D0 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4F01FA52C8CFDDD007950D0 /* Queue.swift */; };
+		A4F01FA82C8CFDDD007950D0 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4F01FA52C8CFDDD007950D0 /* Queue.swift */; };
 		A520FFF71F0D258E00573734 /* RxPickerViewDataSourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A520FFF61F0D258E00573734 /* RxPickerViewDataSourceType.swift */; };
 		A520FFFC1F0D291500573734 /* RxPickerViewDataSourceProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A520FFFB1F0D291500573734 /* RxPickerViewDataSourceProxy.swift */; };
 		A5CD038A1F1660F40005A376 /* RxPickerViewAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5CD03891F1660F40005A376 /* RxPickerViewAdapter.swift */; };
@@ -1017,6 +1021,8 @@
 		A2897D68225D023A004EA481 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Observable+RelayBindTests.swift"; sourceTree = "<group>"; };
 		A2FD4EA4225D0A8100288525 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A4F01FA22C8CFDB7007950D0 /* Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Queue.swift; sourceTree = "<group>"; };
+		A4F01FA52C8CFDDD007950D0 /* Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Queue.swift; sourceTree = "<group>"; };
 		A520FFF61F0D258E00573734 /* RxPickerViewDataSourceType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RxPickerViewDataSourceType.swift; sourceTree = "<group>"; };
 		A520FFFB1F0D291500573734 /* RxPickerViewDataSourceProxy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RxPickerViewDataSourceProxy.swift; sourceTree = "<group>"; };
 		A5CD03891F1660F40005A376 /* RxPickerViewAdapter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RxPickerViewAdapter.swift; sourceTree = "<group>"; };
@@ -1625,6 +1631,22 @@
 			path = RxRelayTests;
 			sourceTree = "<group>";
 		};
+		A4F01FA12C8CFDAF007950D0 /* DataStructures */ = {
+			isa = PBXGroup;
+			children = (
+				A4F01FA22C8CFDB7007950D0 /* Queue.swift */,
+			);
+			path = DataStructures;
+			sourceTree = "<group>";
+		};
+		A4F01FA42C8CFDD8007950D0 /* DataStructures */ = {
+			isa = PBXGroup;
+			children = (
+				A4F01FA52C8CFDDD007950D0 /* Queue.swift */,
+			);
+			path = DataStructures;
+			sourceTree = "<group>";
+		};
 		C8093C471B8A72BE0088E94D /* RxSwift */ = {
 			isa = PBXGroup;
 			children = (
@@ -1877,6 +1899,7 @@
 		C81B6AA71DB2C15C0047CF86 /* Platform */ = {
 			isa = PBXGroup;
 			children = (
+				A4F01FA42C8CFDD8007950D0 /* DataStructures */,
 				C8165AD421891DBE00494BEF /* AtomicInt.swift */,
 				C8F03F4E1DBBAE9400AECC4C /* DispatchQueue+Extensions.swift */,
 				C81B6AA81DB2C15C0047CF86 /* Platform.Darwin.swift */,
@@ -2143,6 +2166,7 @@
 		C85B01661DB2ACAF006043C3 /* Platform */ = {
 			isa = PBXGroup;
 			children = (
+				A4F01FA12C8CFDAF007950D0 /* DataStructures */,
 				C8165ACC21891BE400494BEF /* AtomicInt.swift */,
 				C85B01671DB2ACAF006043C3 /* Platform.Darwin.swift */,
 				C85B01681DB2ACAF006043C3 /* Platform.Linux.swift */,
@@ -3126,6 +3150,7 @@
 				C88E296B1BEB712E001CCB92 /* RunLoopLock.swift in Sources */,
 				C8941BDF1BD5695C00A0E874 /* BlockingObservable.swift in Sources */,
 				C8941BE41BD56B0700A0E874 /* BlockingObservable+Operators.swift in Sources */,
+				A4F01FA32C8CFDB7007950D0 /* Queue.swift in Sources */,
 				C8093F5E1B8A73A20088E94D /* ObservableConvertibleType+Blocking.swift in Sources */,
 				C85218051E33FCA50015DD38 /* Resources.swift in Sources */,
 				C85B01691DB2ACAF006043C3 /* Platform.Darwin.swift in Sources */,
@@ -3225,6 +3250,7 @@
 				C8379EF41D1DD326003EF8FC /* UIButton+RxTests.swift in Sources */,
 				C820A9B61EB5081400D431BC /* Observable+MapTests.swift in Sources */,
 				C8C4F16F1DE9D5E000003FA7 /* UISlider+RxTests.swift in Sources */,
+				A4F01FA82C8CFDDD007950D0 /* Queue.swift in Sources */,
 				C820A9821EB4FB0400D431BC /* Observable+UsingTests.swift in Sources */,
 				C820A9F21EB5109300D431BC /* Observable+DefaultIfEmpty.swift in Sources */,
 				C820AA0E1EB5140100D431BC /* Observable+TimeoutTests.swift in Sources */,
@@ -3387,6 +3413,7 @@
 				D9080AD91EA06189002B433B /* UINavigationController+RxTests.swift in Sources */,
 				C8C4F17A1DE9DF0200003FA7 /* UIBarButtonItem+RxTests.swift in Sources */,
 				C8350A151C38756A0027C24C /* ObserverTests.swift in Sources */,
+				A4F01FA72C8CFDDD007950D0 /* Queue.swift in Sources */,
 				1AF67DA71CED430100C310FA /* ReplaySubjectTest.swift in Sources */,
 				C82FF0F01F93DD2E00BDB34D /* ObservableType+SubscriptionTests.swift in Sources */,
 				C820A9531EB4ECC000D431BC /* Observable+ToArrayTests.swift in Sources */,
@@ -3517,6 +3544,7 @@
 				C8D970F41F532FD30058F2FE /* SharedSequence+OperatorTest.swift in Sources */,
 				4C5213B0225E22510079FC77 /* Observable+CompactMapTests.swift in Sources */,
 				C820A9F01EB50EA100D431BC /* Observable+ScanTests.swift in Sources */,
+				A4F01FA62C8CFDDD007950D0 /* Queue.swift in Sources */,
 				C8ADC1902200F9B000B611D4 /* Atomic+Overrides.swift in Sources */,
 				C83509B81C38750D0027C24C /* ControlEventTests.swift in Sources */,
 				A2FD4E9F225D050B00288525 /* Observable+RelayBindTests.swift in Sources */,
