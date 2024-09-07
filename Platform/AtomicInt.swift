@@ -8,10 +8,21 @@
 
 import Foundation
 
-final class AtomicInt: NSLock {
+final class AtomicInt {
     fileprivate var value: Int32
+    fileprivate let underlyingLock: RecursiveLock
+    
     public init(_ value: Int32 = 0) {
         self.value = value
+        self.underlyingLock = RecursiveLock()
+    }
+    
+    func lock() {
+        underlyingLock.lock()
+    }
+    
+    func unlock() {
+        underlyingLock.unlock()
     }
 }
 

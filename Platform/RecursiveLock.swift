@@ -7,28 +7,39 @@
 //
 
 import Foundation
+import os
 
-#if TRACE_RESOURCES
-    class RecursiveLock: NSRecursiveLock {
-        override init() {
+final class RecursiveLock {
+    let lockPointer: UnsafeMutablePointer<os_unfair_lock_s>
+
+    init() {
+        lockPointer = UnsafeMutablePointer<os_unfair_lock_s>.allocate(capacity: 1)
+
+        lockPointer.initialize(to: os_unfair_lock_s())
+
+        #if TRACE_RESOURCES
             _ = Resources.incrementTotal()
-            super.init()
-        }
-
-        override func lock() {
-            super.lock()
-            _ = Resources.incrementTotal()
-        }
-
-        override func unlock() {
-            super.unlock()
-            _ = Resources.decrementTotal()
-        }
-
-        deinit {
-            _ = Resources.decrementTotal()
-        }
+        #endif
     }
-#else
-    typealias RecursiveLock = NSRecursiveLock
-#endif
+
+    func lock() {
+        #if TRACE_RESOURCES
+            _ = Resources.incrementTotal()
+        #endif
+        os_unfair_lock_lock(lockPointer)
+    }
+
+    func unlock() {
+        #if TRACE_RESOURCES
+            _ = Resources.decrementTotal()
+        #endif
+        os_unfair_lock_unlock(lockPointer)
+    }
+
+    deinit {
+        lockPointer.deallocate()
+        #if TRACE_RESOURCES
+            _ = Resources.decrementTotal()
+        #endif
+    }
+}
