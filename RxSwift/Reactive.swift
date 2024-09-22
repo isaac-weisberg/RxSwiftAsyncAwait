@@ -37,14 +37,14 @@ public struct Reactive<Base> {
     /// Automatically synthesized binder for a key path between the reactive
     /// base and one of its properties
     /// nevermind
-    public nonisolated(unsafe) func binder<Property>(dynamicMember keyPath: Sendable & ReferenceWritableKeyPath<
-        Base,
-        Property
-    >) async -> Binder<Property> where Base: AnyObject & Sendable {
-        await Binder(base) { @Sendable base, value in
-            base[keyPath: keyPath] = value
-        }
-    }
+//    public func binder<Property>(dynamicMember keyPath: Sendable & ReferenceWritableKeyPath<
+//        Base,
+//        Property
+//    >) async -> Binder<Property> where Base: AnyObject & Sendable {
+//        await Binder(base) { @Sendable base, value in
+//            base[keyPath: keyPath] = value
+//        }
+//    }
 }
 
 /// A type that has reactive extensions.

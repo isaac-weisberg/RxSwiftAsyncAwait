@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import os
 
 public protocol ActorLock: Actor {
     func perform<R>(_ work: () -> R) -> R
@@ -132,7 +133,9 @@ public final actor ActualNonRecursiveLock {
 //        }
 //    }
 
-    public struct C: Sendable {
+    public final class C: @unchecked Sendable {
+        static let signposter = OSSignposter()
+        static let signpostName: StaticString = "C.call"
         struct Entry {
             let file: StaticString
             let function: StaticString
@@ -145,54 +148,36 @@ public final actor ActualNonRecursiveLock {
             }
         }
 
-//        final class AcquiredLock {}
-
         let entries: [Entry]
-//        let acquiredLocks: [AcquiredLock]
+        let signpostState: OSSignpostIntervalState
 
-        public init(
+        public convenience init(
             _ file: StaticString = #file,
             _ function: StaticString = #function,
             _ line: UInt = #line
         ) {
-            let entry = Entry(file: file, function: function, line: line)
-            entries = [entry]
-//            acquiredLocks = []
+            self.init(
+                [
+                    Entry(file: file, function: function, line: line),
+                ]
+            )
         }
 
         private init(
-            _ entries: [Entry] // ,
-//            _ acquiredLocks: [AcquiredLock]
+            _ entries: [Entry]
         ) {
+
             self.entries = entries
-//            self.acquiredLocks = acquiredLocks
+            let lastEntry = entries.last!
+            signpostState = Self.signposter.beginInterval(
+                Self.signpostName,
+                "\(lastEntry.file, privacy: .public):\(lastEntry.line, privacy: .public);\(lastEntry.function, privacy: .public)"
+            )
         }
 
-//        func _includesLocksFrom(_ c: C) -> Bool {
-//            var parentIdx = 0
-//            var innerIdx = 0
-//            let concecutiveHitsNeeded = c.acquiredLocks.count
-//            var concecutiveHitsGotten = 0
-//            while parentIdx < acquiredLocks.count {
-//                let me = acquiredLocks[parentIdx]
-//                let them = c.acquiredLocks[innerIdx]
-//
-//                if me === them {
-//                    concecutiveHitsGotten += 1
-//                    innerIdx += 1
-//
-//                    if concecutiveHitsGotten >= concecutiveHitsNeeded {
-//                        return true
-//                    }
-//                } else {
-//                    concecutiveHitsGotten = 0
-//                    innerIdx = 0
-//                }
-//
-//                parentIdx += 1
-//            }
-//            return false
-//        }
+        deinit {
+            Self.signposter.endInterval(Self.signpostName, self.signpostState)
+        }
 
         public func call(
             _ file: StaticString = #file,
@@ -207,15 +192,6 @@ public final actor ActualNonRecursiveLock {
             let c = C(entries)
             return c
         }
-
-//
-//        func acquiringLock() -> C {
-//            let acquiredLock = AcquiredLock()
-//            var acquiredLocks = acquiredLocks
-//            acquiredLocks.append(acquiredLock)
-//            let c = C(entries, acquiredLocks)
-//            return c
-//        }
 
         public func stackAsString() -> String {
             entries.reversed().enumerated().map { index, entry in
