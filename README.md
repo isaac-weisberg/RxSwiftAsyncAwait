@@ -1,5 +1,9 @@
 RxSwift, except funni
 
+HINDSIGHT: actors != locks, and the performance degradation from using them as such begins at 2x and can grow up to 100x.
+
+This entire project is really useless.
+
 ## Big funny questions for the future:
 
 **Q**: `await foo?.bar()` doesn't suspend never-ever, right?  
