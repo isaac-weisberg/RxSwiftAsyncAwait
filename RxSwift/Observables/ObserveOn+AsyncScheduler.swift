@@ -107,6 +107,25 @@ final class ObserveOn<Element: Sendable>: Observable<Element> {
 //    }
 // }
 
+private struct RefIdDisposable: Hashable {
+    static func == (
+        lhs: RefIdDisposable,
+        rhs: RefIdDisposable
+    ) -> Bool {
+        ObjectIdentifier(lhs.disposable) == ObjectIdentifier(rhs.disposable)
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(disposable))
+    }
+
+    let disposable: SingleAssignmentSyncDisposable
+
+    init(disposable: SingleAssignmentSyncDisposable) {
+        self.disposable = disposable
+    }
+}
+
 final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
     AsynchronousDisposable, ActorLock {
 
@@ -115,7 +134,8 @@ final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
     let scheduler: AsyncScheduler
     let observer: Observer
     private let sourceSubscription = SingleAssignmentDisposable()
-    private let disposedFlag = SingleAssignmentSyncDisposable()
+
+    private var disposeFlags: Set<RefIdDisposable> = Set()
 
     init(scheduler: AsyncScheduler, observer: Observer) {
         self.scheduler = scheduler
@@ -127,10 +147,19 @@ final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
             return
         }
 
-        let disposeAction = scheduler.perform(c.call()) { [observer] c in
+        let disp = RefIdDisposable(disposable: SingleAssignmentSyncDisposable())
+        disposeFlags.insert(disp)
+
+        let disposeAction = scheduler.perform(c.call()) { [weak self, observer] c in
             await observer.on(event, c.call())
+            await self?.handleObserverFinished(disp)
         }
-        disposedFlag.setDisposable(disposeAction)?.dispose()
+
+        disp.disposable.setDisposable(disposeAction)?.dispose()
+    }
+
+    private func handleObserverFinished(_ disp: RefIdDisposable) {
+        disposeFlags.remove(disp)
     }
 
     func run(_ c: C, _ source: Observable<Element>) async {
@@ -138,8 +167,16 @@ final actor ObserveOnSink<Observer: AsyncObserverType>: AsyncObserverType,
     }
 
     public func dispose() async {
-        disposedFlag.dispose()?.dispose()
-        await sourceSubscription.dispose()?.dispose()
+        let sourceDispose = sourceSubscription.dispose()
+        let disposeFlags = disposeFlags
+        self.disposeFlags = Set()
+        let disposeActions = disposeFlags.map { $0.disposable.dispose() }
+
+        await sourceDispose
+        for disposeAction in disposeActions {
+            await disposeAction?.dispose()
+        }
+
     }
 
     func perform<R>(_ work: () -> R) -> R {
