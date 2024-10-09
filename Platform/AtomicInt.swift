@@ -10,17 +10,17 @@ import Foundation
 
 final class AtomicInt {
     fileprivate var value: Int32
-    fileprivate let underlyingLock: RecursiveLock
-    
+    private let underlyingLock: NonRecursiveLock
+
     public init(_ value: Int32 = 0) {
         self.value = value
-        self.underlyingLock = RecursiveLock()
+        underlyingLock = NonRecursiveLock()
     }
-    
+
     func lock() {
         underlyingLock.lock()
     }
-    
+
     func unlock() {
         underlyingLock.unlock()
     }

@@ -114,6 +114,7 @@
 		A2FD4E9D225D050A00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
 		A2FD4E9E225D050B00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
 		A2FD4E9F225D050B00288525 /* Observable+RelayBindTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */; };
+		A4E3CDA02CB6AA4500FE0490 /* ConcurrentTaskScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E3CD9F2CB6AA4100FE0490 /* ConcurrentTaskScheduler.swift */; };
 		A4F01FA32C8CFDB7007950D0 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4F01FA22C8CFDB7007950D0 /* Queue.swift */; };
 		A4F01FA62C8CFDDD007950D0 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4F01FA52C8CFDDD007950D0 /* Queue.swift */; };
 		A4F01FA72C8CFDDD007950D0 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4F01FA52C8CFDDD007950D0 /* Queue.swift */; };
@@ -1021,6 +1022,7 @@
 		A2897D68225D023A004EA481 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		A2FD4E9B225D04FF00288525 /* Observable+RelayBindTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Observable+RelayBindTests.swift"; sourceTree = "<group>"; };
 		A2FD4EA4225D0A8100288525 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A4E3CD9F2CB6AA4100FE0490 /* ConcurrentTaskScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcurrentTaskScheduler.swift; sourceTree = "<group>"; };
 		A4F01FA22C8CFDB7007950D0 /* Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Queue.swift; sourceTree = "<group>"; };
 		A4F01FA52C8CFDDD007950D0 /* Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Queue.swift; sourceTree = "<group>"; };
 		A520FFF61F0D258E00573734 /* RxPickerViewDataSourceType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RxPickerViewDataSourceType.swift; sourceTree = "<group>"; };
@@ -1809,6 +1811,7 @@
 		C8093CB41B8A72BE0088E94D /* Schedulers */ = {
 			isa = PBXGroup;
 			children = (
+				A4E3CD9F2CB6AA4100FE0490 /* ConcurrentTaskScheduler.swift */,
 				C83D73B21C1DBAEE003DC470 /* Internal */,
 				C8093CB51B8A72BE0088E94D /* ConcurrentDispatchQueueScheduler.swift */,
 				C8B144FA1BD2D44500267DCE /* ConcurrentMainScheduler.swift */,
@@ -3781,6 +3784,7 @@
 				C820A8E41EB4DA5A00D431BC /* Error.swift in Sources */,
 				C8093CD71B8A72BE0088E94D /* BinaryDisposable.swift in Sources */,
 				C8FA89141C30405400CD3A17 /* VirtualTimeConverterType.swift in Sources */,
+				A4E3CDA02CB6AA4500FE0490 /* ConcurrentTaskScheduler.swift in Sources */,
 				C820A8B01EB4DA5A00D431BC /* SkipUntil.swift in Sources */,
 				C820A8F41EB4DA5A00D431BC /* Create.swift in Sources */,
 				C820A8901EB4DA5A00D431BC /* Scan.swift in Sources */,
